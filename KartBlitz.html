@@ -378,6 +378,10 @@ body{font-family:'Rajdhani',sans-serif;color:var(--text);}
   <div class="lap-row" id="lap-row"></div>
   <div class="setup-section-label">WEATHER</div>
   <div class="wx-row" id="wx-row"></div>
+  <div id="collision-section" style="display:none;">
+    <div class="setup-section-label">CAR CONTACT</div>
+    <div class="lap-row" id="collision-row"></div>
+  </div>
   <div id="quali-section" style="display:none;">
     <div class="setup-section-label">QUALIFYING</div>
     <div class="lap-row" id="quali-toggle-row"></div>
@@ -1133,6 +1137,8 @@ const TRACKS = [
 ];
 
 // Build splines, checkpoint geometry, and spatial grid
+const TRACK_WIDTH_SCALE = 4.0;
+
 TRACKS.forEach(tr => {
   tr.spline = buildSpline(tr.waypoints, 28);
   const spl = tr.spline, n = spl.length;
@@ -1142,10 +1148,10 @@ TRACKS.forEach(tr => {
   tr.totalLen = cum[n-1];
   tr.cum = cum;
 
-  // Widen each track to 2x where possible, but clamp width based on local geometry
+  // Widen each track aggressively, but clamp width based on local geometry
   // so nearby sections and pit lane corridors do not overlap.
   const baseWidth = tr.trackWidth;
-  const targetWidth = baseWidth * 2.0;
+  const targetWidth = baseWidth * TRACK_WIDTH_SCALE;
   let maxSafeWidth = Infinity;
 
   let minCenterDist = Infinity;
@@ -1419,12 +1425,12 @@ class Kart {
     this.getInput = getInput;
     // physics - roughly 350 km/h top speed
     this.maxSpeed = 469;
-    this.accel = 304;
-    this.brakeForce = 620;
-    this.friction = 0.99; // coast friction: lighter drag so braking is primary decel
-    this.turnRate = 2.55;  // slightly tighter to stay stable at 350
-    this.offTrackMaxSpd = 320;  // raised: a brief clip shouldn't crater speed
-    this.offTrackAccel = 200;   // raised to match
+    this.accel = 296;
+    this.brakeForce = 700;
+    this.friction = 0.9915; // keep coasting lively, but make brake zones feel more deliberate
+    this.turnRate = 2.68;
+    this.offTrackMaxSpd = 255;
+    this.offTrackAccel = 165;
     this.slipstreamBoost = false;
     // state
     this.isOffTrack = false;
@@ -1450,7 +1456,7 @@ class Kart {
     this.tyreId       = 'med';
     this.tyreWear     = 0;      // 0.0=fresh → 1.0=dead
     this.baseMaxSpeed = 352;   
-    this.baseTurnRate = 2.55;
+    this.baseTurnRate = 2.68;
     this.tyreWrongWeather = false;
     this.inPit        = false;
     this._onPitLane   = false;  // true while driving through pit lane (limiter active)
@@ -1461,7 +1467,7 @@ class Kart {
     this.pitNavCooldown = 0;   // debounce for pit tyre navigation
     this._aiPitTimer  = 0;     // timer for AI auto-tyre selection in pit
     this._pitTooFarTimer = 0;   // flash timer when pressing pit key outside zone
-    this._baseAccel = 228;      // base accel before wear degradation (reduced 25%)
+    this._baseAccel = this.accel;
     // ERS (Energy Recovery System): X for P1, . for P2
     this.ersCharge = 1.0;       // 0.0 – 1.0 (full to empty)
     this.ersActive = false;
@@ -1528,8 +1534,9 @@ class Kart {
     const inp = this.getInput();
     // Surface-specific off-track physics: each track has a unique offTrackMult
     const surfMult = (trackData && trackData.surface) ? trackData.surface.offTrackMult : 1.0;
-    const maxSpd = this.isOffTrack ? (this.offTrackMaxSpd * surfMult) : this.maxSpeed;
-    const acc = this.isOffTrack ? (this.offTrackAccel * surfMult) : this.accel;
+    const applyOffTrackSlowdown = this.isOffTrack && !this.isAI;
+    const maxSpd = applyOffTrackSlowdown ? (this.offTrackMaxSpd * surfMult) : this.maxSpeed;
+    const acc = applyOffTrackSlowdown ? (this.offTrackAccel * surfMult) : this.accel;
 
     // Slipstream: +10% max speed when closely behind another kart on track
     this.slipstreamBoost = false;
@@ -1550,7 +1557,7 @@ class Kart {
     // ── KART-TO-KART CONTACT PHYSICS ───────────────────
     // Simple circle-circle push: karts have a ~18-unigtfyhrgdsedfgtyjhukysdt radius.
     // Both karts exchange momentum and are pushed apart on overlap.
-    if(otherKarts) {
+    if(otherKarts && isKartContactEnabled()) {
       const KART_R = 18;
       for(const other of otherKarts) {
         if(other === this) continue;
@@ -1631,7 +1638,7 @@ class Kart {
       if(this.speed > 0) this.speed -= this.brakeForce * dt;
       else this.speed -= acc * 0.5 * dt;
       if(this.speed > 0) this.speed -= this.brakeForce * (brakeMul - 1) * dt;
-    } else if(this.isOffTrack) {
+    } else if(applyOffTrackSlowdown) {
       // Grass drag: heavier than coasting but weaker than braking
       this.speed *= Math.pow(0.96, dt * 60);
       if(Math.abs(this.speed) < 0.5) this.speed = 0;
@@ -1648,8 +1655,8 @@ class Kart {
     // Speed-based steering: progressively less responsive at high speed (prevents spinouts at 350)
     if(Math.abs(this.speed) > 4) {
       const speedRatio = Math.abs(this.speed) / this.maxSpeed;
-      // Stronger reduction at the top end so 350 km/h stays controllable
-      const steerFactor = Math.max(0.25, 1.0 - speedRatio * 0.72);
+      // Preserve more authority at high speed so turn-in feels sharper without making launches twitchy.
+      const steerFactor = Math.max(0.30, 1.02 - speedRatio * 0.64);
       const dir = this.speed >= 0 ? 1 : -1;
       if(inp.left) this.angle -= this.turnRate * steerFactor * dt * dir;
       if(inp.right) this.angle += this.turnRate * steerFactor * dt * dir;
@@ -1672,8 +1679,8 @@ class Kart {
 
     // Particles: smoke when drifting, dust when on grass
     const _spd = Math.abs(this.speed);
-    const _drifting = (inp.left || inp.right) && _spd > 190 && !this.isOffTrack;
-    const _driftIntensity = _drifting ? Math.min(1, (_spd - 190) / 280) : 0;
+    const _drifting = (inp.left || inp.right) && _spd > 175 && !this.isOffTrack;
+    const _driftIntensity = _drifting ? Math.min(1, (_spd - 175) / 265) : 0;
     // Drift screech oscillator disabled — engine sound stays constant
     this.slideParticleTimer -= dt;
     if(this.slideParticleTimer <= 0 && _spd > 120) {
@@ -2991,10 +2998,10 @@ function makeAIInput(track, difficulty, aiIndex) {
 
   // AI behaviour tuning. sf = overall speed fraction, curvK = braking aggression, brDist = lookahead
   // Ultra Easy/Easy/Medium are deliberately slow and cautious
-  const sfBase  = {ultraeasy: 0.42, easy: 0.54, medium: 0.68, hard: 1.25, extreme: 1.00}[difficulty] || 1.00;
-  const sf      = sfBase * 1.25;
-  const curvK   = {ultraeasy: 0.06, easy: 0.08, medium: 0.12, hard: 0.210, extreme: 0.04}[difficulty] || 0.15;
-  const brBase  = {ultraeasy: 300,  easy: 420,  medium: 580,  hard: 1000,  extreme: 1200}[difficulty] || 800;
+  const sfBase  = {ultraeasy: 0.46, easy: 0.58, medium: 0.72, hard: 0.84, extreme: 0.94}[difficulty] || 0.72;
+  const sf      = sfBase * 1.18;
+  const curvK   = {ultraeasy: 0.18, easy: 0.145, medium: 0.115, hard: 0.090, extreme: 0.072}[difficulty] || 0.115;
+  const brBase  = {ultraeasy: 920, easy: 780, medium: 660, hard: 560, extreme: 500}[difficulty] || 660;
   const brDist  = brBase * (track.aiBrakeLookaheadScale || 1);
   
   // ── AI PIT STRATEGY ────────────────────────────────────
@@ -3023,9 +3030,9 @@ function makeAIInput(track, difficulty, aiIndex) {
 
   // per car variations, just braking agressivness and lookahead dist
   const carVariations = [
-    { speedMul: 1.00, brakeBias: 1.00, lookDist: 250 },
-    { speedMul: 1.00, brakeBias: 1.12, lookDist: 200 },
-    { speedMul: 1.00, brakeBias: 0.90, lookDist: 300 },
+    { speedMul: 0.99, brakeBias: 1.04, lookDist: 255 },
+    { speedMul: 1.00, brakeBias: 1.00, lookDist: 235 },
+    { speedMul: 1.01, brakeBias: 0.96, lookDist: 285 },
   ];
   const v = carVariations[aiIndex % 3];
   const effectiveSF    = sf * v.speedMul;   // always 1.0
@@ -3121,7 +3128,7 @@ function makeAIInput(track, difficulty, aiIndex) {
 
     // ── SPEED TARGET ───────────────────────────────────
     // Lower minimum speed floor in tight corners so AI can commit to real braking in hairpins.
-    const curvFloor = (difficulty === 'extreme') ? 0.94 : 0.64;
+    const curvFloor = {ultraeasy: 0.54, easy: 0.59, medium: 0.64, hard: 0.70, extreme: 0.78}[difficulty] || 0.64;
     const curvFactor  = Math.max(curvFloor, 1.0 - maxCurv * effectiveCurvK * 8.8);
     const targetSpeed = k.maxSpeed * effectiveSF * curvFactor;
 
@@ -3319,7 +3326,7 @@ function makeAIInput(track, difficulty, aiIndex) {
     }
 
     const straightEnough = maxCurv < 0.055 && cornerSeverity < 0.2;
-    const ersReserve = {ultraeasy: 0.45, easy: 0.36, medium: 0.26, hard: 0.18, extreme: 0.12}[difficulty] || 0.26;
+    const ersReserve = {ultraeasy: 0.55, easy: 0.46, medium: 0.34, hard: 0.24, extreme: 0.16}[difficulty] || 0.34;
     const useERS = !k.isOffTrack &&
       !needsBrake &&
       !projectedOffTrack &&
@@ -3546,8 +3553,9 @@ class Race {
     this.shootoutDifficulty = window._shootoutDifficulty || 'medium';
 
     const pd = getPlayerData();
-    this.weather = pd.weather || 'dry';
+    this.weather = normalizeWeatherId(pd.weather || 'dry');
     this.tyres = pd.tyres || 'med';
+    this.collisionMode = normalizeCollisionMode(pd.collisionMode || 'collision');
     // Shootout is always exactly one timed lap.
     const lapCount = (mode === 'shootout') ? 1 : (pd.selectedLaps || trackData.laps);
     this.lapCount = lapCount;
@@ -3823,12 +3831,8 @@ class Race {
     wrap.innerHTML = html;
 
     // Build race-start tyre selector
-    const weather = this.weather || 'dry';
-    const avail = TYRE_DEFS.filter(t => {
-      if(t.wetOnly  && weather === 'dry') return false;
-      if(t.dryOnly  && (weather === 'wet' || weather === 'heavy')) return false;
-      return true;
-    });
+    const weather = normalizeWeatherId(this.weather || 'dry');
+    const avail = TYRE_DEFS.filter(t => isTyreSelectableForWeather(t, weather));
     const defaultTyre = this.karts[0] ? this.karts[0].tyreId : 'med';
     window._raceStartTyreId = defaultTyre;
     let tyreHtml = `<div style="margin:18px auto 0;max-width:380px;">
@@ -4033,19 +4037,9 @@ class Race {
             k._aiPitTimer = (k._aiPitTimer || 0) + dt;
             
             if(k._aiPitTimer < 0.3) {
-              const weather = window._raceWeather || 'dry';
-              let bestTyreIdx = 1;
-              
-              if(weather === 'wet' || weather === 'heavy') {
-                bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === 'wet');
-                if(bestTyreIdx < 0) bestTyreIdx = 3;
-              } else if(k.tyreWear > 0.5) {
-                bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === 'hard');
-                if(bestTyreIdx < 0) bestTyreIdx = 2;
-              } else {
-                bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === 'med');
-                if(bestTyreIdx < 0) bestTyreIdx = 1;
-              }
+              const weather = normalizeWeatherId(window._raceWeather || 'dry');
+              let bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === getAIPitTyreId(k, weather));
+              if(bestTyreIdx < 0) bestTyreIdx = isWetWeather(weather) ? 3 : 1;
               
               k.pitNavIdx = bestTyreIdx;
             } else if(k._aiPitTimer >= 0.5) {
@@ -4233,22 +4227,9 @@ class Race {
           
           if(k._aiPitTimer < 0.3) {
             // Choose best tyre based on weather and strategy
-            const weather = window._raceWeather || 'dry';
-            let bestTyreIdx = 1; // default to MED
-            
-            if(weather === 'wet' || weather === 'heavy') {
-              // Choose WET tyres in rain
-              bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === 'wet');
-              if(bestTyreIdx < 0) bestTyreIdx = 3; // INTS as fallback
-            } else if(k.tyreWear > 0.5) {
-              // If already worn, choose HARD for durability
-              bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === 'hard');
-              if(bestTyreIdx < 0) bestTyreIdx = 2;
-            } else {
-              // Fresh tyres: choose MED (balanced)
-              bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === 'med');
-              if(bestTyreIdx < 0) bestTyreIdx = 1;
-            }
+            const weather = normalizeWeatherId(window._raceWeather || 'dry');
+            let bestTyreIdx = TYRE_DEFS.findIndex(t => t.id === getAIPitTyreId(k, weather));
+            if(bestTyreIdx < 0) bestTyreIdx = isWetWeather(weather) ? 3 : 1;
             
             k.pitNavIdx = bestTyreIdx;
           } else if(k._aiPitTimer >= 0.5) {
@@ -4527,6 +4508,18 @@ class Race {
       drawPositionTracker(ctx, karts, W, H);
     }
 
+    if(this.collisionMode === 'nocollision' && this.phase !== 'qualifying' && this.phase !== 'quali-turn') {
+      ctx.fillStyle = 'rgba(0,0,0,0.72)';
+      ctx.fillRect(W/2 - 92, 32, 184, 24);
+      ctx.strokeStyle = 'rgba(0,245,255,0.35)';
+      ctx.strokeRect(W/2 - 92, 32, 184, 24);
+      ctx.fillStyle = '#00f5ff';
+      ctx.font = 'bold 10px Orbitron,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NO COLLISION MODE', W/2, 47);
+      ctx.textAlign = 'left';
+    }
+
     // Qualifying overlay
     if(this.phase === 'qualifying' || this.phase === 'quali-turn') {
       const title = this.phase === 'qualifying'
@@ -4607,7 +4600,7 @@ class Race {
     }
 
     // Rain visual overlay
-    if(this.weather === 'rain') {
+    if(isWetWeather(this.weather)) {
       if(!this._rainDrops) {
         this._rainDrops = Array.from({length:220}, () => ({
           x: Math.random()*W, y: Math.random()*H,
@@ -4615,7 +4608,7 @@ class Race {
         }));
       }
       ctx.save();
-      ctx.strokeStyle = 'rgba(155,210,255,0.45)';
+      ctx.strokeStyle = this.weather === 'heavy' ? 'rgba(155,210,255,0.62)' : 'rgba(155,210,255,0.45)';
       ctx.lineWidth = 1;
       const dtR = 0.016;
       this._rainDrops.forEach(d => {
@@ -5157,18 +5150,12 @@ function startRaceFromQualifying() {
   document.getElementById('screen-quali-results').classList.add('hidden');
 
   // Apply fresh race-start tyres to all karts
-  const weather = race.weather || 'dry';
+  const weather = normalizeWeatherId(race.weather || 'dry');
   const playerTyre = window._raceStartTyreId || race.tyres || 'med';
   const aiStratTyres = ['soft','med','med','hard','soft','med','hard','med','soft','med'];
   race.karts.forEach((k, i) => {
     const tyre = (i === 0) ? playerTyre : (aiStratTyres[i % aiStratTyres.length]);
-    // Validate tyre is legal in current weather
-    const def = TYRE_DEFS.find(t => t.id === tyre);
-    let safeTyre = tyre;
-    if(def) {
-      if(def.wetOnly && weather === 'dry') safeTyre = 'med';
-      if(def.dryOnly && (weather === 'wet' || weather === 'heavy')) safeTyre = 'wet';
-    }
+    const safeTyre = getLegalTyreId(tyre, weather);
     k._applyNewTyre(safeTyre, weather);
     // _applyNewTyre resets tyreWear to 0 — ensure flash doesn't show at race start
     k.flashTimer = 0; k.rankFlash = '';
@@ -5526,9 +5513,59 @@ const SETUP_DEFS = [
 ];
 
 const WEATHER_DEFS = [
-  { id:'dry',  label:'DRY ☀️',   gripMult:1.0,  speedPen:0 },
-  { id:'rain', label:'WET 🌧',   gripMult:0.72, speedPen:0.10 },
+  { id:'dry',   label:'DRY ☀️',   icon:'☀️', gripMult:1.0,  speedPen:0.00 },
+  { id:'wet',   label:'WET 🌧',   icon:'🌧', gripMult:0.78, speedPen:0.08 },
+  { id:'heavy', label:'STORM ⛈', icon:'⛈', gripMult:0.66, speedPen:0.14 },
 ];
+
+function normalizeWeatherId(weather) {
+  if(weather === 'rain') return 'wddddddddddddddddet';
+  return WEATHER_DEFS.some(w => w.id === weather) ? weather : 'dry';
+}
+
+function isWetWeather(weather) {
+  const weatherId = normalizeWeatherId(weather);
+  return weatherId === 'wet' || weatherId === 'heavy';
+}
+
+function getPreferredWetTyreId(weather) {
+  return normalizeWeatherId(weather) === 'heavy' ? 'wet' : 'ints';
+}
+
+function isTyreSelectableForWeather(tyre, weather) {
+  const wetRace = isWetWeather(weather);
+  if(tyre.wetOnly) return wetRace;
+  if(tyre.dryOnly) return !wetRace;
+  return true;
+}
+
+function isTyreWrongForWeather(tyre, weather) {
+  const wetRace = isWetWeather(weather);
+  return (!wetRace && tyre.dryPenalty) || (wetRace && tyre.dryOnly);
+}
+
+function getLegalTyreId(tyreId, weather) {
+  const tyre = TYRE_DEFS.find(t => t.id === tyreId);
+  if(!tyre) return isWetWeather(weather) ? getPreferredWetTyreId(weather) : 'med';
+  if(tyre.wetOnly && !isWetWeather(weather)) return 'med';
+  if(tyre.dryOnly && isWetWeather(weather)) return getPreferredWetTyreId(weather);
+  return tyreId;
+}
+
+function getAIPitTyreId(kart, weather) {
+  if(isWetWeather(weather)) return getPreferredWetTyreId(weather);
+  if(kart.tyreWear > 0.5) return 'hard';
+  return 'med';
+}
+
+function normalizeCollisionMode(mode) {
+  return mode === 'nocollision' ? 'nocollision' : 'collision';
+}
+
+function isKartContactEnabled() {
+  return !race || normalizeCollisionMode(race.collisionMode) === 'collision';
+}
+
 // Tyre compounds: lifespan = average laps before worn (at default 3-lap race)
 const TYRE_DEFS = [
   { id:'soft',  label:'SOFT',  color:'#ff3333', lifespan:14, desc:'Max grip · ~14 lap life',      gripBonus:0.14, speedBonus:28,  dryOnly:true  },
@@ -5796,15 +5833,23 @@ function getPlayerData() {
       p2setup: d.p2setup||'balanced',
       p1paint: d.p1paint||'cyan',
       p2paint: d.p2paint||'orange',
-      weather: d.weather||'dry',
+      weather: normalizeWeatherId(d.weather||'dry'),
       tyres:   d.tyres||'med',
       selectedLaps: d.selectedLaps||3,
       unlockedTracks: d.unlockedTracks||[0,1,2,3,4],
       trialPits: d.trialPits !== undefined ? d.trialPits : false,
+      collisionMode: normalizeCollisionMode(d.collisionMode),
     };
-  } catch(e) { return {coins:0,p1upg:{},p2upg:{},p1setup:'balanced',p2setup:'balanced',p1paint:'cyan',p2paint:'orange',weather:'dry',tyres:'med',selectedLaps:3,unlockedTracks:[0,1,2,3,4],trialPits:false}; }
+  } catch(e) { return {coins:0,p1upg:{},p2upg:{},p1setup:'balanced',p2setup:'balanced',p1paint:'cyan',p2paint:'orange',weather:'dry',tyres:'med',selectedLaps:3,unlockedTracks:[0,1,2,3,4],trialPits:false,collisionMode:'collision'}; }
 }
 function savePlayerData(d) {
+  if(d) {
+    d = {
+      ...d,
+      weather: normalizeWeatherId(d.weather),
+      collisionMode: normalizeCollisionMode(d.collisionMode)
+    };
+  }
   try { localStorage.setItem('kartblitz_player', JSON.stringify(d)); } catch(e){}
   // Cloud save via CrazyGames User Data SDK — syncs progress across devices/sessions
   CG.saveUserData('kartblitz_player', JSON.stringify(d));
@@ -6053,7 +6098,7 @@ function showSetupScreen(trackIdx) {
   WEATHER_DEFS.forEach(w => {
     const div = document.createElement('div');
     div.className = 'wx-card'+(pd.weather===w.id?' sel':'');
-    div.innerHTML = `<div style="font-size:26px">${w.id==='dry'?'☀️':'🌧'}</div><div class="setup-sname" style="font-size:11px;">${w.label}</div>`;
+    div.innerHTML = `<div style="font-size:26px">${w.icon}</div><div class="setup-sname" style="font-size:11px;">${w.label}</div>`;
     div.onclick = () => {
       const p = getPlayerData(); p.weather = w.id; savePlayerData(p);
       wxRow.querySelectorAll('.wx-card').forEach(c=>c.classList.remove('sel'));
@@ -6067,6 +6112,28 @@ function showSetupScreen(trackIdx) {
   buildQualiSetupUI();
 
   buildTyreRow();
+
+  const collisionSection = document.getElementById('collision-section');
+  const collisionRow = document.getElementById('collision-row');
+  const supportsCarCollision = currentMode === 'ai' || currentMode === 'versus';
+  collisionSection.style.display = supportsCarCollision ? '' : 'none';
+  collisionRow.innerHTML = '';
+  if(supportsCarCollision) {
+    [
+      { id:'collision', label:'COLLISION ON' },
+      { id:'nocollision', label:'NO COLLISION' }
+    ].forEach(opt => {
+      const b = document.createElement('button');
+      b.className = 'lap-opt' + (pd.collisionMode === opt.id ? ' sel' : '');
+      b.textContent = opt.label;
+      b.onclick = () => {
+        const p = getPlayerData(); p.collisionMode = opt.id; savePlayerData(p);
+        collisionRow.querySelectorAll('.lap-opt').forEach(x => x.classList.remove('sel'));
+        b.classList.add('sel');
+      };
+      collisionRow.appendChild(b);
+    });
+  }
 
   // Pit stop toggle (Time Trial only)
   const trialPitSection = document.getElementById('trial-pit-section');
@@ -6096,10 +6163,10 @@ function buildTyreRow() {
   tyreRow.innerHTML = '';
   const currentTrack = pendingTrackIdx !== null ? TRACKS[pendingTrackIdx] : null;
   TYRE_DEFS.forEach(tr => {
-    const isWet = pd.weather === 'rain';
+    const isWet = isWetWeather(pd.weather);
     // Block wet-only on dry; warn on dryPenalty in dry or dryOnly in wet
-    const blocked = (tr.wetOnly && !isWet);
-    const wrongWeather = (!isWet && tr.dryPenalty) || (isWet && tr.dryOnly);
+    const blocked = !isTyreSelectableForWeather(tr, pd.weather);
+    const wrongWeather = isTyreWrongForWeather(tr, pd.weather);
     const dim = blocked;
     const div = document.createElement('div');
     div.className = 'tyre-card'+(pd.tyres===tr.id?' sel':'');
@@ -6145,6 +6212,7 @@ function applyUpgradesToKart(kart, player) {
 }
 
 function applyWeatherToKart(kart, weather, tyreId) {
+  weather = normalizeWeatherId(weather);
   const wx = WEATHER_DEFS.find(w=>w.id===weather) || WEATHER_DEFS[0];
   const tyre = TYRE_DEFS.find(t=>t.id===tyreId) || TYRE_DEFS[1];
 
@@ -6154,7 +6222,7 @@ function applyWeatherToKart(kart, weather, tyreId) {
   kart.tyreWrongWeather = false;
 
   const isDry = weather === 'dry';
-  const isWet = weather === 'rain';
+  const isWet = isWetWeather(weather);
 
   // Massive penalty for completely wrong tyre on wrong surface
   if (isDry && tyre.dryPenalty) {
