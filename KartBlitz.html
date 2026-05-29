@@ -1137,7 +1137,8 @@ const TRACKS = [
 ];
 
 // Build splines, checkpoint geometry, and spatial grid
-const TRACK_WIDTH_SCALE = 4.0;
+// Width-only scaling: keeps waypoints/spline layout unchanged while widening driveable surface.
+const TRACK_WIDTH_SCALE = 8.0;
 
 TRACKS.forEach(tr => {
   tr.spline = buildSpline(tr.waypoints, 28);
@@ -1491,6 +1492,7 @@ class Kart {
     this._ghostRecord = null;   // current lap recording [{t,x,y,a},...]
     this._bestGhost   = null;   // saved recording of best lap
     this._ghostSampleTimer = 0; // decimate ghost samples to reduce GC pressure
+    this._contactJamTimer = 0;
   }
 
   update(dt, trackData, otherKarts) {
@@ -1559,27 +1561,30 @@ class Kart {
     // Both karts exchange momentum and are pushed apart on overlap.
     if(otherKarts && isKartContactEnabled()) {
       const KART_R = 18;
+      let contactHits = 0;
       for(const other of otherKarts) {
         if(other === this) continue;
         if(other.finished) continue;
         const dx = this.x - other.x, dy = this.y - other.y;
         const dist = Math.hypot(dx, dy);
         if(dist < KART_R * 2 && dist > 0.1) {
+          contactHits++;
           // Penetration depth
           const pen = KART_R * 2 - dist;
           const nx = dx / dist, ny = dy / dist; // normal pointing from other → this
           // Push apart equally
-          this.x  += nx * pen * 0.5;
-          this.y  += ny * pen * 0.5;
-          other.x -= nx * pen * 0.5;
-          other.y -= ny * pen * 0.5;
+          const pushShare = (this.isAI || other.isAI) ? 0.58 : 0.52;
+          this.x  += nx * pen * pushShare;
+          this.y  += ny * pen * pushShare;
+          other.x -= nx * pen * pushShare;
+          other.y -= ny * pen * pushShare;
           // Relative velocity along normal
           const relVx = this.speed * Math.cos(this.angle) - other.speed * Math.cos(other.angle);
           const relVy = this.speed * Math.sin(this.angle) - other.speed * Math.sin(other.angle);
           const relVn = relVx * nx + relVy * ny;
           // Only resolve if approaching
           if(relVn < 0) {
-            const impulse = relVn * 0.55; // restitution ~0.45
+            const impulse = relVn * 0.70; // stronger rebound to reduce AI clumping
             // Bleed the impulse into each kart's speed along their own heading
             this.speed  -= impulse * (Math.cos(this.angle)*nx  + Math.sin(this.angle)*ny);
             other.speed += impulse * (Math.cos(other.angle)*nx + Math.sin(other.angle)*ny);
@@ -1589,6 +1594,19 @@ class Kart {
             // Collision sound (quiet, not spammy)
             try { playCollision(0.22); } catch(e){}
           }
+        }
+      }
+
+      // Anti-pileup nudge for AI karts that stay in repeated low-speed contacts.
+      if(this.isAI) {
+        if(contactHits > 0 && Math.abs(this.speed) < 96) this._contactJamTimer += dt;
+        else this._contactJamTimer = Math.max(0, this._contactJamTimer - dt * 2.2);
+        if(this._contactJamTimer > 0.45 && trackData && trackData.spline) {
+          const jamTang = splineTangent(trackData.spline, this._nearestSplineIdx || 0);
+          this.x += jamTang.x * 8;
+          this.y += jamTang.y * 8;
+          this.speed = Math.max(this.speed, 90);
+          this._contactJamTimer = 0.18;
         }
       }
     }
@@ -1656,7 +1674,7 @@ class Kart {
     if(Math.abs(this.speed) > 4) {
       const speedRatio = Math.abs(this.speed) / this.maxSpeed;
       // Preserve more authority at high speed so turn-in feels sharper without making launches twitchy.
-      const steerFactor = Math.max(0.30, 1.02 - speedRatio * 0.64);
+      const steerFactor = Math.max(0.45, 1.05 - speedRatio * 0.48);
       const dir = this.speed >= 0 ? 1 : -1;
       if(inp.left) this.angle -= this.turnRate * steerFactor * dt * dir;
       if(inp.right) this.angle += this.turnRate * steerFactor * dt * dir;
@@ -3071,17 +3089,21 @@ function makeAIInput(track, difficulty, aiIndex) {
 
   let kart = null;
   let _stuckTimer = 0, _stuckX = 0, _stuckY = 0;
+  let _laneBias = (aiIndex % 2 === 0) ? -1 : 1;
+  let _laneHoldTimer = 0;
+  let _steerFilter = 0;
 
   const fn = function() {
     if (!kart) return { up:false, down:false, left:false, right:false, ers:false, drs:false };
     const k = kart;
     const nearIdx = k._nearestSplineIdx || 0;
+    _laneHoldTimer = Math.max(0, _laneHoldTimer - 0.016);
 
     // stuck check
     const moved = Math.hypot(k.x - _stuckX, k.y - _stuckY);
-    if (moved < 3) { _stuckTimer += 0.016; }
+    if (moved < 6) { _stuckTimer += 0.016; }
     else           { _stuckTimer = 0; _stuckX = k.x; _stuckY = k.y; }
-    const isStuck = _stuckTimer > 1.2;
+    const isStuck = _stuckTimer > 0.85;
 
     // off track or stuck, steer back to nearest point on track
     if (k.isOffTrack || isStuck) {
@@ -3128,7 +3150,7 @@ function makeAIInput(track, difficulty, aiIndex) {
 
     // ── SPEED TARGET ───────────────────────────────────
     // Lower minimum speed floor in tight corners so AI can commit to real braking in hairpins.
-    const curvFloor = {ultraeasy: 0.54, easy: 0.59, medium: 0.64, hard: 0.70, extreme: 0.78}[difficulty] || 0.64;
+    const curvFloor = {ultraeasy: 0.50, easy: 0.54, medium: 0.58, hard: 0.63, extreme: 0.70}[difficulty] || 0.58;
     const curvFactor  = Math.max(curvFloor, 1.0 - maxCurv * effectiveCurvK * 8.8);
     const targetSpeed = k.maxSpeed * effectiveSF * curvFactor;
 
@@ -3139,6 +3161,9 @@ function makeAIInput(track, difficulty, aiIndex) {
 
     // Low-speed racing line: outside on approach, inside near apex, then unwind.
     const halfW = track.trackWidth * 0.5;
+    const tangNear = splineTangent(spl, nearIdx);
+    const perpX0 = -tangNear.y, perpY0 = tangNear.x;
+    const lateralErr = (k.x - spl[nearIdx].x) * perpX0 + (k.y - spl[nearIdx].y) * perpY0;
     const cornerSeverity = Math.min(1, Math.max(0, (maxCurv - 0.07) / 0.22));
     let lateralOffset = 0;
     if(cornerSeverity > 0.12) {
@@ -3147,12 +3172,56 @@ function makeAIInput(track, difficulty, aiIndex) {
       if(distToApex < 0) distToApex += totalLen;
       const approachFrac = Math.max(0, Math.min(1, distToApex / Math.max(60, brDist)));
       const usable = Math.max(14, halfW - 14);
-      const outsideAmt = usable * (0.48 + 0.22 * speedRatio);
+      const outsideAmt = usable * (0.35 + 0.15 * speedRatio);
       const insideAmt  = usable * (0.32 + 0.34 * cornerSeverity);
       if(approachFrac > 0.55) lateralOffset = -turnSign * outsideAmt;
       else if(approachFrac > 0.20) lateralOffset = turnSign * insideAmt;
       else lateralOffset = turnSign * insideAmt * 0.35;
     }
+
+    // Traffic scan: detect slower or clustered karts ahead and choose alternate lane.
+    let trafficAhead = false;
+    let nearestTrafficArc = Infinity;
+    let laneVotes = 0;
+    const allKarts = (typeof race !== 'undefined' && race && race.karts) ? race.karts : null;
+    if(allKarts) {
+      const laneTolerance = Math.max(26, halfW * 0.22);
+      const trafficLookArc = Math.max(170, lookDist * 1.1);
+      const trafficLookDist = Math.max(140, lookDist);
+      for(const other of allKarts) {
+        if(other === k || other.finished) continue;
+        if(other.inPit || other.pitPhase !== null) continue;
+        const directDist = Math.hypot(other.x - k.x, other.y - k.y);
+        if(directDist > trafficLookDist) continue;
+        const otherIdx = other._nearestSplineIdx || 0;
+        let arcAhead = cum[otherIdx] - cum[nearIdx];
+        if(arcAhead < 0) arcAhead += totalLen;
+        if(arcAhead < 8 || arcAhead > trafficLookArc) continue;
+
+        const otherTang = splineTangent(spl, otherIdx);
+        const otherPerpX = -otherTang.y, otherPerpY = otherTang.x;
+        const otherLat = (other.x - spl[otherIdx].x) * otherPerpX + (other.y - spl[otherIdx].y) * otherPerpY;
+        if(Math.abs(otherLat - lateralErr) > laneTolerance) continue;
+
+        trafficAhead = true;
+        nearestTrafficArc = Math.min(nearestTrafficArc, arcAhead);
+        laneVotes += (otherLat >= lateralErr) ? -1 : 1;
+      }
+    }
+
+    if(trafficAhead && _laneHoldTimer <= 0) {
+      _laneBias = laneVotes === 0 ? -_laneBias : Math.sign(laneVotes);
+      _laneHoldTimer = 0.72 + cornerSeverity * 0.35;
+    }
+    if(trafficAhead || _laneHoldTimer > 0) {
+      const laneShift = Math.min(Math.max(20, halfW * 0.24), Math.max(20, halfW - 16));
+      lateralOffset += _laneBias * laneShift;
+      if(trafficAhead && nearestTrafficArc < 90 && Math.abs(k.speed) > 80) {
+        lateralOffset += _laneBias * Math.min(14, halfW * 0.10);
+      }
+    }
+    const edgeBuffer = Math.max(12, halfW * 0.08);
+    lateralOffset = Math.max(-(halfW - edgeBuffer), Math.min(halfW - edgeBuffer, lateralOffset));
 
     const tang = splineTangent(spl, tgtIdx);
     const normX = -tang.y, normY = tang.x;
@@ -3167,11 +3236,9 @@ function makeAIInput(track, difficulty, aiIndex) {
     // Lateral correction: pull AI back toward spline centreline when displaced.
     // Computes signed perpendicular distance from the nearest spline point and
     // blends a corrective angle into the pure-pursuit heading.
-    const tangNear = splineTangent(spl, nearIdx);
-    const perpX0 = -tangNear.y, perpY0 = tangNear.x;
-    const lateralErr = (k.x - spl[nearIdx].x) * perpX0 + (k.y - spl[nearIdx].y) * perpY0;
     // Correction up to ±0.45 rad (~26°) when at the track edge
-    const latCorr = (lateralErr / (track.trackWidth / 2)) * 0.45;
+    let latCorr = (lateralErr / Math.max(1, halfW)) * 0.48;
+    if(Math.abs(lateralErr) > halfW * 0.76) latCorr *= 1.35;
     diff -= latCorr;
     while (diff >  Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
@@ -3195,17 +3262,23 @@ function makeAIInput(track, difficulty, aiIndex) {
     const projY = k.y + Math.sin(k.angle) * projDist;
     const projIdx = idxAhead(nearIdx, projDist);
     const projErr = Math.hypot(projX - spl[projIdx].x, projY - spl[projIdx].y);
-    const strictHalf = halfW + 8;
+    const strictHalf = Math.max(halfW * 0.84, halfW - 6);
     const projectedOffTrack = projErr > strictHalf;
     const edgeNorm = Math.abs(lateralErr) / Math.max(1, halfW);
-    const edgePenalty = Math.max(0.45, 1.0 - Math.max(0, edgeNorm - 0.58) * 1.12);
-    const safeTargetSpeed = targetSpeed * edgePenalty;
+    const edgePenalty = Math.max(0.58, 1.0 - Math.max(0, edgeNorm - 0.62) * 0.92);
+    let safeTargetSpeed = targetSpeed * edgePenalty;
+    if(trafficAhead && nearestTrafficArc < 120 && !projectedOffTrack && edgeNorm < 0.86) {
+      safeTargetSpeed *= 1.07;
+    }
 
-    let needsBrake  = k.speed > safeTargetSpeed + (11 + cornerSeverity * 20);
-    if(overshootRisk > 0.62 && k.speed > safeTargetSpeed + 4) needsBrake = true;
-    if(projectedOffTrack || edgeNorm > 0.92) needsBrake = true;
-    const shouldAccel = !projectedOffTrack && edgeNorm < 0.90 && (k.speed < safeTargetSpeed - (6 + cornerSeverity * 5));
-    const adaptiveBrakeMulBase = 1 + Math.min(1.9, overshootRisk * (1.0 + cornerSeverity * 1.2));
+    let needsBrake  = k.speed > safeTargetSpeed + (6 + cornerSeverity * 12);
+    if(overshootRisk > 0.74 && k.speed > safeTargetSpeed + 7) needsBrake = true;
+    if(projectedOffTrack || edgeNorm > 0.90) needsBrake = true;
+    if(trafficAhead && nearestTrafficArc < 90 && !projectedOffTrack && edgeNorm < 0.84 && k.speed < safeTargetSpeed + 16) {
+      needsBrake = false;
+    }
+    const shouldAccel = !projectedOffTrack && edgeNorm < 0.88 && (k.speed < safeTargetSpeed - (4 + cornerSeverity * 4));
+    const adaptiveBrakeMulBase = 1 + Math.min(1.7, overshootRisk * (0.95 + cornerSeverity * 1.05));
     
     // ── AI PIT DECISION ────────────────────────────────────
     let shouldPit = false;
@@ -3307,9 +3380,12 @@ function makeAIInput(track, difficulty, aiIndex) {
       let cDiff = Math.atan2(cdy, cdx) - k.angle;
       while (cDiff >  Math.PI) cDiff -= Math.PI * 2;
       while (cDiff < -Math.PI) cDiff += Math.PI * 2;
-      steerBias = cDiff * 0.65;
+      steerBias = cDiff * 0.74;
     }
-    const finalSteer = (diff + steerBias) * mistakeSteering;
+    const targetSteer = (diff + steerBias) * mistakeSteering;
+    const steerSmoothing = projectedOffTrack ? 0.58 : (trafficAhead ? 0.44 : 0.34);
+    _steerFilter += (targetSteer - _steerFilter) * steerSmoothing;
+    const finalSteer = _steerFilter;
     const finalSteering = {
       left: finalSteer < -steerThresh,
       right: finalSteer > steerThresh
