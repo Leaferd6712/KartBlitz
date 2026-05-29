@@ -352,6 +352,7 @@ body::after{
 .back-btn{
   top:34px;
   left:34px;
+  z-index:25;
   padding:10px 18px;
   border:1px solid rgba(255,255,255,0.12);
   border-radius:999px;
@@ -2688,6 +2689,8 @@ class Kart {
     this._bestGhost   = null;   // saved recording of best lap
     this._ghostSampleTimer = 0; // decimate ghost samples to reduce GC pressure
     this._contactJamTimer = 0;
+    this._contactLineTimer = 0;
+    this._contactLineSign = 0;
   }
 
   update(dt, trackData, otherKarts) {
@@ -2794,6 +2797,17 @@ class Kart {
         const dist = Math.hypot(dx, dy);
         if(dist < KART_R * 2 && dist > 0.1) {
           contactHits++;
+          // Contact line rule: when cars touch, force AI cars onto opposite lane targets briefly.
+          const localLat = -Math.sin(this.angle) * dx + Math.cos(this.angle) * dy;
+          const sepSignThis = localLat >= 0 ? 1 : -1;
+          if(this.isAI) {
+            this._contactLineSign = sepSignThis;
+            this._contactLineTimer = Math.max(this._contactLineTimer || 0, 0.58);
+          }
+          if(other.isAI) {
+            other._contactLineSign = -sepSignThis;
+            other._contactLineTimer = Math.max(other._contactLineTimer || 0, 0.58);
+          }
           // Penetration depth
           const pen = KART_R * 2 - dist;
           const nx = dx / dist, ny = dy / dist; // normal pointing from other → this
@@ -4492,6 +4506,8 @@ function makeAIInput(track, difficulty, aiIndex) {
     if (!kart) return { up:false, down:false, left:false, right:false, ers:false, drs:false };
     const k = kart;
     const nearIdx = k._nearestSplineIdx || 0;
+    if(k._contactLineTimer > 0) k._contactLineTimer = Math.max(0, k._contactLineTimer - 0.016);
+    else k._contactLineSign = 0;
     _laneHoldTimer = Math.max(0, _laneHoldTimer - 0.016);
     _passCommitTimer = Math.max(0, _passCommitTimer - 0.016);
     _trainTimer = Math.max(0, _trainTimer - 0.010);
@@ -4585,6 +4601,17 @@ function makeAIInput(track, difficulty, aiIndex) {
     lateralOffset = clampLaneOffset(lateralOffset + cruiseLaneOffset * cruiseBlend);
 
     const laneShift = Math.min(Math.max(64, halfW * 0.64 * laneSpreadScale), Math.max(64, halfW - 8));
+
+    const contactLineActive = (k._contactLineTimer || 0) > 0.02;
+    if(contactLineActive) {
+      const contactSign = Math.sign(k._contactLineSign || _laneBias || 1) || 1;
+      const contactStrength = Math.min(1, (k._contactLineTimer || 0) / 0.58);
+      const forcedLane = clampLaneOffset(contactSign * Math.min(Math.max(72, halfW * 0.66 * laneSpreadScale), Math.max(72, halfW - 6)));
+      const blend = 0.68 + contactStrength * 0.26;
+      lateralOffset = clampLaneOffset(lateralOffset * (1 - blend) + forcedLane * blend);
+      _laneBias = contactSign;
+      _laneHoldTimer = Math.max(_laneHoldTimer, 0.42 + contactStrength * 0.50);
+    }
 
     // Traffic scan: detect slower or clustered karts ahead and choose alternate lane.
     let trafficAhead = false;
