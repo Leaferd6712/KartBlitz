@@ -1415,6 +1415,7 @@ function spawnDust(x,y,a) {
 }
 
 // ── KART CLASS ──────────────────────────────────────────
+const GAME_SPEED_MULT = 0.75; // global multiplier to reduce top speeds by 25%
 class Kart {
   constructor(id, spawnX, spawnY, angle, color, shadowColor, getInput) {
     this.id = id;
@@ -1424,13 +1425,13 @@ class Kart {
     this.color = color;
     this.shadowColor = shadowColor;
     this.getInput = getInput;
-    // physics - roughly 350 km/h top speed
-    this.maxSpeed = 469;
+    // physics - roughly 350 km/h top speed (scaled by GAME_SPEED_MULT)
+    this.maxSpeed = 469 * GAME_SPEED_MULT;
     this.accel = 296;
     this.brakeForce = 700;
     this.friction = 0.9915; // keep coasting lively, but make brake zones feel more deliberate
     this.turnRate = 2.68;
-    this.offTrackMaxSpd = 255;
+    this.offTrackMaxSpd = 255 * GAME_SPEED_MULT;
     this.offTrackAccel = 165;
     this.slipstreamBoost = false;
     // state
@@ -1456,7 +1457,7 @@ class Kart {
     // Tyre wear & pit stop
     this.tyreId       = 'med';
     this.tyreWear     = 0;      // 0.0=fresh → 1.0=dead
-    this.baseMaxSpeed = 352;   
+    this.baseMaxSpeed = 352 * GAME_SPEED_MULT;   
     this.baseTurnRate = 2.68;
     this.tyreWrongWeather = false;
     this.inPit        = false;
@@ -3053,7 +3054,9 @@ function makeAIInput(track, difficulty, aiIndex) {
     { speedMul: 1.01, brakeBias: 0.96, lookDist: 285 },
   ];
   const v = carVariations[aiIndex % 3];
-  const effectiveSF    = sf * v.speedMul;   // always 1.0
+  // Increase AI aggression: global multiplier to make AI faster by 25%
+  const AI_SPEED_MULT = 1.25; // 1.00 = baseline, 1.25 = +25%
+  const effectiveSF    = sf * v.speedMul * AI_SPEED_MULT;   // always 1.0
   const effectiveCurvK = curvK * v.brakeBias;
 
   const spl = track.spline;
@@ -5573,12 +5576,13 @@ const PAINT_COLORS = [
 ];
 
 // 5 upgrade types, 4 levels each, separate for P1 and P2
+// Expandable upgrade definitions: now 10 levels per upgrade for deeper progression
 const UPG_DEFS = [
-  { id:'speed',    name:'MAX SPEED',     icon:'🚀', costs:[40,100,200,380], bonuses:[40,95,175,280] },
-  { id:'accel',    name:'ACCELERATION',  icon:'⚡', costs:[35,85,170,320],  bonuses:[30,65,120,195] },
-  { id:'traction', name:'TRACTION',      icon:'🛞', costs:[30,75,150,290],  bonuses:[15,35,60,95]  },
-  { id:'braking',  name:'BRAKING',       icon:'🔴', costs:[30,75,150,290],  bonuses:[60,130,220,340]},
-  { id:'handling', name:'HANDLING',      icon:'🎯', costs:[35,85,170,320],  bonuses:[0.12,0.26,0.42,0.60]},
+  { id:'speed',    name:'MAX SPEED',     icon:'🚀', costs:[40,100,200,380,700,1200,2000,3200,5000,8000], bonuses:[40,95,175,280,420,590,790,1020,1280,1600] },
+  { id:'accel',    name:'ACCELERATION',  icon:'⚡', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[30,65,120,195,285,395,530,690,880,1100] },
+  { id:'traction', name:'TRACTION',      icon:'🛞', costs:[30,75,150,290,540,980,1600,2500,3700,5400],  bonuses:[15,35,60,95,135,185,240,305,380,470]  },
+  { id:'braking',  name:'BRAKING',       icon:'🔴', costs:[30,75,150,290,540,980,1600,2500,3700,5400],  bonuses:[60,130,220,340,480,640,820,1020,1250,1500]},
+  { id:'handling', name:'HANDLING',      icon:'🎯', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[0.12,0.26,0.42,0.60,0.82,1.06,1.32,1.60,1.92,2.30]},
 ];
 
 const SETUP_DEFS = [
@@ -5586,6 +5590,8 @@ const SETUP_DEFS = [
   { id:'balanced',  name:'BALANCED',  icon:'⚖️', desc:'Default configuration<br>All stats normal',    speedMult:1.00, turnMult:1.00, tractBonus:0  },
   { id:'speed',     name:'SPEED RUN', icon:'💨', desc:'Maximum top speed<br>Less cornering grip',    speedMult:1.14, turnMult:0.82, tractBonus:-12},
   { id:'wet',       name:'WET SETUP', icon:'🌧', desc:'Optimised for rain<br>Better wet traction',   speedMult:0.93, turnMult:1.10, tractBonus:30 },
+  // Custom placeholder: actual values are stored per-player in player data under <player>customSetup
+  { id:'custom',    name:'CUSTOM',     icon:'🛠', desc:'Create your own setup: tweak speed, downforce and traction', speedMult:1.00, turnMult:1.00, tractBonus:0 },
 ];
 
 const WEATHER_DEFS = [
@@ -5875,14 +5881,15 @@ function buildHowToPane(){
 
     <div class="howto-section">
       <div class="howto-heading">🔧 GARAGE — UPGRADES &amp; PAINT</div>
-      <p>Access from the main menu. Spend coins to permanently improve your kart or change its colour.</p>
-      <div class="info-kv"><span class="info-k">SPEED</span><span class="info-v">Raises maximum top speed. Up to ~+160 km/h at level 4.</span></div>
-      <div class="info-kv"><span class="info-k">ACCELERATION</span><span class="info-v">Increases thrust force. Reach top speed quicker out of corners.</span></div>
-      <div class="info-kv"><span class="info-k">TRACTION</span><span class="info-v">Reduces off-track speed penalty and improves grass drag.</span></div>
-      <div class="info-kv"><span class="info-k">BRAKING</span><span class="info-v">Stronger braking force. Shorten braking distances at level 4.</span></div>
-      <div class="info-kv"><span class="info-k">HANDLING</span><span class="info-v">Improves turn rate and steering feel at high speed.</span></div>
+      <p>Open the Garage from the main menu to spend coins on permanent upgrades or to change your kart's paint. Upgrades now have deeper progression and a new CUSTOM setup option.</p>
+      <div class="info-kv"><span class="info-k">SPEED</span><span class="info-v">Raises maximum top speed (stackable through multiple levels).</span></div>
+      <div class="info-kv"><span class="info-k">ACCELERATION</span><span class="info-v">Improves how quickly you reach top speed coming out of corners.</span></div>
+      <div class="info-kv"><span class="info-k">TRACTION</span><span class="info-v">Reduces off-track penalties and improves grip in slow corners.</span></div>
+      <div class="info-kv"><span class="info-k">BRAKING</span><span class="info-v">Stronger brakes shorten stopping distance and help late braking.</span></div>
+      <div class="info-kv"><span class="info-k">HANDLING</span><span class="info-v">Increases turn responsiveness and high-speed steering authority.</span></div>
+      <div class="info-kv"><span class="info-k">CUSTOM SETUP</span><span class="info-v">Choose the CUSTOM setup in Race Setup to manually tweak Top-Speed, Turn-Rate and Traction bonus before a race.</span></div>
       <div class="info-kv"><span class="info-k">PAINT</span><span class="info-v">Cosmetic only. 8 colours available for P1 and P2 independently.</span></div>
-      <p class="howto-tip">P1 and P2 upgrades are completely separate — each player has and spends their own coin pool.</p>
+      <p class="howto-tip">P1 and P2 have separate upgrade trees and coin balances. Custom setups are saved per-player and applied when a race starts.</p>
     </div>
 
     <div class="howto-section" style="border-bottom:none">
@@ -6149,9 +6156,77 @@ function showSetupScreen(trackIdx) {
       const p = getPlayerData(); p.p1setup = s.id; savePlayerData(p);
       grid.querySelectorAll('.setup-card').forEach(c=>c.classList.remove('sel'));
       div.classList.add('sel');
+      // Re-render to show/hide custom controls immediately
+      showSetupScreen(pendingTrackIdx);
     };
     grid.appendChild(div);
   });
+
+  // Custom setup controls (shown when player selects the CUSTOM setup)
+  const existingCustom = document.getElementById('custom-setup-controls');
+  if(existingCustom) existingCustom.remove();
+  const customWrap = document.createElement('div');
+  customWrap.id = 'custom-setup-controls';
+  customWrap.style.width = '760px';
+  customWrap.style.margin = '18px auto 0';
+  customWrap.style.padding = '12px';
+  customWrap.style.background = 'rgba(255,255,255,0.02)';
+  customWrap.style.border = '1px solid rgba(0,245,255,0.06)';
+
+  function renderCustomControls() {
+    const p = getPlayerData();
+    if(p.p1setup !== 'custom') { customWrap.style.display = 'none'; return; }
+    customWrap.style.display = '';
+    const cust = p.p1customSetup || { speedMult:1.00, turnMult:1.00, tractBonus:0 };
+    customWrap.innerHTML = `
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Top Speed Mult (${cust.speedMult.toFixed(2)})</div>
+          <input id="cust-speed" type="range" min="0.70" max="1.25" step="0.01" value="${cust.speedMult}">
+        </div>
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Turn Rate Mult (${cust.turnMult.toFixed(2)})</div>
+          <input id="cust-turn" type="range" min="0.70" max="1.40" step="0.01" value="${cust.turnMult}">
+        </div>
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Traction Bonus (${cust.tractBonus} units)</div>
+          <input id="cust-tract" type="range" min="-40" max="80" step="1" value="${cust.tractBonus}">
+        </div>
+      </div>
+      <div style="margin-top:8px;text-align:right;">
+        <button class="btn btn-gold btn-sm" id="cust-save">SAVE CUSTOM SETUP</button>
+      </div>
+    `;
+
+    // Wire events
+    customWrap.querySelector('#cust-speed').oninput = (e) => {
+      const v = parseFloat(e.target.value);
+      customWrap.querySelector('div').querySelector('div').textContent = `Top Speed Mult (${v.toFixed(2)})`;
+    };
+    customWrap.querySelector('#cust-turn').oninput = (e) => {
+      const v = parseFloat(e.target.value);
+      // update label (second control)
+      const labels = customWrap.querySelectorAll('div > div');
+      if(labels[1]) labels[1].textContent = `Turn Rate Mult (${v.toFixed(2)})`;
+    };
+    customWrap.querySelector('#cust-tract').oninput = (e) => {
+      const v = parseInt(e.target.value,10);
+      const labels = customWrap.querySelectorAll('div > div');
+      if(labels[2]) labels[2].textContent = `Traction Bonus (${v} units)`;
+    };
+    customWrap.querySelector('#cust-save').onclick = () => {
+      const speed = parseFloat(customWrap.querySelector('#cust-speed').value);
+      const turn  = parseFloat(customWrap.querySelector('#cust-turn').value);
+      const tract = parseInt(customWrap.querySelector('#cust-tract').value,10);
+      const pd2 = getPlayerData(); pd2.p1customSetup = { speedMult: speed, turnMult: turn, tractBonus: tract }; pd2.p1setup = 'custom'; savePlayerData(pd2);
+      // Refresh the setup grid so selection shows
+      showSetupScreen(pendingTrackIdx);
+    };
+  }
+
+  // Insert custom controls after the grid
+  grid.parentNode.insertBefore(customWrap, grid.nextSibling);
+  renderCustomControls();
 
   // Lap count
   const lapRow = document.getElementById('lap-row');
@@ -6270,18 +6345,23 @@ function applyUpgradesToKart(kart, player) {
   const pd = getPlayerData();
   const upgs = pd[player+'upg'] || {};
   const setupId = pd[player+'setup'] || 'balanced';
-  const setup = SETUP_DEFS.find(s=>s.id===setupId) || SETUP_DEFS[1];
+  let setup = SETUP_DEFS.find(s=>s.id===setupId) || SETUP_DEFS[1];
+  // If player selected a custom setup, read numeric values from saved player data
+  if(setup.id === 'custom') {
+    const cust = pd[player+'customSetup'] || { speedMult:1.00, turnMult:1.00, tractBonus:0 };
+    setup = { id:'custom', name:'CUSTOM', speedMult: Number(cust.speedMult) || 1.00, turnMult: Number(cust.turnMult) || 1.00, tractBonus: Number(cust.tractBonus) || 0 };
+  }
 
   const get = (id) => {
     const upg = UPG_DEFS.find(u=>u.id===id);
     const lvl = upgs[id]||0;
     return lvl > 0 ? upg.bonuses[lvl-1] : 0;
   };
-  kart.maxSpeed = (469 + get('speed')) * setup.speedMult;
+  kart.maxSpeed = ((469 + get('speed')) * setup.speedMult) * GAME_SPEED_MULT;
   kart.accel    = 304 + get('accel');
   kart.brakeForce = 620 + get('braking');
   kart.turnRate = (2.55 + get('handling')) * setup.turnMult;
-  kart.offTrackMaxSpd = Math.max(30, 80 + get('traction') + setup.tractBonus);
+  kart.offTrackMaxSpd = Math.max(30, 80 + get('traction') + setup.tractBonus) * GAME_SPEED_MULT;
   kart._baseAccel = kart.accel;
   // Store raw values for pit stop tyre re-application
   kart._upgradeBase = { maxSpeed: kart.maxSpeed, turnRate: kart.turnRate, accel: kart.accel };
