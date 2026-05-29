@@ -3464,163 +3464,254 @@ function drawScenery(ctx, td, ofx, ofy) {
   }
 }
 
-function drawTrack(ctx, td, camX, camY, camW, camH, kartBits) {
-  const spl = td.spline;
-  const ofx = camW/2 - camX, ofy = camH/2 - camY;
+let _trackBaseCache = null;
 
-  // Background
-  ctx.fillStyle = td.bgColor;
-  ctx.fillRect(0,0,camW,camH);
+function clearTrackBaseCache() {
+  _trackBaseCache = null;
+}
 
-  // Grass with checker pattern
-  const gCtx = ctx;
-  gCtx.fillStyle = td.grassColor;
-  gCtx.fillRect(0,0,camW,camH);
+function buildTrackBaseCache(td) {
+  const spl = td && td.spline;
+  if(!td || !spl || !spl.length) return null;
 
-  // World-space grass checker tiles (scroll with camera)
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const pad = Math.max(220, (td.trackWidth || 0) + 180);
+  const addPoint = (x, y, extra = 0) => {
+    minX = Math.min(minX, x - extra);
+    minY = Math.min(minY, y - extra);
+    maxX = Math.max(maxX, x + extra);
+    maxY = Math.max(maxY, y + extra);
+  };
+
+  spl.forEach(p => addPoint(p.x, p.y, pad));
+  if(td.pitLane && td.pitLane.path) td.pitLane.path.forEach(p => addPoint(p.x, p.y, pad));
+  if(td.scenery) {
+    (td.scenery.stands || []).forEach(s => addPoint(s.x, s.y, 140));
+    (td.scenery.trees || []).forEach(t => addPoint(t.x, t.y, (t.r || 24) + 40));
+    (td.scenery.adboards || []).forEach(a => addPoint(a.x, a.y, 120));
+  }
+
+  if(!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return null;
+
+  minX = Math.floor(minX);
+  minY = Math.floor(minY);
+  maxX = Math.ceil(maxX);
+  maxY = Math.ceil(maxY);
+
+  const width = Math.max(1, maxX - minX);
+  const height = Math.max(1, maxY - minY);
+  const cacheCanvas = document.createElement('canvas');
+  cacheCanvas.width = width;
+  cacheCanvas.height = height;
+  const cacheCtx = cacheCanvas.getContext('2d');
+  const ofx = -minX;
+  const ofy = -minY;
+
+  cacheCtx.fillStyle = td.bgColor;
+  cacheCtx.fillRect(0, 0, width, height);
+  cacheCtx.fillStyle = td.grassColor;
+  cacheCtx.fillRect(0, 0, width, height);
+
   const stripeSize = 60;
-  gCtx.save();
-  gCtx.globalAlpha = 0.3;
-  const worldMinX = Math.floor((camX - camW/2) / stripeSize) * stripeSize;
-  const worldMinY = Math.floor((camY - camH/2) / stripeSize) * stripeSize;
-  const worldMaxX = camX + camW/2 + stripeSize;
-  const worldMaxY = camY + camH/2 + stripeSize;
+  cacheCtx.save();
+  cacheCtx.globalAlpha = 0.3;
+  const worldMinX = Math.floor(minX / stripeSize) * stripeSize;
+  const worldMinY = Math.floor(minY / stripeSize) * stripeSize;
+  const worldMaxX = maxX + stripeSize;
+  const worldMaxY = maxY + stripeSize;
   for(let wx = worldMinX; wx < worldMaxX; wx += stripeSize) {
     for(let wy = worldMinY; wy < worldMaxY; wy += stripeSize) {
-      if((Math.floor(wx/stripeSize) + Math.floor(wy/stripeSize)) % 2 === 0) {
-        gCtx.fillStyle = td.grassColor2;
-        gCtx.fillRect(wx + ofx, wy + ofy, stripeSize, stripeSize);
+      if((Math.floor(wx / stripeSize) + Math.floor(wy / stripeSize)) % 2 === 0) {
+        cacheCtx.fillStyle = td.grassColor2;
+        cacheCtx.fillRect(wx + ofx, wy + ofy, stripeSize, stripeSize);
       }
     }
   }
-  gCtx.restore();
+  cacheCtx.restore();
 
-  // Draw scenery (grandstands, trees, ad boards) in the grass, before the track surface
-  drawScenery(ctx, td, ofx, ofy);
+  drawScenery(cacheCtx, td, ofx, ofy);
+  drawPitLane(cacheCtx, td, ofx, ofy);
 
-  // Draw pit lane road beneath the main track surface (track covers the junctions)
-  drawPitLane(ctx, td, ofx, ofy);
+  cacheCtx.beginPath();
+  cacheCtx.moveTo(spl[0].x + ofx, spl[0].y + ofy);
+  for(let i = 1; i < spl.length; i++) cacheCtx.lineTo(spl[i].x + ofx, spl[i].y + ofy);
+  cacheCtx.closePath();
+  cacheCtx.strokeStyle = td.borderColor;
+  cacheCtx.lineWidth = td.trackWidth + 8;
+  cacheCtx.lineCap = 'round';
+  cacheCtx.lineJoin = 'round';
+  cacheCtx.stroke();
 
-  // Track shadow/border (slightly wider)
-  ctx.beginPath();
-  ctx.moveTo(spl[0].x+ofx, spl[0].y+ofy);
-  for(let i=1;i<spl.length;i++) ctx.lineTo(spl[i].x+ofx, spl[i].y+ofy);
-  ctx.closePath();
-  ctx.strokeStyle = td.borderColor;
-  ctx.lineWidth = td.trackWidth + 8;
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.stroke();
+  cacheCtx.beginPath();
+  cacheCtx.moveTo(spl[0].x + ofx, spl[0].y + ofy);
+  for(let i = 1; i < spl.length; i++) cacheCtx.lineTo(spl[i].x + ofx, spl[i].y + ofy);
+  cacheCtx.closePath();
+  cacheCtx.strokeStyle = td.trackColor;
+  cacheCtx.lineWidth = td.trackWidth;
+  cacheCtx.stroke();
 
-  // Track surface
-  ctx.beginPath();
-  ctx.moveTo(spl[0].x+ofx, spl[0].y+ofy);
-  for(let i=1;i<spl.length;i++) ctx.lineTo(spl[i].x+ofx, spl[i].y+ofy);
-  ctx.closePath();
-  ctx.strokeStyle = td.trackColor;
-  ctx.lineWidth = td.trackWidth;
-  ctx.stroke();
+  cacheCtx.setLineDash([24, 16]);
+  cacheCtx.strokeStyle = 'rgba(255,255,255,0.25)';
+  cacheCtx.lineWidth = 2;
+  cacheCtx.beginPath();
+  cacheCtx.moveTo(spl[0].x + ofx, spl[0].y + ofy);
+  for(let i = 1; i < spl.length; i++) cacheCtx.lineTo(spl[i].x + ofx, spl[i].y + ofy);
+  cacheCtx.closePath();
+  cacheCtx.stroke();
+  cacheCtx.setLineDash([]);
 
-  // Dashed center line
-  ctx.setLineDash([24,16]);
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(spl[0].x+ofx, spl[0].y+ofy);
-  for(let i=1;i<spl.length;i++) ctx.lineTo(spl[i].x+ofx, spl[i].y+ofy);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Racing line removed
-
-  // Kerb markers: red/white stripes on inside of sharp corners only
   {
     const n = spl.length;
-    let kbPrevTx = 0, kbPrevTy = 0, kc = 0;
-    // Use a smoothed curvature signal to avoid random kerbs on barely-curved sections
     const curvSmooth = new Float32Array(n);
+    let kc = 0;
     for(let i = 1; i < n - 1; i++) {
-      const prev = spl[(i-1+n)%n], next = spl[(i+1)%n];
+      const prev = spl[(i - 1 + n) % n], next = spl[(i + 1) % n];
       const tx = next.x - prev.x, ty = next.y - prev.y;
       const tlen = Math.hypot(tx, ty) || 1;
-      const tnx = tx/tlen, tny = ty/tlen;
-      const px0 = spl[(i-2+n)%n], nx2 = spl[(i+2)%n];
+      const tnx = tx / tlen, tny = ty / tlen;
+      const px0 = spl[(i - 2 + n) % n], nx2 = spl[(i + 2) % n];
       const tx0 = spl[i].x - px0.x, ty0 = spl[i].y - px0.y;
-      const tl0 = Math.hypot(tx0,ty0)||1;
-      curvSmooth[i] = tnx*(ty0/tl0) - tny*(tx0/tl0); // cross product = signed curvature
+      const tl0 = Math.hypot(tx0, ty0) || 1;
+      curvSmooth[i] = tnx * (ty0 / tl0) - tny * (tx0 / tl0);
     }
     for(let i = 1; i < n; i++) {
-      const prev = spl[(i-1+n)%n], next = spl[(i+1)%n];
+      const prev = spl[(i - 1 + n) % n], next = spl[(i + 1) % n];
       const tx = next.x - prev.x, ty = next.y - prev.y;
       const tlen = Math.hypot(tx, ty) || 1;
-      const tnx = tx/tlen, tny = ty/tlen;
+      const tnx = tx / tlen, tny = ty / tlen;
       const nx = -tny, ny = tnx;
       const curv = curvSmooth[i];
-      // Only draw kerbs at genuinely sharp corners (higher threshold = no random blips)
       if(Math.abs(curv) > 0.025 && i % 3 === 0) {
         const sign = Math.sign(curv);
         const hw = td.trackWidth * 0.5;
         const kx1 = spl[i].x + nx * hw * sign + ofx;
         const ky1 = spl[i].y + ny * hw * sign + ofy;
-        ctx.strokeStyle = (kc % 2 === 0) ? '#cc1111' : '#eeeeee';
-        ctx.lineWidth = 8; ctx.lineCap = 'square';
-        ctx.beginPath();
-        ctx.moveTo(kx1, ky1);
-        ctx.lineTo(kx1 + tnx * 11, ky1 + tny * 11);
-        ctx.stroke();
+        cacheCtx.strokeStyle = (kc % 2 === 0) ? '#cc1111' : '#eeeeee';
+        cacheCtx.lineWidth = 8;
+        cacheCtx.lineCap = 'square';
+        cacheCtx.beginPath();
+        cacheCtx.moveTo(kx1, ky1);
+        cacheCtx.lineTo(kx1 + tnx * 11, ky1 + tny * 11);
+        cacheCtx.stroke();
         kc++;
       }
-
       if(Math.abs(curv) > 0.033 && i % 18 === 0) {
         const sign = Math.sign(curv) || 1;
         const hw = td.trackWidth * 0.5;
         const bx = spl[i].x - nx * (hw + 30) * sign + ofx;
         const by = spl[i].y - ny * (hw + 30) * sign + ofy;
-        ctx.save();
-        ctx.translate(bx, by);
-        ctx.rotate(Math.atan2(ty, tx));
-        ctx.fillStyle = 'rgba(255,215,0,0.95)';
-        ctx.fillRect(-16, -12, 32, 24);
-        ctx.strokeStyle = '#111';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-16, -12, 32, 24);
-        ctx.fillStyle = '#111';
-        ctx.font = 'bold 12px Orbitron,sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('!', 0, 1);
-        ctx.restore();
+        cacheCtx.save();
+        cacheCtx.translate(bx, by);
+        cacheCtx.rotate(Math.atan2(ty, tx));
+        cacheCtx.fillStyle = 'rgba(255,215,0,0.95)';
+        cacheCtx.fillRect(-16, -12, 32, 24);
+        cacheCtx.strokeStyle = '#111';
+        cacheCtx.lineWidth = 2;
+        cacheCtx.strokeRect(-16, -12, 32, 24);
+        cacheCtx.fillStyle = '#111';
+        cacheCtx.font = 'bold 12px Orbitron,sans-serif';
+        cacheCtx.textAlign = 'center';
+        cacheCtx.textBaseline = 'middle';
+        cacheCtx.fillText('!', 0, 1);
+        cacheCtx.restore();
       }
     }
   }
 
-  // Track edge markings (rumble strips)
-  ctx.strokeStyle = td.borderColor;
-  ctx.lineWidth = 5;
-  ctx.globalAlpha = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(spl[0].x+ofx, spl[0].y+ofy);
-  for(let i=1;i<spl.length;i++) ctx.lineTo(spl[i].x+ofx, spl[i].y+ofy);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.globalAlpha = 1;
+  cacheCtx.strokeStyle = td.borderColor;
+  cacheCtx.lineWidth = 5;
+  cacheCtx.globalAlpha = 0.5;
+  cacheCtx.beginPath();
+  cacheCtx.moveTo(spl[0].x + ofx, spl[0].y + ofy);
+  for(let i = 1; i < spl.length; i++) cacheCtx.lineTo(spl[i].x + ofx, spl[i].y + ofy);
+  cacheCtx.closePath();
+  cacheCtx.stroke();
+  cacheCtx.globalAlpha = 1;
 
-  // Start/finish line
   const sf = td.cpLines[0];
-  const sfAngle = Math.atan2(sf.y2-sf.y1, sf.x2-sf.x1);
-  ctx.save();
-  ctx.translate(sf.cx+ofx, sf.cy+ofy);
-  ctx.rotate(sfAngle);
-  const sfW = Math.hypot(sf.x2-sf.x1, sf.y2-sf.y1);
-  // Chequered flag pattern
+  const sfAngle = Math.atan2(sf.y2 - sf.y1, sf.x2 - sf.x1);
+  cacheCtx.save();
+  cacheCtx.translate(sf.cx + ofx, sf.cy + ofy);
+  cacheCtx.rotate(sfAngle);
+  const sfW = Math.hypot(sf.x2 - sf.x1, sf.y2 - sf.y1);
   const sqSize = 8;
-  for(let ci=0; ci<sfW/sqSize+1; ci++) {
-    for(let ri=0; ri<3; ri++) {
-      ctx.fillStyle = (ci+ri)%2===0 ? '#ffffff' : '#000000';
-      ctx.fillRect(ci*sqSize - sfW/2, ri*sqSize - sqSize*1.5, sqSize, sqSize);
+  for(let ci = 0; ci < sfW / sqSize + 1; ci++) {
+    for(let ri = 0; ri < 3; ri++) {
+      cacheCtx.fillStyle = (ci + ri) % 2 === 0 ? '#ffffff' : '#000000';
+      cacheCtx.fillRect(ci * sqSize - sfW / 2, ri * sqSize - sqSize * 1.5, sqSize, sqSize);
     }
   }
-  ctx.restore();
+  cacheCtx.restore();
+
+  if(td.drsZones) {
+    for(const zone of td.drsZones) {
+      cacheCtx.save();
+      cacheCtx.lineCap = 'round';
+      cacheCtx.setLineDash([]);
+      cacheCtx.beginPath();
+      cacheCtx.moveTo(zone.x1 + ofx, zone.y1 + ofy);
+      cacheCtx.lineTo(zone.x2 + ofx, zone.y2 + ofy);
+      cacheCtx.strokeStyle = 'rgba(0,120,255,0.32)';
+      cacheCtx.lineWidth = 20;
+      cacheCtx.stroke();
+      cacheCtx.beginPath();
+      cacheCtx.moveTo(zone.x1 + ofx, zone.y1 + ofy);
+      cacheCtx.lineTo(zone.x2 + ofx, zone.y2 + ofy);
+      cacheCtx.strokeStyle = '#2299ff';
+      cacheCtx.lineWidth = 4;
+      cacheCtx.stroke();
+      cacheCtx.fillStyle = '#66bbff';
+      cacheCtx.font = 'bold 10px Orbitron,sans-serif';
+      cacheCtx.textAlign = 'center';
+      cacheCtx.textBaseline = 'middle';
+      cacheCtx.fillText('DRS', zone.cx + ofx, zone.cy + ofy - 16);
+      cacheCtx.restore();
+    }
+  }
+
+  drawPitGarage(cacheCtx, td, ofx, ofy);
+
+  return {
+    trackId: td.id,
+    canvas: cacheCanvas,
+    minX,
+    minY,
+    maxX,
+    maxY
+  };
+}
+
+function ensureTrackBaseCache(td) {
+  if(!_trackBaseCache || _trackBaseCache.trackId !== td.id) {
+    _trackBaseCache = buildTrackBaseCache(td);
+  }
+  return _trackBaseCache;
+}
+
+function drawTrackBaseCache(ctx, td, camX, camY, camW, camH) {
+  const cache = ensureTrackBaseCache(td);
+  if(!cache || !cache.canvas) return false;
+  const worldLeft = camX - camW * 0.5;
+  const worldTop = camY - camH * 0.5;
+  const srcX = worldLeft - cache.minX;
+  const srcY = worldTop - cache.minY;
+  const sx = Math.max(0, Math.floor(srcX));
+  const sy = Math.max(0, Math.floor(srcY));
+  const dx = Math.max(0, Math.floor(sx - srcX));
+  const dy = Math.max(0, Math.floor(sy - srcY));
+  const sw = Math.min(camW - dx, cache.canvas.width - sx);
+  const sh = Math.min(camH - dy, cache.canvas.height - sy);
+  ctx.fillStyle = td.bgColor;
+  ctx.fillRect(0, 0, camW, camH);
+  if(sw <= 0 || sh <= 0) return false;
+  ctx.drawImage(cache.canvas, sx, sy, sw, sh, dx, dy, sw, sh);
+  return true;
+}
+
+function drawTrack(ctx, td, camX, camY, camW, camH, kartBits) {
+  const spl = td.spline;
+  const ofx = camW/2 - camX, ofy = camH/2 - camY;
+  drawTrackBaseCache(ctx, td, camX, camY, camW, camH);
 
   // Checkpoint lines — bright yellow (pending) → green (passed this lap)
   for(let i=1;i<td.cpLines.length;i++) {
@@ -3654,38 +3745,6 @@ function drawTrack(ctx, td, camX, camY, camW, camH, kartBits) {
     ctx.restore();
   }
 
-  // DRS zone entry gates (blue)
-  if(td.drsZones) {
-    for(const zone of td.drsZones) {
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.setLineDash([]);
-      // Outer glow
-      ctx.beginPath();
-      ctx.moveTo(zone.x1+ofx, zone.y1+ofy);
-      ctx.lineTo(zone.x2+ofx, zone.y2+ofy);
-      ctx.strokeStyle = 'rgba(0,120,255,0.32)';
-      ctx.lineWidth = 20;
-      ctx.stroke();
-      // Core line
-      ctx.beginPath();
-      ctx.moveTo(zone.x1+ofx, zone.y1+ofy);
-      ctx.lineTo(zone.x2+ofx, zone.y2+ofy);
-      ctx.strokeStyle = '#2299ff';
-      ctx.lineWidth = 4;
-      ctx.stroke();
-      // DRS label above the gate
-      ctx.fillStyle = '#66bbff';
-      ctx.font = 'bold 10px Orbitron,sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('DRS', zone.cx+ofx, zone.cy+ofy - 16);
-      ctx.restore();
-    }
-  }
-
-  // Draw pit garage
-  drawPitGarage(ctx, td, ofx, ofy);
 }
 
 // ── PIT LANE ROAD DRAW ──────────────────────────────────
@@ -6993,6 +7052,7 @@ function incRaceCount() { try { localStorage.setItem('kartblitz_racecount', Stri
 
 function selectTrackStart(idx) {
   initAudio();
+  clearTrackBaseCache();
   incRaceCount(); // track race count for FTUE hint
   const t = TRACKS[idx];
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
