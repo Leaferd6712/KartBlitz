@@ -17,7 +17,7 @@ body{font-family:'Rajdhani',sans-serif;color:var(--text);}
 .scanlines{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.08) 3px,rgba(0,0,0,.08) 4px);z-index:10;}
 .glow-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;pointer-events:none;}
 .title-wrap{position:relative;text-align:center;z-index:2;}
-.title-logo{font-family:'Orbitron',sans-serif;font-size:clamp(64px,10vw,108px);font-weight:900;line-height:.95;background:linear-gradient(135deg,#00f5ff 0%,#ffffff 40%,#ff6b35 70%,#ffd700 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 40px rgba(0,245,255,.6));animation:logoPulse 3s ease-in-out infinite;}
+.title-logo{font-family:'Orbitron',sans-serif;font-size:clamp(64px,10vw,108px);font-weight:900;line-height:.95;background:linear-gradient(135deg,#00f5ff 0%,#ffffff 40%,#ff6b35 70%,#ffd700 100%);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 40px rgba(0,245,255,.6));animation:logoPulse 3s ease-in-out infinite;}
 @keyframes logoPulse{0%,100%{filter:drop-shadow(0 0 30px rgba(0,245,255,.5));}50%{filter:drop-shadow(0 0 60px rgba(0,245,255,.9)) drop-shadow(0 0 100px rgba(255,107,53,.4));}}
 .title-sub{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.6em;color:var(--cyan);margin-top:10px;opacity:.75;}
 .title-decor{width:300px;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);margin:20px auto;}
@@ -154,6 +154,17 @@ body{font-family:'Rajdhani',sans-serif;color:var(--text);}
 .tyre-row{display:flex;gap:8px;justify-content:center;margin:6px 0;flex-wrap:wrap;}
 .tyre-card{width:118px;padding:10px 7px;border:1px solid rgba(255,255,255,.15);cursor:pointer;text-align:center;transition:all .2s;font-size:11px;}
 .tyre-card:hover,.tyre-card.sel{border-color:var(--orange);color:var(--orange);}
+.pit-plan-wrap{width:min(760px,96vw);display:flex;flex-direction:column;gap:12px;align-items:center;}
+.pit-plan-sliders{width:100%;display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px;}
+.pit-plan-panel{width:100%;padding:12px 14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);}
+.pit-plan-label{font-family:'Orbitron',sans-serif;font-size:10px;color:rgba(255,255,255,.7);letter-spacing:.14em;margin-bottom:8px;}
+.pit-plan-value{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--gold);letter-spacing:.08em;}
+.pit-plan-range{width:100%;accent-color:#ffd700;cursor:pointer;}
+.pit-plan-tyres{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;width:100%;}
+.pit-plan-tyre{min-width:118px;padding:10px 9px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#dfefff;cursor:pointer;text-align:center;transition:all .2s;}
+.pit-plan-tyre:hover,.pit-plan-tyre.sel{border-color:var(--orange);color:var(--orange);background:rgba(255,107,53,.08);}
+.pit-plan-tyre.disabled{opacity:.32;cursor:not-allowed;}
+.pit-plan-meta{font-size:10px;opacity:.6;margin-top:4px;}
 .locked-overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
 .track-card{position:relative;}
 .setup-section-label{font-family:'Orbitron',sans-serif;font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.2em;margin:14px 0 4px;text-align:center;}
@@ -168,6 +179,17 @@ body{font-family:'Rajdhani',sans-serif;color:var(--text);}
 #touch-btn-ers{width:80px;height:56px;right:200px;bottom:100px;}
 #touch-btn-drs{width:80px;height:56px;right:108px;bottom:100px;}
 #touch-btn-pit{width:64px;height:56px;right:34px;bottom:100px;}
+#pit-ui-overlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,.42);z-index:120;}
+.pit-ui-card{width:min(560px,92vw);padding:18px 18px 16px;border:2px solid rgba(255,215,0,.65);background:rgba(3,5,18,.95);box-shadow:0 0 36px rgba(255,215,0,.16);}
+.pit-ui-title{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:.16em;color:#ffd700;text-align:center;}
+.pit-ui-sub{font-size:11px;opacity:.65;text-align:center;margin-top:8px;line-height:1.5;}
+.pit-ui-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px;}
+.pit-ui-choice{padding:12px 10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#dfefff;cursor:pointer;text-align:left;transition:all .18s;}
+.pit-ui-choice:hover,.pit-ui-choice.sel{border-color:var(--orange);background:rgba(255,107,53,.10);color:var(--orange);}
+.pit-ui-choice-head{display:flex;align-items:center;gap:8px;font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.08em;}
+.pit-ui-choice-dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px;}
+.pit-ui-choice-meta{font-size:10px;opacity:.62;margin-top:6px;line-height:1.4;}
+.pit-ui-actions{display:flex;justify-content:center;margin-top:16px;}
 /* ── DEVICE PROMPT ──────────────────────────────── */
 #device-prompt{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.93);border:2px solid #00f5ff;border-radius:12px;padding:36px 56px;z-index:200;color:#fff;font-family:'Orbitron',sans-serif;font-size:13px;text-align:center;max-width:520px;width:520px;}
 #device-prompt h2{color:#00f5ff;margin:0 0 12px;font-size:16px;letter-spacing:.1em;}
@@ -378,6 +400,11 @@ body{font-family:'Rajdhani',sans-serif;color:var(--text);}
   <div class="lap-row" id="lap-row"></div>
   <div class="setup-section-label">WEATHER</div>
   <div class="wx-row" id="wx-row"></div>
+  <div id="pit-strategy-section">
+    <div class="setup-section-label">PIT STRATEGY</div>
+    <div class="lap-row" id="pit-strategy-row"></div>
+    <div class="quali-note" id="pit-strategy-note">Set your planned stop window before the race. The HUD will call you in when the strategy window opens.</div>
+  </div>
   <div id="collision-section" style="display:none;">
     <div class="setup-section-label">CAR CONTACT</div>
     <div class="lap-row" id="collision-row"></div>
@@ -448,6 +475,17 @@ body{font-family:'Rajdhani',sans-serif;color:var(--text);}
   <div id="touch-btn-ers" class="touch-btn" style="font-size:13px;font-family:Orbitron,sans-serif;">⚡ERS</div>
   <div id="touch-btn-drs" class="touch-btn" style="font-size:13px;font-family:Orbitron,sans-serif;">💨DRS</div>
   <div id="touch-btn-pit" class="touch-btn" style="font-size:13px;font-family:Orbitron,sans-serif;">🔧</div>
+</div>
+
+<div id="pit-ui-overlay">
+  <div class="pit-ui-card">
+    <div class="pit-ui-title" id="pit-ui-title">🔧 PIT STOP — PICK TYRES</div>
+    <div class="pit-ui-sub" id="pit-ui-sub">Click or tap a tyre, then confirm it. Keyboard controls still work.</div>
+    <div class="pit-ui-choices" id="pit-ui-choices"></div>
+    <div class="pit-ui-actions">
+      <button type="button" class="btn btn-gold btn-sm" id="pit-ui-confirm">FIT SELECTED TYRES</button>
+    </div>
+  </div>
 </div>
 
 <!-- PAUSE MENU -->
@@ -606,6 +644,8 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   canvas.style.display = 'none';
   document.getElementById('countdownOverlay').style.display = 'none';
+  const pitUi = document.getElementById('pit-ui-overlay');
+  if(pitUi) { pitUi.style.display = 'none'; pitUi.dataset.signature = ''; }
   showTouchOverlay(false);
   const _adEl = document.getElementById('ai-difficulty'); if(_adEl) _adEl.style.display='none';
   const el = document.getElementById('screen-' + id);
@@ -623,7 +663,9 @@ function showScreen(id) {
   const _ftueEl = document.getElementById('ftue-hint');
   if (_ftueEl && canvas.style.display !== 'block') _ftueEl.style.display = 'none';
 }
-showScreen('menu');
+window.addEventListener('load', () => {
+  showScreen('menu');
+});
 // Show device/input selection prompt only once — persist choice in localStorage
 (function(){
   const saved = localStorage.getItem('kartblitz_devicemode');
@@ -1133,32 +1175,223 @@ const TRACKS = [
     drsFracs:[[0.05, 0.11], [0.35, 0.45]],
     // The Void — leaving the circuit is catastrophically punished
     surface:{offTrackMult:0.35, label:'THE VOID'}
+  },
+  {
+    id:8, name:'RIVIERA GP', difficulty:'MEDIUM', diffClass:'diff-med', diffLetter:'m',
+    targetLap:74, laps:3, trackWidth:148, lapDistance:16840, locked:true, unlockCost:650, coinMult:2.0,
+    grassColor:'#092236', grassColor2:'#10304a',
+    trackColor:'#1b2630', borderColor:'#4dd9ff', lineColor:'#ffffff',
+    accentColor:'#ffd166', bgColor:'#041019',
+    // modern GP-style layout: huge T1, long back straight, and wide exits for side-by-side racing
+    waypoints:[
+      {x:900,y:5800},{x:1700,y:5800},{x:2600,y:5800},{x:3400,y:5800},
+      {x:3900,y:5600},{x:4200,y:5200},{x:4300,y:4700},
+      {x:4250,y:4200},{x:4100,y:3800},{x:3800,y:3500},{x:3350,y:3350},{x:2900,y:3300},
+      {x:2500,y:3150},{x:2300,y:2800},{x:2300,y:2350},
+      {x:2500,y:1950},{x:2900,y:1750},{x:3450,y:1700},{x:4000,y:1700},
+      {x:4450,y:1550},{x:4700,y:1250},{x:4700,y:850},{x:4450,y:600},{x:3950,y:520},
+      {x:3400,y:600},{x:2850,y:780},{x:2450,y:1100},{x:2150,y:1500},{x:1900,y:2000},
+      {x:1600,y:2350},{x:1200,y:2550},{x:850,y:2850},{x:700,y:3300},{x:650,y:3900},{x:700,y:4600},{x:780,y:5250}
+    ],
+    startPos:{x:1450,y:5800}, startAngle:0,
+    pitPos:{x:1300,y:5590},
+    pitLane:{
+      path:[{x:1300,y:5800},{x:1300,y:5590},{x:1950,y:5590},{x:2600,y:5590},{x:2600,y:5800}],
+      entryPt:{x:1300,y:5800}, garagePos:{x:1950,y:5590}, garageAngle:0,
+      exitPos:{x:2600,y:5800}, exitAngle:0, width:60
+    },
+    cpFracs:[0.03, 0.10, 0.18, 0.28, 0.38, 0.48, 0.58, 0.68, 0.78, 0.88],
+    drsFracs:[[0.02, 0.10], [0.44, 0.54]],
+    aiBrakeLookaheadScale:0.88,
+    surface:{offTrackMult:0.82, label:'SEASIDE RUNOFF'}
+  },
+  {
+    id:9, name:'CROWN MOTORPLEX', difficulty:'HARD', diffClass:'diff-hard', diffLetter:'h',
+    targetLap:80, laps:3, trackWidth:142, lapDistance:17680, locked:true, unlockCost:1050, coinMult:2.3,
+    grassColor:'#180808', grassColor2:'#261010',
+    trackColor:'#24191a', borderColor:'#ffb347', lineColor:'#ffffff',
+    accentColor:'#ff6b35', bgColor:'#0d0606',
+    // stop-start arena circuit with two monster hairpins and a tight lower stadium section
+    waypoints:[
+      {x:800,y:5450},{x:1600,y:5450},{x:2450,y:5450},{x:3250,y:5450},
+      {x:3800,y:5250},{x:4150,y:4950},{x:4300,y:4550},
+      {x:4250,y:4100},{x:4000,y:3750},{x:3600,y:3550},{x:3150,y:3450},{x:2750,y:3450},
+      {x:2350,y:3300},{x:2100,y:3000},{x:2100,y:2550},
+      {x:2250,y:2150},{x:2550,y:1850},{x:3000,y:1650},{x:3550,y:1550},{x:4100,y:1550},
+      {x:4525,y:1400},{x:4750,y:1100},{x:4750,y:700},{x:4550,y:420},{x:4150,y:320},
+      {x:3650,y:360},{x:3150,y:500},{x:2750,y:760},{x:2500,y:1125},{x:2300,y:1550},
+      {x:2025,y:1850},{x:1650,y:1975},{x:1250,y:2000},{x:950,y:1875},{x:700,y:1600},
+      {x:575,y:1200},{x:600,y:850},{x:800,y:600},{x:1150,y:450},{x:1600,y:425},{x:2050,y:550},
+      {x:2325,y:825},{x:2450,y:1175},{x:2350,y:1525},{x:2100,y:1800},{x:1700,y:1950},{x:1325,y:2125},
+      {x:1000,y:2425},{x:775,y:2850},{x:675,y:3400},{x:675,y:4000},{x:700,y:4625},{x:740,y:5150}
+    ],
+    startPos:{x:1200,y:5450}, startAngle:0,
+    pitPos:{x:1050,y:5255},
+    pitLane:{
+      path:[{x:1050,y:5450},{x:1050,y:5255},{x:1850,y:5255},{x:2700,y:5255},{x:2700,y:5450}],
+      entryPt:{x:1050,y:5450}, garagePos:{x:1850,y:5255}, garageAngle:0,
+      exitPos:{x:2700,y:5450}, exitAngle:0, width:60
+    },
+    cpFracs:[0.02, 0.09, 0.16, 0.24, 0.33, 0.42, 0.52, 0.62, 0.72, 0.82, 0.91],
+    drsFracs:[[0.02, 0.09], [0.46, 0.56]],
+    aiBrakeLookaheadScale:0.86,
+    surface:{offTrackMult:0.76, label:'HEAT SOAK'}
+  },
+  {
+    id:10, name:'SKYLINE INTERNATIONAL', difficulty:'HARD', diffClass:'diff-hard', diffLetter:'h',
+    targetLap:84, laps:3, trackWidth:138, lapDistance:18820, locked:true, unlockCost:1450, coinMult:2.6,
+    grassColor:'#060d28', grassColor2:'#0c1638',
+    trackColor:'#151b28', borderColor:'#66e3ff', lineColor:'#ffffff',
+    accentColor:'#9cf0ff', bgColor:'#030813',
+    // long straight-line speed into late-braking corners, then a technical lower bowl before the front stretch
+    waypoints:[
+      {x:850,y:5900},{x:1700,y:5900},{x:2600,y:5900},{x:3500,y:5900},
+      {x:4100,y:5750},{x:4500,y:5450},{x:4700,y:5000},{x:4725,y:4475},
+      {x:4600,y:4025},{x:4300,y:3700},{x:3875,y:3475},{x:3400,y:3375},{x:2900,y:3375},
+      {x:2475,y:3225},{x:2225,y:2900},{x:2200,y:2450},
+      {x:2350,y:2050},{x:2675,y:1750},{x:3150,y:1575},{x:3700,y:1500},{x:4250,y:1500},
+      {x:4700,y:1325},{x:4950,y:1000},{x:5000,y:575},{x:4800,y:250},{x:4375,y:125},
+      {x:3900,y:150},{x:3425,y:275},{x:3050,y:525},{x:2825,y:900},{x:2650,y:1325},
+      {x:2375,y:1650},{x:1975,y:1775},{x:1550,y:1800},{x:1225,y:1650},{x:950,y:1375},
+      {x:725,y:975},{x:650,y:525},{x:750,y:200},{x:1025,y:40},{x:1425,y:40},{x:1850,y:225},
+      {x:2125,y:550},{x:2225,y:950},{x:2150,y:1325},{x:1900,y:1575},{x:1550,y:1725},{x:1200,y:1900},
+      {x:925,y:2225},{x:750,y:2700},{x:650,y:3300},{x:625,y:3925},{x:675,y:4600},{x:760,y:5300}
+    ],
+    startPos:{x:1200,y:5900}, startAngle:0,
+    pitPos:{x:1100,y:5695},
+    pitLane:{
+      path:[{x:1100,y:5900},{x:1100,y:5695},{x:1950,y:5695},{x:2850,y:5695},{x:2850,y:5900}],
+      entryPt:{x:1100,y:5900}, garagePos:{x:1950,y:5695}, garageAngle:0,
+      exitPos:{x:2850,y:5900}, exitAngle:0, width:60
+    },
+    cpFracs:[0.03, 0.10, 0.18, 0.26, 0.35, 0.44, 0.54, 0.64, 0.73, 0.82, 0.91],
+    drsFracs:[[0.02, 0.10], [0.48, 0.58]],
+    aiBrakeLookaheadScale:0.85,
+    surface:{offTrackMult:0.72, label:'SKY BARRIER'}
+  },
+  {
+    id:11, name:'AURORA AUTODROME', difficulty:'HARD', diffClass:'diff-hard', diffLetter:'h',
+    targetLap:88, laps:3, trackWidth:136, lapDistance:19160, locked:true, unlockCost:1800, coinMult:3.0,
+    grassColor:'#03181b', grassColor2:'#06252a',
+    trackColor:'#152022', borderColor:'#7cffc4', lineColor:'#ffffff',
+    accentColor:'#b8ff5f', bgColor:'#01090a',
+    // wide parkland GP with two huge braking zones and a technical final complex that rewards overlapping lines
+    waypoints:[
+      {x:900,y:5700},{x:1750,y:5700},{x:2650,y:5700},{x:3500,y:5700},
+      {x:4050,y:5550},{x:4400,y:5250},{x:4550,y:4825},{x:4525,y:4400},
+      {x:4350,y:4025},{x:4025,y:3750},{x:3600,y:3575},{x:3150,y:3525},
+      {x:2750,y:3400},{x:2475,y:3075},{x:2425,y:2650},
+      {x:2550,y:2225},{x:2850,y:1925},{x:3300,y:1775},{x:3825,y:1725},{x:4325,y:1725},
+      {x:4700,y:1575},{x:4900,y:1275},{x:4925,y:875},{x:4775,y:550},{x:4450,y:375},
+      {x:4000,y:350},{x:3525,y:475},{x:3125,y:725},{x:2800,y:1100},{x:2550,y:1500},
+      {x:2250,y:1800},{x:1850,y:1975},{x:1450,y:2100},{x:1125,y:2250},{x:875,y:2525},
+      {x:725,y:2925},{x:700,y:3375},{x:800,y:3775},{x:1025,y:4100},{x:1325,y:4325},{x:1700,y:4475},
+      {x:2100,y:4575},{x:2525,y:4650},{x:2925,y:4775},{x:3225,y:5025},{x:3300,y:5375},{x:3100,y:5625},
+      {x:2700,y:5750},{x:2050,y:5800},{x:1250,y:5775}
+    ],
+    startPos:{x:1300,y:5700}, startAngle:0,
+    pitPos:{x:1200,y:5495},
+    pitLane:{
+      path:[{x:1200,y:5700},{x:1200,y:5495},{x:2050,y:5495},{x:2925,y:5495},{x:2925,y:5700}],
+      entryPt:{x:1200,y:5700}, garagePos:{x:2050,y:5495}, garageAngle:0,
+      exitPos:{x:2925,y:5700}, exitAngle:0, width:60
+    },
+    cpFracs:[0.02, 0.10, 0.19, 0.27, 0.36, 0.45, 0.54, 0.64, 0.74, 0.84, 0.93],
+    drsFracs:[[0.02, 0.09], [0.50, 0.59]],
+    aiBrakeLookaheadScale:0.84,
+    surface:{offTrackMult:0.78, label:'PARK GRASS'}
   }
 ];
 
 // Build splines, checkpoint geometry, and spatial grid.
-// Shared remap pass: widen corridors, sharpen larger corners, and let AI use more lane width.
+// Shared remap pass: widen corridors, force 13+ corners per circuit, and reject overlapping centre-lines.
 const TRACK_REMAP_PROFILES = {
-  easy:   { widthBoost:1.28, cornerThreshold:0.38, cornerPull:0.24, maxInsert:170, minSeg:170, aiBrakeLookaheadScale:0.92, aiLaneSpreadScale:1.18 },
-  medium: { widthBoost:1.24, cornerThreshold:0.34, cornerPull:0.22, maxInsert:155, minSeg:155, aiBrakeLookaheadScale:0.90, aiLaneSpreadScale:1.22 },
-  hard:   { widthBoost:1.18, cornerThreshold:0.30, cornerPull:0.20, maxInsert:140, minSeg:140, aiBrakeLookaheadScale:0.88, aiLaneSpreadScale:1.26 }
+  easy: {
+    widthBoost:1.28, cornerThreshold:0.30, cornerPull:0.34, maxInsert:210, minSeg:145,
+    aiBrakeLookaheadScale:0.90, aiLaneSpreadScale:1.20,
+    minCorners:13, cornerCountAngle:0.38, straightThreshold:540, chicaneOffset:210, overlapGap:250
+  },
+  medium: {
+    widthBoost:1.24, cornerThreshold:0.28, cornerPull:0.30, maxInsert:190, minSeg:135,
+    aiBrakeLookaheadScale:0.88, aiLaneSpreadScale:1.24,
+    minCorners:14, cornerCountAngle:0.36, straightThreshold:500, chicaneOffset:190, overlapGap:235
+  },
+  hard: {
+    widthBoost:1.18, cornerThreshold:0.26, cornerPull:0.28, maxInsert:175, minSeg:125,
+    aiBrakeLookaheadScale:0.85, aiLaneSpreadScale:1.28,
+    minCorners:14, cornerCountAngle:0.34, straightThreshold:460, chicaneOffset:175, overlapGap:220
+  }
 };
 const TRACK_REMAP_OVERRIDES = {
-  0: { widthBoost:1.36, cornerThreshold:0.32, cornerPull:0.28, maxInsert:185, aiBrakeLookaheadScale:0.88, aiLaneSpreadScale:1.32 },
-  1: { widthBoost:1.30, cornerThreshold:0.34, cornerPull:0.25, maxInsert:172, aiBrakeLookaheadScale:0.90, aiLaneSpreadScale:1.28 },
-  3: { widthBoost:1.28, cornerThreshold:0.32, cornerPull:0.24, maxInsert:165, aiBrakeLookaheadScale:0.89, aiLaneSpreadScale:1.26 },
-  7: { widthBoost:1.16, cornerThreshold:0.28, cornerPull:0.18, maxInsert:132, aiBrakeLookaheadScale:0.87, aiLaneSpreadScale:1.18 }
+  0: { widthBoost:1.36, cornerThreshold:0.28, cornerPull:0.38, maxInsert:230, minCorners:13, straightThreshold:500, chicaneOffset:230, overlapGap:260, aiBrakeLookaheadScale:0.86, aiLaneSpreadScale:1.34 },
+  1: { widthBoost:1.30, cornerThreshold:0.30, cornerPull:0.34, maxInsert:210, minCorners:14, straightThreshold:480, chicaneOffset:220, overlapGap:248, aiBrakeLookaheadScale:0.86, aiLaneSpreadScale:1.30 },
+  3: { widthBoost:1.28, cornerThreshold:0.28, cornerPull:0.32, maxInsert:205, minCorners:14, straightThreshold:470, chicaneOffset:205, overlapGap:240, aiBrakeLookaheadScale:0.85, aiLaneSpreadScale:1.28 },
+  7: { widthBoost:1.16, cornerThreshold:0.24, cornerPull:0.26, maxInsert:160, minCorners:14, straightThreshold:430, chicaneOffset:165, overlapGap:212, aiBrakeLookaheadScale:0.83, aiLaneSpreadScale:1.20 },
+  8: { widthBoost:1.34, cornerThreshold:0.28, cornerPull:0.32, maxInsert:215, minCorners:14, straightThreshold:500, chicaneOffset:220, overlapGap:252, aiBrakeLookaheadScale:0.85, aiLaneSpreadScale:1.34 },
+  9: { widthBoost:1.30, cornerThreshold:0.26, cornerPull:0.30, maxInsert:198, minCorners:15, straightThreshold:470, chicaneOffset:190, overlapGap:232, aiBrakeLookaheadScale:0.83, aiLaneSpreadScale:1.30 },
+  10:{ widthBoost:1.28, cornerThreshold:0.26, cornerPull:0.29, maxInsert:190, minCorners:15, straightThreshold:455, chicaneOffset:185, overlapGap:226, aiBrakeLookaheadScale:0.82, aiLaneSpreadScale:1.28 },
+  11:{ widthBoost:1.26, cornerThreshold:0.25, cornerPull:0.28, maxInsert:185, minCorners:15, straightThreshold:445, chicaneOffset:180, overlapGap:224, aiBrakeLookaheadScale:0.81, aiLaneSpreadScale:1.26 }
 };
-const TRACK_WIDTH_SCALE = 9.0;
-const TRACK_CENTERLINE_BUFFER = 28;
-const TRACK_PIT_BUFFER = 12;
+const TRACK_WIDTH_SCALE = 18.0;
+const TRACK_CENTERLINE_BUFFER = 88;
+const TRACK_PIT_BUFFER = 24;
 
 function getTrackRemapProfile(tr) {
   const base = TRACK_REMAP_PROFILES[(tr.difficulty || 'MEDIUM').toLowerCase()] || TRACK_REMAP_PROFILES.medium;
   return {...base, ...(TRACK_REMAP_OVERRIDES[tr.id] || {})};
 }
 
-function remapTrackWaypointsForBraking(wps, remap) {
+function getWaypointTurnAngle(prev, cur, next) {
+  const inX = cur.x - prev.x, inY = cur.y - prev.y;
+  const outX = next.x - cur.x, outY = next.y - cur.y;
+  const inLen = Math.hypot(inX, inY);
+  const outLen = Math.hypot(outX, outY);
+  if(inLen < 1 || outLen < 1) return 0;
+  const dot = (inX / inLen) * (outX / outLen) + (inY / inLen) * (outY / outLen);
+  return Math.acos(Math.max(-1, Math.min(1, dot)));
+}
+
+function countWaypointCorners(wps, minAngle) {
+  if(!wps || wps.length < 3) return 0;
+  let count = 0;
+  for(let i = 0; i < wps.length; i++) {
+    const prev = wps[(i - 1 + wps.length) % wps.length];
+    const cur = wps[i];
+    const next = wps[(i + 1) % wps.length];
+    if(getWaypointTurnAngle(prev, cur, next) >= minAngle) count++;
+  }
+  return count;
+}
+
+function minWaypointSegmentClearance(wps) {
+  if(!wps || wps.length < 4) return Infinity;
+  let minClearance = Infinity;
+  const n = wps.length;
+  for(let i = 0; i < n; i++) {
+    const ni = (i + 1) % n;
+    const a = wps[i], b = wps[ni];
+    for(let j = i + 1; j < n; j++) {
+      const nj = (j + 1) % n;
+      if(i === j || ni === j || nj === i) continue;
+      const c = wps[j], d = wps[nj];
+      if(linesCross(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y)) return 0;
+      const clearance = Math.min(
+        distToSeg(a.x, a.y, c.x, c.y, d.x, d.y),
+        distToSeg(b.x, b.y, c.x, c.y, d.x, d.y),
+        distToSeg(c.x, c.y, a.x, a.y, b.x, b.y),
+        distToSeg(d.x, d.y, a.x, a.y, b.x, b.y)
+      );
+      if(clearance < minClearance) minClearance = clearance;
+    }
+  }
+  return minClearance;
+}
+
+function hasWaypointOverlapRisk(wps, minGap) {
+  return minWaypointSegmentClearance(wps) < minGap;
+}
+
+function insertCornerControlPoints(wps, remap) {
   if(!wps || wps.length < 3) return wps;
   const n = wps.length;
   const out = [];
@@ -1171,23 +1404,115 @@ function remapTrackWaypointsForBraking(wps, remap) {
     const inLen = Math.hypot(inX, inY);
     const outLen = Math.hypot(outX, outY);
     if(inLen < remap.minSeg || outLen < remap.minSeg) {
-      out.push(cur);
+      out.push({x: cur.x, y: cur.y});
+      continue;
+    }
+    const turnAngle = getWaypointTurnAngle(prev, cur, next);
+    if(turnAngle < remap.cornerThreshold) {
+      out.push({x: cur.x, y: cur.y});
       continue;
     }
     const inNX = inX / inLen, inNY = inY / inLen;
     const outNX = outX / outLen, outNY = outY / outLen;
-    const turnAngle = Math.acos(Math.max(-1, Math.min(1, inNX * outNX + inNY * outNY)));
-    if(turnAngle < remap.cornerThreshold) {
-      out.push(cur);
-      continue;
-    }
     const preDist = Math.min(remap.maxInsert, inLen * remap.cornerPull);
     const postDist = Math.min(remap.maxInsert, outLen * remap.cornerPull);
     out.push({x: cur.x - inNX * preDist, y: cur.y - inNY * preDist});
-    out.push(cur);
+    out.push({x: cur.x, y: cur.y});
     out.push({x: cur.x + outNX * postDist, y: cur.y + outNY * postDist});
   }
   return out;
+}
+
+function insertTechnicalChicane(wps, segIdx, remap, sign, strength) {
+  const n = wps.length;
+  if(!n) return null;
+  const a = wps[segIdx];
+  const b = wps[(segIdx + 1) % n];
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if(len < remap.straightThreshold) return null;
+  const ux = dx / len, uy = dy / len;
+  const px = -uy, py = ux;
+  const offset = Math.min(remap.chicaneOffset * strength, len * 0.22);
+  const p1 = { x: a.x + dx * 0.28 + px * offset * 0.95 * sign, y: a.y + dy * 0.28 + py * offset * 0.95 * sign };
+  const p2 = { x: a.x + dx * 0.52 - px * offset * 1.15 * sign, y: a.y + dy * 0.52 - py * offset * 1.15 * sign };
+  const p3 = { x: a.x + dx * 0.78 + px * offset * 0.82 * sign, y: a.y + dy * 0.78 + py * offset * 0.82 * sign };
+  return [...wps.slice(0, segIdx + 1), p1, p2, p3, ...wps.slice(segIdx + 1)];
+}
+
+function getStraightSegmentCandidates(wps, remap) {
+  const candidates = [];
+  const n = wps.length;
+  for(let i = 0; i < n; i++) {
+    const a = wps[i];
+    const b = wps[(i + 1) % n];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if(len < remap.straightThreshold) continue;
+    const prev = wps[(i - 1 + n) % n];
+    const next = wps[(i + 2) % n];
+    const straightness = len - (getWaypointTurnAngle(prev, a, b) + getWaypointTurnAngle(a, b, next)) * 180;
+    candidates.push({ idx:i, score:straightness, len });
+  }
+  candidates.sort((a, b) => b.score - a.score || b.len - a.len);
+  return candidates;
+}
+
+function addTechnicalCorners(wps, remap) {
+  let out = wps.map(p => ({x:p.x, y:p.y}));
+  let cornerCount = countWaypointCorners(out, remap.cornerCountAngle);
+  const maxPasses = Math.max(4, remap.minCorners);
+  for(let pass = 0; pass < maxPasses && cornerCount < remap.minCorners; pass++) {
+    const candidates = getStraightSegmentCandidates(out, remap);
+    let improved = false;
+    for(const candidate of candidates) {
+      const signOrder = (pass % 2 === 0) ? [1, -1] : [-1, 1];
+      for(const strength of [1.0, 0.86, 0.72]) {
+        for(const sign of signOrder) {
+          const trial = insertTechnicalChicane(out, candidate.idx, remap, sign, strength);
+          if(!trial || hasWaypointOverlapRisk(trial, remap.overlapGap)) continue;
+          const trialCorners = countWaypointCorners(trial, remap.cornerCountAngle);
+          if(trialCorners <= cornerCount) continue;
+          out = trial;
+          cornerCount = trialCorners;
+          improved = true;
+          break;
+        }
+        if(improved) break;
+      }
+      if(improved) break;
+    }
+    if(!improved) break;
+  }
+  return out;
+}
+
+function remapTrackWaypointsForBraking(wps, remap) {
+  if(!wps || wps.length < 3) return wps;
+  const base = wps.map(p => ({x:p.x, y:p.y}));
+  let bestSafe = base;
+  let bestSafeCorners = countWaypointCorners(base, remap.cornerCountAngle);
+  let bestSafeClearance = minWaypointSegmentClearance(base);
+  const scales = [1.0, 0.92, 0.84, 0.76, 0.68];
+  for(const scale of scales) {
+    const tuned = {
+      ...remap,
+      cornerPull: remap.cornerPull * scale,
+      maxInsert: remap.maxInsert * scale,
+      chicaneOffset: remap.chicaneOffset * scale
+    };
+    let candidate = insertCornerControlPoints(base, tuned);
+    candidate = addTechnicalCorners(candidate, tuned);
+    const clearance = minWaypointSegmentClearance(candidate);
+    if(clearance < remap.overlapGap) continue;
+    const cornerCount = countWaypointCorners(candidate, remap.cornerCountAngle);
+    if(cornerCount > bestSafeCorners || (cornerCount === bestSafeCorners && clearance > bestSafeClearance)) {
+      bestSafe = candidate;
+      bestSafeCorners = cornerCount;
+      bestSafeClearance = clearance;
+    }
+    if(cornerCount >= remap.minCorners) return candidate;
+  }
+  return bestSafe;
 }
 
 TRACKS.forEach(tr => {
@@ -1196,6 +1521,8 @@ TRACKS.forEach(tr => {
   tr.aiBrakeLookaheadScale = Math.min(tr.aiBrakeLookaheadScale || 1, remap.aiBrakeLookaheadScale);
   tr.aiLaneSpreadScale = remap.aiLaneSpreadScale;
   tr.waypoints = remapTrackWaypointsForBraking(tr.waypoints, remap);
+  tr.cornerCount = countWaypointCorners(tr.waypoints, remap.cornerCountAngle);
+  tr.centerlineClearance = minWaypointSegmentClearance(tr.waypoints);
   tr.spline = buildSpline(tr.waypoints, 28);
   const spl = tr.spline, n = spl.length;
   // cumulative distances
@@ -1581,8 +1908,7 @@ class Kart {
       updateEngine(this.id, 0, this.maxSpeed, false, false);
       if(this.pitTimer >= 3.0) {
         // Apply chosen tyre
-        this._applyNewTyre(this.pitTyreChoice);
-        this._pitExitPos = null; this._pitExitAngle = null;
+        this._applyNewTyre(this.pitTyreChoice || this.tyreId);
         this.pitPhase = null;
         this.inPit = false;
         this._hasPitted = true;
@@ -1590,7 +1916,11 @@ class Kart {
       return;
     }
 
-    const inp = this.getInput();
+    let inp = this.getInput();
+    if(this.isAI && !this.inPit && this.pitPhase === null && this._pitExitPos) {
+      const pitExitInput = this._getPitExitInput(trackData);
+      if(pitExitInput) inp = pitExitInput;
+    }
     // Surface-specific off-track physics: each track has a unique offTrackMult
     const surfMult = (trackData && trackData.surface) ? trackData.surface.offTrackMult : 1.0;
     const applyOffTrackSlowdown = this.isOffTrack && !this.isAI;
@@ -1789,6 +2119,11 @@ class Kart {
       if (this._onPitLane && _distTrackCenter <= _trackHwL) this._onPitLane = false;
       if (this._onPitLane && this.speed > 130) this.speed = 130;
     }
+    if(this._pitExitPos && Math.hypot(this.x - this._pitExitPos.x, this.y - this._pitExitPos.y) < 44) {
+      if(this._pitExitAngle !== null && this._pitExitAngle !== undefined) this.angle = this._pitExitAngle;
+      this._pitExitPos = null;
+      this._pitExitAngle = null;
+    }
 
     // Off-track check
     this.isOffTrack = !this.onTrack(trackData);
@@ -1857,6 +2192,43 @@ class Kart {
     updateEngine(this.id, this.speed, this.maxSpeed, !!inp.up, !!inp.down);
     // Always correct AI orientation — prevents wrong-facing angle from cascading
     if (this.isAI) fixAIKartOrientation(this, trackData);
+  }
+
+  _getPitExitInput(trackData) {
+    const pl = trackData && trackData.pitLane;
+    if(!pl || !pl.path || pl.path.length < 2 || !this._pitExitPos) return null;
+    const path = pl.path;
+    let nearestIdx = 0, nearestDist = Infinity;
+    let exitIdx = 0, exitDist = Infinity;
+    for(let i = 0; i < path.length; i++) {
+      const dKart = Math.hypot(this.x - path[i].x, this.y - path[i].y);
+      if(dKart < nearestDist) { nearestDist = dKart; nearestIdx = i; }
+      const dExit = Math.hypot(this._pitExitPos.x - path[i].x, this._pitExitPos.y - path[i].y);
+      if(dExit < exitDist) { exitDist = dExit; exitIdx = i; }
+    }
+    nearestIdx = Math.min(nearestIdx, exitIdx);
+    const lookAhead = this.speed > 96 ? 3 : (this.speed > 56 ? 2 : 1);
+    const targetIdx = Math.min(exitIdx, nearestIdx + lookAhead);
+    const remaining = Math.hypot(this.x - this._pitExitPos.x, this.y - this._pitExitPos.y);
+    const exitLead = (this._pitExitAngle !== null && this._pitExitAngle !== undefined)
+      ? { x: this._pitExitPos.x + Math.cos(this._pitExitAngle) * 42, y: this._pitExitPos.y + Math.sin(this._pitExitAngle) * 42 }
+      : this._pitExitPos;
+    const aim = remaining < 96 ? exitLead : (path[targetIdx] || this._pitExitPos);
+    let diff = Math.atan2(aim.y - this.y, aim.x - this.x) - this.angle;
+    while (diff >  Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    const needsBrake = Math.abs(diff) > 0.86 && this.speed > 88;
+    const holdSpeed = remaining > 120 ? 126 : 102;
+    return {
+      up: this.speed < holdSpeed && !needsBrake,
+      down: needsBrake,
+      left: diff < -0.045,
+      right: diff > 0.045,
+      brakeMult: needsBrake ? 1.7 : 1,
+      ers:false,
+      drs:false,
+      pit:false
+    };
   }
 
   onTrack(td) {
@@ -2605,7 +2977,7 @@ function drawPitGarage(ctx, td, ofx, ofy) {
   // Sub-label: auto-trigger info
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.font = '7px Orbitron,sans-serif';
-  ctx.fillText('DRIVE IN · TYRES AUTO', px, py + 7);
+  ctx.fillText('DRIVE IN · PICK TYRES', px, py + 7);
   // small tyre icon dots
   const dotCols = ['#ff3333','#cccccc','#ffee00','#0099ff'];
   for(let di=0;di<4;di++) {
@@ -2628,6 +3000,12 @@ function fmtTime(s) {
 function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   const now = performance.now();
   const pad = 12;
+  const totalLapsDisplay = kart.totalLaps || track.laps;
+  const playerData = getPlayerData();
+  const pitWeather = race && race.weather ? race.weather : playerData.weather;
+  const pitsAllowed = (mode !== 'trial' && mode !== 'shootout') || (mode === 'trial' && playerData.trialPits === true);
+  const pitPlan = getPlayerPitStrategyPlan(playerData, pitWeather);
+  const pitCall = pitsAllowed ? getPitCallStatus(kart, totalLapsDisplay, pitPlan, pitWeather) : null;
 
   // === TOP LEFT: Lap info ===
   ctx.save();
@@ -2648,7 +3026,6 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
 
   // Lap counter
   const completedLaps = kart.lap;
-  const totalLapsDisplay = kart.totalLaps || track.laps;
   const currentLapNum = kart.finished ? totalLapsDisplay : Math.min(kart.lap+1, totalLapsDisplay);
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 13px Orbitron,sans-serif';
@@ -2656,6 +3033,20 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   ctx.font = 'bold 32px Orbitron,sans-serif';
   ctx.fillStyle = '#ffd700';
   ctx.fillText(`${currentLapNum}/${totalLapsDisplay}`, pad+8, pad+78);
+
+  // Track name ribbon
+  const ribbonW = Math.min(320, w - 240);
+  const ribbonX = Math.max((w - ribbonW) / 2, pad + 190);
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillRect(ribbonX, pad, ribbonW, 28);
+  ctx.strokeStyle = `${track.borderColor}88`;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ribbonX, pad, ribbonW, 28);
+  ctx.fillStyle = track.borderColor;
+  ctx.font = 'bold 11px Orbitron,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(track.name, ribbonX + ribbonW / 2, pad + 18);
+  ctx.textAlign = 'left';
   
   // === TOP RIGHT: Timers ===
   const timerW = mode === 'versus' ? 200 : 260;
@@ -2869,6 +3260,19 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     ctx.fillText('⚠ WRONG TYRES — EXTREMELY SLOW', pad+5, warnY+15);
   }
 
+  if(pitCall) {
+    const pitWarnX = w - 224;
+    const pitWarnW = 212;
+    const levelColor = pitCall.level === 'critical' ? 'rgba(255,60,60,0.95)' : pitCall.level === 'now' ? 'rgba(255,149,0,0.95)' : 'rgba(255,215,0,0.86)';
+    ctx.fillStyle = levelColor;
+    ctx.fillRect(pitWarnX, warnY, pitWarnW, 22);
+    ctx.fillStyle = pitCall.level === 'window' ? '#111' : '#fff';
+    ctx.font = 'bold 9px Orbitron,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`🔧 ${pitCall.message} · ${pitCall.strategy.label}`, pitWarnX + pitWarnW / 2, warnY + 15);
+    ctx.textAlign = 'left';
+  }
+
   // ── PIT STOP SELECTOR OVERLAY ──
   if(kart.pitPhase === 'selecting') {
     const ow = 280, oh = 220;
@@ -2884,8 +3288,8 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     const navKey1 = player===0 ? 'W/S' : '↑/↓';
     const navKey2 = player===0 ? 'P' : '/';
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.font = '9px Orbitron,sans-serif';
-    ctx.fillText(`${navKey1} = NAVIGATE   ${navKey2} = CONFIRM`, w/2, oy+38);
+    ctx.font = '8px Orbitron,sans-serif';
+    ctx.fillText(`${navKey1} = NAV   ${navKey2} = CONFIRM   CLICK / TAP = SELECT`, w/2, oy+38);
 
     TYRE_DEFS.forEach((t, ti) => {
       const ry = oy + 52 + ti * 32;
@@ -3064,7 +3468,7 @@ function fixAIKartOrientation(k, td) {
   while (diff < -Math.PI) diff += Math.PI * 2;
   if (Math.abs(diff) > Math.PI * 0.72) {
     k.angle = trackAngle;
-    k.speed  = 0;
+    k.speed  = Math.max(48, k.speed * 0.55);
   }
 }
 
@@ -3075,7 +3479,7 @@ function makeAIInput(track, difficulty, aiIndex) {
   // Ultra Easy/Easy/Medium are deliberately slow and cautious
   const sfBase  = {ultraeasy: 0.46, easy: 0.58, medium: 0.72, hard: 0.84, extreme: 0.94}[difficulty] || 0.72;
   const sf      = sfBase * 1.18;
-  const curvK   = {ultraeasy: 0.18, easy: 0.145, medium: 0.115, hard: 0.090, extreme: 0.072}[difficulty] || 0.115;
+  const curvK   = {ultraeasy: 0.18, easy: 0.145, medium: 0.100, hard: 0.070, extreme: 0.030}[difficulty] || 0.115;
   const brBase  = {ultraeasy: 920, easy: 780, medium: 660, hard: 560, extreme: 500}[difficulty] || 660;
   const brDist  = brBase * (track.aiBrakeLookaheadScale || 1);
   
@@ -3110,8 +3514,11 @@ function makeAIInput(track, difficulty, aiIndex) {
     { speedMul: 1.01, brakeBias: 0.96, lookDist: 285 },
   ];
   const v = carVariations[aiIndex % 3];
+  const cruiseLanePattern = [-1.12, -0.72, -0.28, 0.28, 0.72, 1.12, -0.90, -0.46, 0.46, 0.90];
+  const _cruiseLaneBias = cruiseLanePattern[aiIndex % cruiseLanePattern.length];
+  const _pitStrategyId = getAiPitStrategyId(aiIndex, difficulty, 3);
   // Increase AI aggression: global multiplier to make AI faster by 25%
-  const AI_SPEED_MULT = 1.25; // 1.00 = baseline, 1.25 = +25%
+  const AI_SPEED_MULT = 1.75; // 1.00 = baseline, 1.25 = +25%
   const effectiveSF    = sf * v.speedMul * AI_SPEED_MULT;   // always 1.0
   const effectiveCurvK = curvK * v.brakeBias;
 
@@ -3150,6 +3557,7 @@ function makeAIInput(track, difficulty, aiIndex) {
   let _stuckTimer = 0, _stuckX = 0, _stuckY = 0;
   let _laneBias = (aiIndex % 2 === 0) ? -1 : 1;
   let _laneHoldTimer = 0;
+  let _passCommitTimer = 0;
   let _steerFilter = 0;
 
   const fn = function() {
@@ -3157,6 +3565,7 @@ function makeAIInput(track, difficulty, aiIndex) {
     const k = kart;
     const nearIdx = k._nearestSplineIdx || 0;
     _laneHoldTimer = Math.max(0, _laneHoldTimer - 0.016);
+    _passCommitTimer = Math.max(0, _passCommitTimer - 0.016);
 
     // stuck check
     const moved = Math.hypot(k.x - _stuckX, k.y - _stuckY);
@@ -3209,7 +3618,7 @@ function makeAIInput(track, difficulty, aiIndex) {
 
     // ── SPEED TARGET ───────────────────────────────────
     // Lower minimum speed floor in tight corners so AI can commit to real braking in hairpins.
-    const curvFloor = {ultraeasy: 0.50, easy: 0.54, medium: 0.58, hard: 0.63, extreme: 0.70}[difficulty] || 0.58;
+    const curvFloor = {ultraeasy: 0.50, easy: 0.54, medium: 0.58, hard: 0.65, extreme: 0.85}[difficulty] || 0.58;
     const curvFactor  = Math.max(curvFloor, 1.0 - maxCurv * effectiveCurvK * 8.8);
     const targetSpeed = k.maxSpeed * effectiveSF * curvFactor;
 
@@ -3225,6 +3634,10 @@ function makeAIInput(track, difficulty, aiIndex) {
     const perpX0 = -tangNear.y, perpY0 = tangNear.x;
     const lateralErr = (k.x - spl[nearIdx].x) * perpX0 + (k.y - spl[nearIdx].y) * perpY0;
     const cornerSeverity = Math.min(1, Math.max(0, (maxCurv - 0.07) / 0.22));
+    const edgeBuffer = Math.max(12, halfW * 0.08);
+    const clampLaneOffset = (value) => Math.max(-(halfW - edgeBuffer), Math.min(halfW - edgeBuffer, value));
+    // Give each AI car a stable preferred lane so they do not collapse into one centerline train.
+    const cruiseLaneOffset = clampLaneOffset(_cruiseLaneBias * Math.min(Math.max(48, halfW * 0.48 * laneSpreadScale), Math.max(48, halfW - 10)));
     let lateralOffset = 0;
     if(cornerSeverity > 0.12) {
       const turnSign = Math.sign(maxCurvSigned) || 1;
@@ -3238,14 +3651,33 @@ function makeAIInput(track, difficulty, aiIndex) {
       else if(approachFrac > 0.20) lateralOffset = turnSign * insideAmt;
       else lateralOffset = turnSign * insideAmt * 0.35;
     }
+    const cruiseBlend = cornerSeverity > 0.12 ? 0.46 : 0.92;
+    lateralOffset = clampLaneOffset(lateralOffset + cruiseLaneOffset * cruiseBlend);
+
+    const laneShift = Math.min(Math.max(64, halfW * 0.64 * laneSpreadScale), Math.max(64, halfW - 8));
 
     // Traffic scan: detect slower or clustered karts ahead and choose alternate lane.
     let trafficAhead = false;
     let nearestTrafficArc = Infinity;
     let laneVotes = 0;
+    let blockingCarArc = Infinity;
+    let blockingCarSpeed = Infinity;
     const allKarts = (typeof race !== 'undefined' && race && race.karts) ? race.karts : null;
+    const candidateOffsets = [
+      clampLaneOffset(lateralOffset - laneShift),
+      clampLaneOffset(lateralOffset),
+      clampLaneOffset(lateralOffset + laneShift)
+    ];
+    const candidateScores = candidateOffsets.map((offset, idx) => {
+      let score = -Math.abs(offset - lateralOffset) * 0.10;
+      if(idx === 1) score += 6;
+      const edgeRatio = Math.abs(offset) / Math.max(1, halfW - edgeBuffer);
+      if(edgeRatio > 0.80) score -= (edgeRatio - 0.80) * 140;
+      return score;
+    });
     if(allKarts) {
       const laneTolerance = Math.max(24, halfW * 0.18);
+      const laneClearance = Math.max(34, halfW * 0.22);
       const trafficLookArc = Math.max(170, lookDist * 1.1);
       const trafficLookDist = Math.max(140, lookDist);
       for(const other of allKarts) {
@@ -3261,27 +3693,51 @@ function makeAIInput(track, difficulty, aiIndex) {
         const otherTang = splineTangent(spl, otherIdx);
         const otherPerpX = -otherTang.y, otherPerpY = otherTang.x;
         const otherLat = (other.x - spl[otherIdx].x) * otherPerpX + (other.y - spl[otherIdx].y) * otherPerpY;
+        const trafficWeight = Math.max(0, trafficLookArc - arcAhead);
+        const speedDelta = Math.max(0, k.speed - other.speed);
+        for(let ci = 0; ci < candidateOffsets.length; ci++) {
+          const latGap = Math.abs(otherLat - candidateOffsets[ci]);
+          if(latGap < laneClearance) {
+            const gapFactor = 1 - latGap / laneClearance;
+            candidateScores[ci] -= trafficWeight * (0.34 + gapFactor * 0.48) + speedDelta * 0.08;
+          }
+        }
         if(Math.abs(otherLat - lateralErr) > laneTolerance) continue;
 
         trafficAhead = true;
         nearestTrafficArc = Math.min(nearestTrafficArc, arcAhead);
         laneVotes += (otherLat >= lateralErr) ? -1 : 1;
+        if(k.speed > other.speed + 8 && arcAhead < Math.max(95, lookDist * 0.82) && arcAhead < blockingCarArc) {
+          blockingCarArc = arcAhead;
+          blockingCarSpeed = Math.abs(other.speed);
+        }
       }
     }
 
-    if(trafficAhead && _laneHoldTimer <= 0) {
-      _laneBias = laneVotes === 0 ? -_laneBias : Math.sign(laneVotes);
+    const bestLaneIdx = candidateScores[0] > candidateScores[2]
+      ? (candidateScores[0] > candidateScores[1] ? 0 : 1)
+      : (candidateScores[2] > candidateScores[1] ? 2 : 1);
+    const centerLaneScore = candidateScores[1];
+    const bestLaneScore = candidateScores[bestLaneIdx];
+    const bestLaneBias = bestLaneIdx === 0 ? -1 : bestLaneIdx === 2 ? 1 : 0;
+    const canCommitPass = bestLaneBias !== 0 && bestLaneScore > centerLaneScore + 16;
+
+    if(blockingCarArc < Infinity && canCommitPass) {
+      _laneBias = bestLaneBias;
+      _laneHoldTimer = Math.max(_laneHoldTimer, 1.25 + cornerSeverity * 0.50);
+      _passCommitTimer = Math.max(_passCommitTimer, 1.05 + Math.min(0.65, blockingCarArc / 220));
+    } else if(trafficAhead && _laneHoldTimer <= 0) {
+      _laneBias = laneVotes === 0 ? (bestLaneBias || -_laneBias) : Math.sign(laneVotes);
       _laneHoldTimer = 0.95 + cornerSeverity * 0.45;
     }
-    if(trafficAhead || _laneHoldTimer > 0) {
-      const laneShift = Math.min(Math.max(24, halfW * 0.24 * laneSpreadScale), Math.max(24, halfW - 16));
-      lateralOffset += _laneBias * laneShift;
-      if(trafficAhead && nearestTrafficArc < 90 && Math.abs(k.speed) > 80) {
-        lateralOffset += _laneBias * Math.min(18, halfW * 0.12 * laneSpreadScale);
+
+    if(trafficAhead || _laneHoldTimer > 0 || _passCommitTimer > 0) {
+      lateralOffset = clampLaneOffset(lateralOffset + _laneBias * laneShift);
+      if((trafficAhead || _passCommitTimer > 0) && nearestTrafficArc < 110 && Math.abs(k.speed) > 80) {
+        lateralOffset = clampLaneOffset(lateralOffset + _laneBias * Math.min(26, halfW * 0.18 * laneSpreadScale));
       }
     }
-    const edgeBuffer = Math.max(12, halfW * 0.08);
-    lateralOffset = Math.max(-(halfW - edgeBuffer), Math.min(halfW - edgeBuffer, lateralOffset));
+    lateralOffset = clampLaneOffset(lateralOffset);
 
     const tang = splineTangent(spl, tgtIdx);
     const normX = -tang.y, normY = tang.x;
@@ -3322,13 +3778,19 @@ function makeAIInput(track, difficulty, aiIndex) {
     const projY = k.y + Math.sin(k.angle) * projDist;
     const projIdx = idxAhead(nearIdx, projDist);
     const projErr = Math.hypot(projX - spl[projIdx].x, projY - spl[projIdx].y);
-    const strictHalf = Math.max(halfW * 0.84, halfW - 6);
+    const strictHalf = Math.max(halfW * 0.94, halfW + 12);
     const projectedOffTrack = projErr > strictHalf;
     const edgeNorm = Math.abs(lateralErr) / Math.max(1, halfW);
-    const edgePenalty = Math.max(0.58, 1.0 - Math.max(0, edgeNorm - 0.62) * 0.92);
+    const edgePenalty = Math.max(0.72, 1.0 - Math.max(0, edgeNorm - 0.68) * 0.68);
     let safeTargetSpeed = targetSpeed * edgePenalty;
+    const momentumFloor = k.maxSpeed * (0.22 + cornerSeverity * 0.08);
+    safeTargetSpeed = Math.max(safeTargetSpeed, momentumFloor);
     if(trafficAhead && nearestTrafficArc < 120 && !projectedOffTrack && edgeNorm < 0.86) {
       safeTargetSpeed *= 1.07;
+    }
+    if(blockingCarArc < Infinity && _passCommitTimer <= 0 && nearestTrafficArc < 125) {
+      const followBuffer = Math.max(8, Math.min(22, blockingCarArc * 0.10));
+      safeTargetSpeed = Math.min(safeTargetSpeed, Math.max(momentumFloor, blockingCarSpeed + followBuffer));
     }
 
     let needsBrake  = k.speed > safeTargetSpeed + (6 + cornerSeverity * 12);
@@ -3337,7 +3799,11 @@ function makeAIInput(track, difficulty, aiIndex) {
     if(trafficAhead && nearestTrafficArc < 90 && !projectedOffTrack && edgeNorm < 0.84 && k.speed < safeTargetSpeed + 16) {
       needsBrake = false;
     }
-    const shouldAccel = !projectedOffTrack && edgeNorm < 0.88 && (k.speed < safeTargetSpeed - (4 + cornerSeverity * 4));
+    let shouldAccel = !projectedOffTrack && edgeNorm < 0.92 && (k.speed < safeTargetSpeed - (4 + cornerSeverity * 4));
+    if(cornerSeverity > 0.48 && k.speed < momentumFloor + 12 && headingErr < 1.05) {
+      needsBrake = false;
+      shouldAccel = true;
+    }
     const adaptiveBrakeMulBase = 1 + Math.min(1.7, overshootRisk * (0.95 + cornerSeverity * 1.05));
     
     // ── AI PIT DECISION ────────────────────────────────────
@@ -3355,33 +3821,17 @@ function makeAIInput(track, difficulty, aiIndex) {
       if(inQualifying) _pitAfterPushLap = true;
     }
 
-    // Determine pit strategy based on race length
-    if(totalLaps >= 5) {
-      _pitStrategy = 'two-stop';  // Two pit stops for long races (5+ laps)
-    } else if(totalLaps >= 4) {
-      _pitStrategy = 'single-late';  // Single pit late in race
-    } else {
-      _pitStrategy = 'single'; // Default single pit for 3-lap races
-    }
+    _pitStrategy = getAiPitStrategyId(aiIndex, difficulty, totalLaps);
+    k.aiPitPlan = _pitStrategy;
 
     // Decide to pit based on strategy
     const lapsSinceLastPit = k.lap - _lastPitLap;
     if(!k.inPit && k.pitPhase === null && inPitZone) {
       if(inQualifying) {
         shouldPit = _pitAfterPushLap;
-      } else if(_pitStrategy === 'two-stop') {
-        // Two-stop: pit at ~33% and ~66% tyre wear
-        if((k.tyreWear > 0.3 && lapsSinceLastPit > 1) || (k.tyreWear > 0.65 && lapsSinceLastPit > 1)) {
-          shouldPit = true;
-        }
-      } else if(_pitStrategy === 'single-late') {
-        // Single late: pit when tyre wear reaches 60-70%
-        if(k.tyreWear > 0.6 && lapsSinceLastPit > 1) {
-          shouldPit = true;
-        }
       } else {
-        // Single pit: pit when tyre wear reaches 70-75%
-        if(k.tyreWear > 0.7 && lapsSinceLastPit > 1) {
+        const aiPitCall = getPitCallStatus(k, totalLaps, _pitStrategy, window._raceWeather || 'dry');
+        if(aiPitCall && aiPitCall.level !== 'window' && lapsSinceLastPit > 0) {
           shouldPit = true;
         }
       }
@@ -3491,7 +3941,7 @@ function makeAIInput(track, difficulty, aiIndex) {
     };
   };
 
-  return { fn, set: (k) => { kart = k; } };
+  return { fn, set: (k) => { kart = k; if(k) k.aiPitPlan = _pitStrategyId; } };
 }
 
 // ── GHOST KART RENDERER ─────────────────────────────────
@@ -3992,6 +4442,7 @@ class Race {
   _drawGridSlots(ctx, camX, camY, W, H) {
     if(!this.gridSlots) return;
     const slotColors = ['#ffd700','#c0c0c0','#cd7f32','#ff6b35','#00c2ff','#aa44ff','#39ff14','#ff3b8d','#00e091','#f5f5f5'];
+    const pulse = 0.65 + 0.35 * Math.sin(performance.now() / 320);
     this.gridSlots.forEach((slot, idx) => {
       const sx = slot.x - camX + W/2;
       const sy = slot.y - camY + H/2;
@@ -3999,25 +4450,38 @@ class Race {
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate(slot.a);
-      // Filled background box
-      ctx.globalAlpha = 0.18;
-      ctx.fillStyle = col;
-      ctx.fillRect(-15, -10, 30, 20);
-      // Border
-      ctx.globalAlpha = 0.75;
+      // Outer glow halo
+      ctx.globalAlpha = 0.28 * pulse;
       ctx.shadowColor = col;
-      ctx.shadowBlur = 10;
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-15, -10, 30, 20);
-      ctx.shadowBlur = 0;
-      // Position label
-      ctx.globalAlpha = 1.0;
+      ctx.shadowBlur = 28;
       ctx.fillStyle = col;
-      ctx.font = 'bold 9px Orbitron,sans-serif';
+      ctx.fillRect(-22, -15, 44, 30);
+      ctx.shadowBlur = 0;
+      // Filled background box
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = col;
+      ctx.fillRect(-20, -13, 40, 26);
+      // Bright border
+      ctx.globalAlpha = 1.0;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(-20, -13, 40, 26);
+      ctx.shadowBlur = 0;
+      // Inner white line for contrast
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-17, -10, 34, 20);
+      // Position label
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 8;
+      ctx.font = 'bold 13px Orbitron,sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(`P${idx+1}`, 0, 0);
+      ctx.shadowBlur = 0;
       ctx.restore();
     });
   }
@@ -4109,8 +4573,7 @@ class Race {
           const gDist = Math.hypot(k.x - pl.garagePos.x, k.y - pl.garagePos.y);
           if(gDist < 110 && k._onPitLane) {
             k.pitPhase = 'selecting';
-            k.pitNavIdx = TYRE_DEFS.findIndex(t=>t.id===k.tyreId);
-            if(k.pitNavIdx < 0) k.pitNavIdx = 1;
+            seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
             k.inPit = true; k.speed = 0; k._aiPitTimer = 0;
             k._pitExitPos = pl.exitPos;
             k._pitExitAngle = pl.exitAngle !== undefined ? pl.exitAngle : 0;
@@ -4145,8 +4608,7 @@ class Race {
               return;
             }
             k.pitPhase   = 'selecting';
-            k.pitNavIdx  = TYRE_DEFS.findIndex(t=>t.id===k.tyreId);
-            if(k.pitNavIdx < 0) k.pitNavIdx = 1;
+            seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
             k.inPit      = true;
             k._aiPitTimer = 0;
             beep(440,0.08,0.3,'square');
@@ -4244,12 +4706,27 @@ class Race {
 
     if(this.phase === 'countdown') {
       this.countdownTimer += dt;
-      this.karts.forEach((k, i) => this.updateCamera(i, dt));
+      this.karts.forEach((k, i) => {
+        this.updateCamera(i, dt);
+        // Let human players build RPM during the countdown
+        if(!k.isAI) {
+          const inp = k.getInput ? k.getInput() : {up:false, down:false};
+          let rpm = this.launchRPM[i] || 0.0;
+          if(inp.up) rpm += 1.15 * dt;
+          else rpm -= 0.55 * dt;
+          if(inp.down) rpm -= 0.75 * dt;
+          this.launchRPM[i] = Math.max(0, Math.min(1, rpm));
+        } else {
+          const jitter = (Math.random() - 0.5) * 0.03;
+          this.launchRPM[i] = Math.max(0, Math.min(1, (this.launchRPM[i] || 0.62) + jitter));
+        }
+      });
       if(this.countdownTimer >= 1) {
         this.countdownTimer -= 1;
         this.countdownVal--;
         if(this.countdownVal < 0) {
-          this._startLaunchPhase();
+          // GO — launch immediately with whatever RPM the player has built
+          this._applyLaunch();
           showCountdown(-1);
         } else {
           showCountdown(this.countdownVal);
@@ -4259,6 +4736,7 @@ class Race {
     }
 
     if(this.phase === 'launch') {
+      // Legacy path — should no longer be reached but kept as a safety fallback
       this.launchTimer += dt;
       this.karts.forEach((k, i) => {
         this.updateCamera(i, dt);
@@ -4295,8 +4773,7 @@ class Race {
         const gDist = Math.hypot(k.x - pl.garagePos.x, k.y - pl.garagePos.y);
         if(gDist < 110 && k._onPitLane) {
           k.pitPhase = 'selecting';
-          k.pitNavIdx = TYRE_DEFS.findIndex(t=>t.id===k.tyreId);
-          if(k.pitNavIdx < 0) k.pitNavIdx = 1;
+          seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
           k.inPit = true; k.speed = 0; k._aiPitTimer = 0;
           k._pitExitPos = pl.exitPos;
           k._pitExitAngle = pl.exitAngle !== undefined ? pl.exitAngle : 0;
@@ -4333,8 +4810,7 @@ class Race {
             return;
           }
           k.pitPhase   = 'selecting';
-          k.pitNavIdx  = TYRE_DEFS.findIndex(t=>t.id===k.tyreId);
-          if(k.pitNavIdx < 0) k.pitNavIdx = 1;
+          seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
           k.inPit      = true;
           k._aiPitTimer = 0;  // timer for AI to auto-select
           beep(440,0.08,0.3,'square');
@@ -4695,32 +5171,65 @@ class Race {
       });
     }
 
-    if(this.phase === 'launch') {
+    // Show launch bar during countdown AND the legacy launch phase
+    if(this.phase === 'countdown' || this.phase === 'launch') {
       const humanCount = this.mode === 'versus' ? 2 : 1;
-      const barW = 280;
-      const topY = 58;
+      const barW = 320;
+      const barH = 38;
+      const goodL = 0.56, goodR = 0.76;
+      const topY = this.phase === 'countdown' ? H - 130 : 58;
+      const barPulse = 0.6 + 0.4 * Math.sin(performance.now() / 180);
       for(let i = 0; i < humanCount; i++) {
-        const bx = (i === 0) ? (W/2 - barW - 10) : (W/2 + 10);
+        const bx = humanCount === 1 ? W/2 - barW/2 : (i === 0 ? W/2 - barW - 14 : W/2 + 14);
         const by = topY;
         const rpm = Math.max(0, Math.min(1, this.launchRPM[i] || 0));
-        ctx.fillStyle = 'rgba(0,0,0,0.72)';
-        ctx.fillRect(bx, by, barW, 30);
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        ctx.strokeRect(bx, by, barW, 30);
-        const goodL = 0.56, goodR = 0.76;
-        ctx.fillStyle = 'rgba(60,220,120,0.35)';
-        ctx.fillRect(bx + 4 + (barW-8)*goodL, by + 4, (barW-8)*(goodR-goodL), 22);
-        ctx.fillStyle = rpm > 0.88 ? '#ff4444' : '#00f5ff';
-        ctx.fillRect(bx + 4, by + 4, (barW-8) * rpm, 22);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 10px Orbitron,sans-serif';
+        const inGreen = rpm >= goodL && rpm <= goodR;
+        const overRev  = rpm > 0.88;
+        const bogZone  = rpm < 0.30;
+        // Backdrop
+        ctx.fillStyle = 'rgba(0,0,0,0.82)';
+        ctx.fillRect(bx - 2, by - 28, barW + 4, barH + 34);
+        ctx.strokeStyle = inGreen ? `rgba(60,255,120,${barPulse})` : 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx - 2, by - 28, barW + 4, barH + 34);
+        // Zone labels above the bar
+        ctx.font = '8px Orbitron,sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#f87171'; ctx.fillText('BOG', bx + (barW-8)*0.15, by - 16);
+        ctx.fillStyle = '#ffd700'; ctx.fillText('GOOD', bx + (barW-8)*0.46, by - 16);
+        ctx.fillStyle = '#4ade80'; ctx.fillText('PERFECT', bx + (barW-8)*0.66, by - 16);
+        ctx.fillStyle = '#f87171'; ctx.fillText('WHEELSPIN', bx + (barW-8)*0.92, by - 16);
+        // Bar trough
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(bx + 4, by + 4, barW - 8, barH - 8);
+        // Green zone highlight (pulsing)
+        ctx.fillStyle = `rgba(60,220,120,${0.28 + 0.22 * barPulse})`;
+        ctx.fillRect(bx + 4 + (barW-8)*goodL, by + 4, (barW-8)*(goodR-goodL), barH - 8);
+        // RPM fill
+        const rpmColor = overRev ? '#ff4444' : bogZone ? '#f97316' : inGreen ? '#4ade80' : '#00f5ff';
+        ctx.fillStyle = rpmColor;
+        ctx.fillRect(bx + 4, by + 4, (barW-8) * rpm, barH - 8);
+        // Green zone border tick marks
+        ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(bx + 4 + (barW-8)*goodL, by + 2); ctx.lineTo(bx + 4 + (barW-8)*goodL, by + barH - 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx + 4 + (barW-8)*goodR, by + 2); ctx.lineTo(bx + 4 + (barW-8)*goodR, by + barH - 2); ctx.stroke();
+        // Status text
+        const statusText = overRev ? '🔴 WHEELSPIN — ease off!' : inGreen ? '🟢 PERFECT — hold it!' : bogZone ? '🟡 TOO LOW — more throttle' : '🔵 GOOD — hold steady';
+        ctx.fillStyle = inGreen ? '#4ade80' : overRev ? '#ff4444' : '#ffd700';
+        ctx.font = `bold 10px Orbitron,sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(statusText, bx + barW/2, by + barH + 12);
+        // Player label
+        ctx.fillStyle = i === 0 ? '#00f5ff' : '#ff6b35';
+        ctx.font = 'bold 9px Orbitron,sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(`P${i+1} LAUNCH RPM`, bx + 8, by - 4);
+        ctx.fillText(`P${i+1} — BUILD REVS NOW`, bx, by - 28 + 10);
       }
+      // Central instruction
       ctx.fillStyle = '#ffd700';
       ctx.textAlign = 'center';
-      ctx.font = 'bold 12px Orbitron,sans-serif';
-      ctx.fillText('HOLD THROTTLE IN GREEN RANGE', W/2, 52);
+      ctx.font = 'bold 13px Orbitron,sans-serif';
+      ctx.fillText('REV UP NOW — HIT GREEN BEFORE GO!', W/2, topY - 38);
     }
 
     // Race timer
@@ -5055,6 +5564,8 @@ function pauseGame() {
   if (AC) try { AC.suspend(); } catch(e){}
   const po = document.getElementById('pause-overlay');
   if (po) po.style.display = 'flex';
+  const pitUi = document.getElementById('pit-ui-overlay');
+  if(pitUi) { pitUi.style.display = 'none'; pitUi.dataset.signature = ''; }
   showTouchOverlay(false);
 }
 function resumeGame() {
@@ -5100,6 +5611,7 @@ function gameLoop(ts) {
     race.update(dt);
     race.render();
   }
+  syncPitSelectionOverlay();
   animId = requestAnimationFrame(gameLoop);
 }
 
@@ -5162,6 +5674,40 @@ function renderThumbnail(trackIdx) {
     cx.fillRect(ci*sq-hw,ri*sq-sq,sq,sq);
   }
   cx.restore();
+
+  // Grid slots preview
+  if(t.gridSlots && t.gridSlots.length) {
+    t.gridSlots.slice(0, 10).forEach((slot, idx) => {
+      const sx = slot.x * sc + ofx;
+      const sy = slot.y * sc + ofy;
+      const angle = slot.a || 0;
+      const bodyColor = idx === 0 ? '#00f5ff' : idx === 1 ? '#ff6b35' : 'rgba(255,255,255,0.72)';
+      cx.save();
+      cx.translate(sx, sy);
+      cx.rotate(angle);
+      cx.fillStyle = bodyColor;
+      cx.globalAlpha = idx < 2 ? 0.95 : 0.70;
+      cx.fillRect(-4, -2, 8, 4);
+      cx.strokeStyle = 'rgba(0,0,0,0.65)';
+      cx.lineWidth = 1;
+      cx.strokeRect(-4, -2, 8, 4);
+      cx.restore();
+    });
+  }
+
+  // Name ribbon overlay so the preview always carries the circuit name
+  cx.fillStyle = 'rgba(0,0,0,0.62)';
+  cx.fillRect(8, 8, c.width - 16, 18);
+  cx.strokeStyle = t.borderColor + '88';
+  cx.lineWidth = 1;
+  cx.strokeRect(8, 8, c.width - 16, 18);
+  cx.fillStyle = t.borderColor;
+  cx.font = 'bold 10px Orbitron,sans-serif';
+  cx.textAlign = 'center';
+  cx.textBaseline = 'middle';
+  cx.fillText(t.name, c.width / 2, 17);
+  cx.textAlign = 'left';
+  cx.textBaseline = 'alphabetic';
 
   return c.toDataURL();
 }
@@ -5360,6 +5906,77 @@ function setupTouchControls() {
   window.addEventListener('resize', scaleOverlay);
   scaleOverlay();
   overlay.style.display = 'block';
+}
+
+function getActivePitSelectionKart() {
+  if(!race || !race.karts) return null;
+  for(let i = 0; i < race.karts.length; i++) {
+    const kart = race.karts[i];
+    if(kart && !kart.isAI && kart.pitPhase === 'selecting') return { kart, playerIndex:i };
+  }
+  return null;
+}
+
+function confirmPitSelection(kart, playerIndex) {
+  if(!kart || kart.pitPhase !== 'selecting') return;
+  const tyre = TYRE_DEFS[kart.pitNavIdx] || TYRE_DEFS.find(t => t.id === kart.pitTyreChoice) || TYRE_DEFS[1];
+  kart.pitNavIdx = TYRE_DEFS.findIndex(t => t.id === tyre.id);
+  kart.pitTyreChoice = tyre.id;
+  kart.pitPhase = 'stopping';
+  const bp = playerIndex === 0 ? BINDINGS.p1 : BINDINGS.p2;
+  [bp.pit, bp.pit && bp.pit.toLowerCase ? bp.pit.toLowerCase() : null, bp.pit && bp.pit.toUpperCase ? bp.pit.toUpperCase() : null, 'Enter']
+    .filter(Boolean)
+    .forEach(kk => delete keys[kk]);
+  beep(550,0.08,0.3,'square');
+}
+
+function syncPitSelectionOverlay() {
+  const overlay = document.getElementById('pit-ui-overlay');
+  if(!overlay) return;
+  if(canvas.style.display !== 'block' || !race || isPaused) {
+    overlay.style.display = 'none';
+    overlay.dataset.signature = '';
+    return;
+  }
+
+  const active = getActivePitSelectionKart();
+  if(!active) {
+    overlay.style.display = 'none';
+    overlay.dataset.signature = '';
+    return;
+  }
+
+  const { kart, playerIndex } = active;
+  const title = document.getElementById('pit-ui-title');
+  const sub = document.getElementById('pit-ui-sub');
+  const choices = document.getElementById('pit-ui-choices');
+  const confirmBtn = document.getElementById('pit-ui-confirm');
+  const signature = `${playerIndex}|${kart.pitPhase}|${kart.pitNavIdx}|${kart.tyreId}|${kart.pitTyreChoice||''}|${race && race.track ? race.track.id : 0}`;
+
+  if(overlay.dataset.signature !== signature) {
+    const currentTyre = TYRE_DEFS.find(t => t.id === kart.tyreId) || TYRE_DEFS[1];
+    title.textContent = `🔧 ${playerIndex === 0 ? 'P1' : 'P2'} PIT STOP — PICK TYRES`;
+    sub.textContent = `Current tyre: ${currentTyre.label}. Click or tap a compound, or use your pit keys to confirm.`;
+    choices.innerHTML = '';
+    TYRE_DEFS.forEach((t, ti) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pit-ui-choice' + (ti === kart.pitNavIdx ? ' sel' : '');
+      const lapLife = race && race.track ? getTyreLapLifespan(race.track.id, t.id) : '?';
+      b.innerHTML = `<div class="pit-ui-choice-head"><span class="pit-ui-choice-dot" style="background:${t.color};"></span>${t.label}${t.id === kart.tyreId ? ' · ON NOW' : ''}</div><div class="pit-ui-choice-meta">${t.desc} · ~${lapLife} lap${lapLife===1?'':'s'}</div>`;
+      b.onclick = () => {
+        kart.pitNavIdx = ti;
+        kart.pitTyreChoice = t.id;
+        beep(440,0.04,0.2,'square');
+        syncPitSelectionOverlay();
+      };
+      choices.appendChild(b);
+    });
+    confirmBtn.onclick = () => confirmPitSelection(kart, playerIndex);
+    overlay.dataset.signature = signature;
+  }
+
+  overlay.style.display = 'flex';
 }
 
 // ── CONFETTI ─────────────────────────────────────────────
@@ -5632,8 +6249,7 @@ const PAINT_COLORS = [
   {id:'purple', label:'PURPLE',  body:'#aa44ff', shadow:'#550088'},
 ];
 
-// 5 upgrade types, 4 levels each, separate for P1 and P2
-// Expandable upgrade definitions: now 10 levels per upgrade for deeper progression
+// Legacy numeric upgrade tree kept for save migration into the part-based development system.
 const UPG_DEFS = [
   { id:'speed',    name:'MAX SPEED',     icon:'🚀', costs:[40,100,200,380,700,1200,2000,3200,5000,8000], bonuses:[40,95,175,280,420,590,790,1020,1280,1600] },
   { id:'accel',    name:'ACCELERATION',  icon:'⚡', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[30,65,120,195,285,395,530,690,880,1100] },
@@ -5641,6 +6257,115 @@ const UPG_DEFS = [
   { id:'braking',  name:'BRAKING',       icon:'🔴', costs:[30,75,150,290,540,980,1600,2500,3700,5400],  bonuses:[60,130,220,340,480,640,820,1020,1250,1500]},
   { id:'handling', name:'HANDLING',      icon:'🎯', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[0.12,0.26,0.42,0.60,0.82,1.06,1.32,1.60,1.92,2.30]},
 ];
+
+const DEV_DEFS = [
+  {
+    id:'engine', name:'ENGINE', icon:'⚙️', desc:'Power unit research and driveline upgrades.',
+    parts:[
+      { id:'eng-intake',      code:'E-01', name:'High-Flow Intake',        researchCost:70,  implementCost:90,  desc:'Sharpen throttle pickup out of slow corners.', bonus:{ accel:26 } },
+      { id:'eng-ecu',         code:'E-02', name:'Race ECU Mapping',        researchCost:110, implementCost:140, desc:'Unlocks cleaner fuel and ignition delivery.', bonus:{ speed:30, accel:18 } },
+      { id:'eng-internals',   code:'E-03', name:'Forged Internals',        researchCost:170, implementCost:220, desc:'Raises rev ceiling for stronger top-end speed.', bonus:{ speed:52 } },
+      { id:'eng-final-drive', code:'E-04', name:'Close-Ratio Final Drive', researchCost:210, implementCost:260, desc:'Improves launch and traction on corner exit.', bonus:{ accel:32, speed:18 } },
+    ]
+  },
+  {
+    id:'aero', name:'AERO', icon:'💨', desc:'Downforce and drag management for corner entry and exit.',
+    parts:[
+      { id:'aero-front',    code:'A-01', name:'Front Canards',       researchCost:80,  implementCost:100, desc:'Adds front bite in medium-speed sections.', bonus:{ handling:0.14 } },
+      { id:'aero-floor',    code:'A-02', name:'Floor Tunnels',       researchCost:120, implementCost:150, desc:'Builds efficient downforce under the kart.', bonus:{ handling:0.22, traction:18 } },
+      { id:'aero-diffuser', code:'A-03', name:'Rear Diffuser',       researchCost:165, implementCost:205, desc:'Stabilises rear grip on throttle application.', bonus:{ handling:0.20, traction:24 } },
+      { id:'aero-wing',     code:'A-04', name:'Low-Drag Rear Wing',  researchCost:210, implementCost:250, desc:'Balances loaded speed with straight-line efficiency.', bonus:{ speed:24, handling:0.16 } },
+    ]
+  },
+  {
+    id:'chassis', name:'CHASSIS', icon:'🛞', desc:'Structure, suspension and braking confidence under load.',
+    parts:[
+      { id:'chassis-susp',   code:'C-01', name:'Suspension Geometry Kit', researchCost:75,  implementCost:95,  desc:'Keeps the kart settled over weight transfer.', bonus:{ handling:0.16, traction:18 } },
+      { id:'chassis-brakes', code:'C-02', name:'Brake Cooling Ducts',     researchCost:105, implementCost:130, desc:'Lets you brake later without fade.', bonus:{ braking:120 } },
+      { id:'chassis-weight', code:'C-03', name:'Weight Reduction Pack',   researchCost:150, implementCost:185, desc:'Sheds mass for better rotation and pickup.', bonus:{ accel:22, handling:0.18 } },
+      { id:'chassis-rack',   code:'C-04', name:'Quick Steering Rack',     researchCost:185, implementCost:225, desc:'Sharper response when changing direction.', bonus:{ handling:0.28, braking:70 } },
+    ]
+  }
+];
+
+const DEV_PARTS = DEV_DEFS.flatMap(dept =>
+  dept.parts.map(part => ({ ...part, departmentId: dept.id, departmentName: dept.name, departmentIcon: dept.icon }))
+);
+
+function getDevelopmentPart(partId) {
+  return DEV_PARTS.find(part => part.id === partId) || null;
+}
+
+function createEmptyDevelopmentState() {
+  const state = {};
+  DEV_PARTS.forEach(part => { state[part.id] = 0; });
+  return state;
+}
+
+function applyStagePointsToDepartment(parts, points, targetState) {
+  let remaining = Math.max(0, points);
+  parts.forEach(part => {
+    const stage = Math.max(0, Math.min(2, remaining));
+    targetState[part.id] = stage;
+    remaining -= stage;
+  });
+}
+
+function buildLegacyDevelopmentState(legacyUpg) {
+  const state = createEmptyDevelopmentState();
+  const getLevel = (id) => Math.max(0, Math.min(10, Number((legacyUpg || {})[id]) || 0));
+  const deptAverages = {
+    engine:  (getLevel('speed') + getLevel('accel')) / 2,
+    aero:    (getLevel('speed') + getLevel('handling') + getLevel('traction')) / 3,
+    chassis: (getLevel('accel') + getLevel('traction') + getLevel('braking') + getLevel('handling')) / 4,
+  };
+
+  DEV_DEFS.forEach(dept => {
+    const stagePoints = Math.round((deptAverages[dept.id] / 10) * (dept.parts.length * 2));
+    applyStagePointsToDepartment(dept.parts, stagePoints, state);
+  });
+  return state;
+}
+
+function normalizeDevelopmentState(devState, legacyUpg) {
+  const source = (devState && Object.keys(devState).length) ? devState : buildLegacyDevelopmentState(legacyUpg);
+  const normalized = createEmptyDevelopmentState();
+  DEV_PARTS.forEach(part => {
+    normalized[part.id] = Math.max(0, Math.min(2, parseInt(source[part.id], 10) || 0));
+  });
+  return normalized;
+}
+
+function getDevelopmentBonuses(devState) {
+  const bonus = { speed:0, accel:0, traction:0, braking:0, handling:0 };
+  DEV_PARTS.forEach(part => {
+    if((devState[part.id] || 0) < 2) return;
+    Object.keys(part.bonus).forEach(key => {
+      bonus[key] = (bonus[key] || 0) + part.bonus[key];
+    });
+  });
+  return bonus;
+}
+
+function formatDevelopmentBonus(bonus) {
+  const tags = [];
+  if(bonus.speed) tags.push(`+${Math.round(bonus.speed * 0.8)} KM/H TOP`);
+  if(bonus.accel) tags.push('+ACCEL');
+  if(bonus.traction) tags.push(`+${Math.round(bonus.traction * 0.8)} GRIP`);
+  if(bonus.braking) tags.push('+BRAKING');
+  if(bonus.handling) tags.push(`+${Math.round(bonus.handling * 100)}% TURN`);
+  return tags.join(' · ');
+}
+
+function getDevelopmentStageMeta(stage, part) {
+  if(stage >= 2) {
+    return { status:'IMPLEMENTED', color:'#4ade80', actionLabel:'✓ FITTED', actionCost:0, canAdvance:false };
+  }
+  if(stage === 1) {
+    return { status:'RESEARCH COMPLETE', color:'#ffd700', actionLabel:`IMPLEMENT 💰${part.implementCost}`, actionCost:part.implementCost, canAdvance:true };
+  }
+  return { status:'NOT STARTED', color:'#f472b6', actionLabel:`RESEARCH 💰${part.researchCost}`, actionCost:part.researchCost, canAdvance:true };
+}
 
 const SETUP_DEFS = [
   { id:'downforce', name:'DOWNFORCE', icon:'⬇️', desc:'High grip & tighter turns<br>Lower top speed',  speedMult:0.87, turnMult:1.22, tractBonus:22 },
@@ -5650,6 +6375,114 @@ const SETUP_DEFS = [
   // Custom placeholder: actual values are stored per-player in player data under <player>customSetup
   { id:'custom',    name:'CUSTOM',     icon:'🛠', desc:'Create your own setup: tweak speed, downforce and traction', speedMult:1.00, turnMult:1.00, tractBonus:0 },
 ];
+
+const PIT_STRATEGY_DEFS = [
+  { id:'undercut', label:'UNDERCUT', icon:'⚡', desc:'Pit early for clean air and a softer second stint.', wearOpen:0.42, wearNow:0.58, tyrePref:'soft' },
+  { id:'balanced', label:'BALANCED', icon:'⚖️', desc:'Normal one-stop window with a medium tyre target.', wearOpen:0.55, wearNow:0.70, tyrePref:'med' },
+  { id:'overcut',  label:'OVERCUT',  icon:'🛡️', desc:'Stay out longer and lean on track position.', wearOpen:0.66, wearNow:0.82, tyrePref:'hard' },
+  { id:'safe',     label:'SAFE',     icon:'🔧', desc:'Only pit when wear gets high or the tyres are failing.', wearOpen:0.78, wearNow:0.92, tyrePref:'hard' },
+];
+
+function createDefaultPitStrategyCustom() {
+  return { wearOpen:0.55, wearNow:0.70, tyrePref:'med' };
+}
+
+function normalizePitStrategyCustom(plan, weather) {
+  const fallback = createDefaultPitStrategyCustom();
+  const src = (plan && typeof plan === 'object') ? plan : fallback;
+  let wearOpen = Number(src.wearOpen);
+  let wearNow = Number(src.wearNow);
+  wearOpen = Number.isFinite(wearOpen) ? wearOpen : fallback.wearOpen;
+  wearNow = Number.isFinite(wearNow) ? wearNow : fallback.wearNow;
+  wearOpen = Math.max(0.20, Math.min(0.88, wearOpen));
+  wearNow = Math.max(wearOpen + 0.05, Math.min(0.96, wearNow));
+  const tyrePref = typeof src.tyrePref === 'string' ? src.tyrePref : fallback.tyrePref;
+  return { wearOpen, wearNow, tyrePref };
+}
+
+function getLegacyPitStrategySeed(id) {
+  switch(id) {
+    case 'undercut': return { wearOpen:0.42, wearNow:0.58, tyrePref:'soft' };
+    case 'overcut': return { wearOpen:0.66, wearNow:0.82, tyrePref:'hard' };
+    case 'safe': return { wearOpen:0.78, wearNow:0.92, tyrePref:'hard' };
+    default: return createDefaultPitStrategyCustom();
+  }
+}
+
+function getPitStrategyDef(id) {
+  if(id && typeof id === 'object') return id;
+  return PIT_STRATEGY_DEFS.find(strat => strat.id === id) || PIT_STRATEGY_DEFS[1];
+}
+
+function getPlayerPitStrategyPlan(playerData, weather) {
+  const weatherId = normalizeWeatherId(weather || (playerData && playerData.weather) || 'dry');
+  const seed = (playerData && playerData.pitStrategyCustom) || getLegacyPitStrategySeed((playerData && playerData.pitStrategy) || 'balanced');
+  const custom = normalizePitStrategyCustom(seed, weatherId);
+  custom.tyrePref = getLegalTyreId(custom.tyrePref, weatherId);
+  const tyre = TYRE_DEFS.find(t => t.id === custom.tyrePref) || TYRE_DEFS[1];
+  const openPct = Math.round(custom.wearOpen * 100);
+  const nowPct = Math.round(custom.wearNow * 100);
+  return {
+    id:'custom',
+    label:`CUSTOM · ${tyre.label}`,
+    icon:'🛠',
+    desc:`Pit window opens at ${openPct}% wear, box this lap at ${nowPct}% wear, fit ${tyre.label}.`,
+    wearOpen: custom.wearOpen,
+    wearNow: custom.wearNow,
+    tyrePref: custom.tyrePref
+  };
+}
+
+function getPitNavIndexForStop(kartIndex, kart, weather) {
+  const fallbackTyreId = (kart && kart.tyreId) || 'med';
+  const tyreId = (kart && kart.isAI)
+    ? getAIPitTyreId(kart, weather)
+    : (kartIndex === 0 ? getPlayerPitStrategyPlan(getPlayerData(), weather).tyrePref : fallbackTyreId);
+  let idx = TYRE_DEFS.findIndex(t => t.id === tyreId);
+  if(idx < 0) idx = TYRE_DEFS.findIndex(t => t.id === fallbackTyreId);
+  return idx < 0 ? 1 : idx;
+}
+
+function seedPitStopSelection(kart, kartIndex, weather) {
+  if(!kart) return;
+  kart.pitNavIdx = getPitNavIndexForStop(kartIndex, kart, weather);
+  kart.pitTyreChoice = (TYRE_DEFS[kart.pitNavIdx] && TYRE_DEFS[kart.pitNavIdx].id) || kart.tyreId || 'med';
+  kart.pitNavCooldown = 0;
+}
+
+function getPitCallStatus(kart, totalLaps, strategyId, weather) {
+  if(!kart || kart.finished || kart.inPit || kart.pitPhase !== null || kart._hasPitted) return null;
+  if((totalLaps || 0) <= 1) return null;
+
+  const strat = getPitStrategyDef(strategyId);
+  const lapsAfterThisLap = Math.max(0, (totalLaps || 0) - (kart.lap + 1));
+  let wearOpen = strat.wearOpen;
+  let wearNow = strat.wearNow;
+  if(isWetWeather(weather)) {
+    wearOpen = Math.max(0.24, wearOpen - 0.08);
+    wearNow = Math.max(0.38, wearNow - 0.10);
+  }
+  if(kart.tyreWrongWeather) {
+    wearOpen = Math.min(wearOpen, 0.20);
+    wearNow = Math.min(wearNow, 0.36);
+  }
+
+  if(kart.tyreWear >= 0.98 || kart.tyreWrongWeather) {
+    return { level:'critical', strategy:strat, message:'BOX NOW' };
+  }
+  if(lapsAfterThisLap <= 0) return null;
+  if(kart.tyreWear >= wearNow) return { level:'now', strategy:strat, message:'BOX THIS LAP' };
+  if(kart.tyreWear >= wearOpen) return { level:'window', strategy:strat, message:'PIT WINDOW OPEN' };
+  return null;
+}
+
+function getAiPitStrategyId(aiIndex, difficulty, totalLaps) {
+  const plans = totalLaps >= 5
+    ? ['undercut','balanced','overcut','safe']
+    : ['undercut','balanced','balanced','overcut'];
+  const diffOffset = { ultraeasy:0, easy:0, medium:1, hard:2, extreme:3 }[difficulty] || 1;
+  return plans[(aiIndex + diffOffset) % plans.length];
+}
 
 const WEATHER_DEFS = [
   { id:'dry',   label:'DRY ☀️',   icon:'☀️', gripMult:1.0,  speedPen:0.00 },
@@ -5693,7 +6526,9 @@ function getLegalTyreId(tyreId, weather) {
 
 function getAIPitTyreId(kart, weather) {
   if(isWetWeather(weather)) return getPreferredWetTyreId(weather);
-  if(kart.tyreWear > 0.5) return 'hard';
+  const plan = getPitStrategyDef(kart && kart.aiPitPlan);
+  if(plan.tyrePref === 'soft' && kart.tyreWear < 0.82) return 'soft';
+  if(plan.tyrePref === 'hard' || kart.tyreWear > 0.62) return 'hard';
   return 'med';
 }
 
@@ -5937,26 +6772,25 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">🔧 GARAGE — UPGRADES &amp; PAINT</div>
-      <p>Open the Garage from the main menu to spend coins on permanent upgrades or to change your kart's paint. Upgrades now have deeper progression and a new CUSTOM setup option.</p>
-      <div class="info-kv"><span class="info-k">SPEED</span><span class="info-v">Raises maximum top speed (stackable through multiple levels).</span></div>
-      <div class="info-kv"><span class="info-k">ACCELERATION</span><span class="info-v">Improves how quickly you reach top speed coming out of corners.</span></div>
-      <div class="info-kv"><span class="info-k">TRACTION</span><span class="info-v">Reduces off-track penalties and improves grip in slow corners.</span></div>
-      <div class="info-kv"><span class="info-k">BRAKING</span><span class="info-v">Stronger brakes shorten stopping distance and help late braking.</span></div>
-      <div class="info-kv"><span class="info-k">HANDLING</span><span class="info-v">Increases turn responsiveness and high-speed steering authority.</span></div>
-      <div class="info-kv"><span class="info-k">CUSTOM SETUP</span><span class="info-v">Choose the CUSTOM setup in Race Setup to manually tweak Top-Speed, Turn-Rate and Traction bonus before a race.</span></div>
-      <div class="info-kv"><span class="info-k">PAINT</span><span class="info-v">Cosmetic only. 8 colours available for P1 and P2 independently.</span></div>
-      <p class="howto-tip">P1 and P2 have separate upgrade trees and coin balances. Custom setups are saved per-player and applied when a race starts.</p>
+      <div class="howto-heading">🔧 GARAGE — DEVELOPMENT &amp; PAINT</div>
+      <p>Open the Garage to run a proper development programme. Each part now has a research cost and an implementation cost before the upgrade becomes live on the kart.</p>
+      <div class="info-kv"><span class="info-k">ENGINE</span><span class="info-v">Power unit work like intake, ECU, internals, and final-drive upgrades improves top speed and acceleration.</span></div>
+      <div class="info-kv"><span class="info-k">AERO</span><span class="info-v">Canards, floor work, diffusers, and wing packages improve downforce grip, balance, and loaded speed.</span></div>
+      <div class="info-kv"><span class="info-k">CHASSIS</span><span class="info-v">Suspension, brake cooling, weight reduction, and steering hardware improve braking confidence, response, and mechanical grip.</span></div>
+      <div class="info-kv"><span class="info-k">RESEARCH</span><span class="info-v">The first purchase completes the R&amp;D phase and unlocks the part for fitting.</span></div>
+      <div class="info-kv"><span class="info-k">IMPLEMENT</span><span class="info-v">The second purchase fits the package to the kart. Only implemented parts affect performance.</span></div>
+      <div class="info-kv"><span class="info-k">CUSTOM SETUP</span><span class="info-v">Choose the CUSTOM setup in Race Setup to manually tune Top Speed Trim, Downforce Grip Bias, and Mechanical Traction Assist before a race.</span></div>
+      <div class="info-kv"><span class="info-k">PAINT</span><span class="info-v">Cosmetic only. 8 colours are available for P1 and P2 independently.</span></div>
+      <p class="howto-tip">P1 and P2 keep separate development programmes and coin spend, so each kart can evolve in a different direction.</p>
     </div>
 
     <div class="howto-section" style="border-bottom:none">
       <div class="howto-heading">💰 COINS &amp; TRACK UNLOCKS</div>
       <p>Earn coins from every race. Spend them in the Garage on upgrades or unlock premium circuits.</p>
       <div class="info-kv"><span class="info-k">EARNINGS</span><span class="info-v">3 coins per lap + 10 for finishing + 8 bonus for beating the target time. Multiplied by the track's coin rate.</span></div>
-      <div class="info-kv"><span class="info-k">AMBER HIGHWAY</span><span class="info-v">Medium difficulty · 150 💰 to unlock · 1.6× coins.</span></div>
-      <div class="info-kv"><span class="info-k">STEEL FORGE</span><span class="info-v">Hard difficulty · 400 💰 to unlock · 2.0× coins.</span></div>
-      <div class="info-kv"><span class="info-k">VOID CIRCUIT</span><span class="info-v">Expert difficulty · 900 💰 to unlock · 2.8× coins.</span></div>
-      <p class="howto-tip">Grind Neon City or Plasma Ridge (free hard tracks) with a low lap count to unlock premium circuits faster.</p>
+      <div class="info-kv"><span class="info-k">PREMIUM CIRCUITS</span><span class="info-v">Amber Highway, Steel Forge, Void Circuit, Riviera GP, Crown Motorplex, Skyline International, and Aurora Autodrome all unlock with coins.</span></div>
+      <div class="info-kv"><span class="info-k">COST RANGE</span><span class="info-v">Unlock prices now scale from 150 💰 for early premium tracks up to 1800 💰 for the longest, highest-paying GP-style circuits.</span></div>
+      <p class="howto-tip">Grind Neon City, Plasma Ridge, or the new Riviera GP to farm coins quickly, then spend them on the longer GP-style tracks with bigger payouts.</p>
     </div>
   `;
 }
@@ -5964,13 +6798,19 @@ function buildHowToPane(){
 function getPlayerData() {
   try {
     const d = JSON.parse(localStorage.getItem('kartblitz_player')||'{}');
-    const def = (p) => ({speed:0,accel:0,traction:0,braking:0,handling:0});
+    const def = () => ({speed:0,accel:0,traction:0,braking:0,handling:0});
     return {
       coins: d.coins||0,
       p1upg: d.p1upg || def(),
       p2upg: d.p2upg || def(),
+      p1dev: normalizeDevelopmentState(d.p1dev, d.p1upg),
+      p2dev: normalizeDevelopmentState(d.p2dev, d.p2upg),
       p1setup: d.p1setup||'balanced',
       p2setup: d.p2setup||'balanced',
+      p1customSetup: d.p1customSetup || { speedMult:1.00, turnMult:1.00, tractBonus:0 },
+      p2customSetup: d.p2customSetup || { speedMult:1.00, turnMult:1.00, tractBonus:0 },
+      pitStrategy: d.pitStrategy || 'balanced',
+      pitStrategyCustom: normalizePitStrategyCustom(d.pitStrategyCustom || getLegacyPitStrategySeed(d.pitStrategy || 'balanced'), normalizeWeatherId(d.weather||'dry')),
       p1paint: d.p1paint||'cyan',
       p2paint: d.p2paint||'orange',
       weather: normalizeWeatherId(d.weather||'dry'),
@@ -5980,14 +6820,20 @@ function getPlayerData() {
       trialPits: d.trialPits !== undefined ? d.trialPits : false,
       collisionMode: normalizeCollisionMode(d.collisionMode),
     };
-  } catch(e) { return {coins:0,p1upg:{},p2upg:{},p1setup:'balanced',p2setup:'balanced',p1paint:'cyan',p2paint:'orange',weather:'dry',tyres:'med',selectedLaps:3,unlockedTracks:[0,1,2,3,4],trialPits:false,collisionMode:'collision'}; }
+  } catch(e) { return {coins:0,p1upg:{speed:0,accel:0,traction:0,braking:0,handling:0},p2upg:{speed:0,accel:0,traction:0,braking:0,handling:0},p1dev:createEmptyDevelopmentState(),p2dev:createEmptyDevelopmentState(),p1setup:'balanced',p2setup:'balanced',p1customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },p2customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },pitStrategy:'balanced',pitStrategyCustom:createDefaultPitStrategyCustom(),p1paint:'cyan',p2paint:'orange',weather:'dry',tyres:'med',selectedLaps:3,unlockedTracks:[0,1,2,3,4],trialPits:false,collisionMode:'collision'}; }
 }
 function savePlayerData(d) {
   if(d) {
     d = {
       ...d,
       weather: normalizeWeatherId(d.weather),
-      collisionMode: normalizeCollisionMode(d.collisionMode)
+      collisionMode: normalizeCollisionMode(d.collisionMode),
+      p1dev: normalizeDevelopmentState(d.p1dev, d.p1upg),
+      p2dev: normalizeDevelopmentState(d.p2dev, d.p2upg),
+      p1customSetup: d.p1customSetup || { speedMult:1.00, turnMult:1.00, tractBonus:0 },
+      p2customSetup: d.p2customSetup || { speedMult:1.00, turnMult:1.00, tractBonus:0 },
+      pitStrategy: d.pitStrategy || 'balanced',
+      pitStrategyCustom: normalizePitStrategyCustom(d.pitStrategyCustom || getLegacyPitStrategySeed(d.pitStrategy || 'balanced'), d.weather || 'dry')
     };
   }
   try { localStorage.setItem('kartblitz_player', JSON.stringify(d)); } catch(e){}
@@ -6004,10 +6850,20 @@ function savePlayerData(d) {
       const localData = getPlayerData();
       // Simple merge: take whichever has more coins (favours the richer save)
       if ((cloudData.coins || 0) > (localData.coins || 0)) {
-        localStorage.setItem('kartblitz_player', JSON.stringify(cloudData));
+        const mergedData = {
+          ...localData,
+          ...cloudData,
+          p1dev: normalizeDevelopmentState(cloudData.p1dev || localData.p1dev, cloudData.p1upg || localData.p1upg),
+          p2dev: normalizeDevelopmentState(cloudData.p2dev || localData.p2dev, cloudData.p2upg || localData.p2upg),
+          p1customSetup: cloudData.p1customSetup || localData.p1customSetup,
+          p2customSetup: cloudData.p2customSetup || localData.p2customSetup,
+          pitStrategy: cloudData.pitStrategy || localData.pitStrategy,
+          pitStrategyCustom: normalizePitStrategyCustom(cloudData.pitStrategyCustom || localData.pitStrategyCustom || getLegacyPitStrategySeed(cloudData.pitStrategy || localData.pitStrategy), cloudData.weather || localData.weather)
+        };
+        localStorage.setItem('kartblitz_player', JSON.stringify(mergedData));
         // Refresh menu coins display if visible
         const mc = document.getElementById('menu-coins');
-        if (mc) mc.textContent = `💰 ${cloudData.coins}`;
+        if (mc) mc.textContent = `💰 ${mergedData.coins}`;
       }
     } catch(e) {}
   });
@@ -6077,57 +6933,83 @@ function buildGarageContent() {
   }
 
   const player = garageTab; // 'p1' or 'p2'
-  const upgs = pd[player+'upg'] || {};
+  const devState = normalizeDevelopmentState(pd[player+'dev'], pd[player+'upg']);
+  const implemented = DEV_PARTS.filter(part => (devState[part.id] || 0) >= 2).length;
+  const researched = DEV_PARTS.filter(part => (devState[part.id] || 0) === 1).length;
 
-  const grid = document.createElement('div');
-  grid.className = 'upgrade-grid';
-  UPG_DEFS.forEach(upg => {
-    const lvl = upgs[upg.id]||0;
-    const maxLvl = upg.costs.length;
-    const canUp = lvl < maxLvl;
-    const cost = canUp ? upg.costs[lvl] : 0;
-    const afford = pd.coins >= cost;
-    const bars = Array.from({length:maxLvl},(_,i)=>`<div class="upgrade-bar${i<lvl?' filled':''}"></div>`).join('');
-    // Human-readable benefit for the NEXT upgrade level
-    let bonusTxt = '';
-    if (canUp) {
-      const nb = upg.bonuses[lvl];
-      if (upg.id === 'speed')    bonusTxt = `+${Math.round(nb * 0.8)} KM/H top speed`;
-      else if (upg.id === 'accel')    bonusTxt = `faster acceleration`;
-      else if (upg.id === 'traction') bonusTxt = `+${Math.round(nb * 0.8)} KM/H off-track`;
-      else if (upg.id === 'braking')  bonusTxt = `shorter stopping distance`;
-      else if (upg.id === 'handling') bonusTxt = `+${Math.round(nb * 100)}% turn rate`;
-    }
-    const div = document.createElement('div');
-    div.className = 'upgrade-card';
-    div.innerHTML = `
-      <div style="font-size:28px">${upg.icon}</div>
-      <div class="upgrade-name">${upg.name}</div>
-      <div class="upgrade-level">LV ${lvl}/${maxLvl}</div>
-      <div class="upgrade-bars">${bars}</div>
-      ${canUp ? `<div style="font-size:9px;color:#4ade80;margin:5px 0 3px;min-height:12px;">${bonusTxt}</div>
-        <div style="margin-top:2px;">
-        <button class="btn btn-sm ${afford?'btn-gold':'btn-pink'}" ${afford?'':'disabled style="opacity:.4"'}
-          onclick="buyUpgrade('${player}','${upg.id}')" style="font-size:10px;padding:5px 12px;">
-          ${afford?`UPGRADE 💰${cost}`:`NEED 💰${cost}`}
-        </button></div>`
-      : `<div style="margin-top:8px;font-family:'Orbitron',sans-serif;font-size:10px;color:#4ade80;letter-spacing:.1em;">✓ MAXED</div>`}`;
-    grid.appendChild(div);
+  const overview = document.createElement('div');
+  overview.className = 'upgrade-card';
+  overview.style.maxWidth = '780px';
+  overview.style.width = '100%';
+  overview.style.margin = '0 auto 16px';
+  overview.style.textAlign = 'left';
+  overview.innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;">
+      <div>
+        <div class="upgrade-name">${player.toUpperCase()} DEVELOPMENT PROGRAMME</div>
+        <div style="font-size:12px;opacity:.7;line-height:1.5;margin-top:6px;">Choose projects department by department. Each part has a research phase, then an implementation phase before the performance gain goes on the kart.</div>
+      </div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.12em;color:var(--gold);text-align:right;">
+        <div>IMPLEMENTED ${implemented}/${DEV_PARTS.length}</div>
+        <div style="margin-top:4px;color:${researched ? '#ffd700' : 'rgba(255,255,255,.45)'};">${researched} READY TO FIT</div>
+      </div>
+    </div>`;
+  content.appendChild(overview);
+
+  DEV_DEFS.forEach(dept => {
+    const label = document.createElement('div');
+    label.className = 'setup-section-label';
+    label.textContent = `${dept.name} DEVELOPMENT`;
+    content.appendChild(label);
+
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:11px;opacity:.55;text-align:center;margin:-2px 0 10px;letter-spacing:.08em;';
+    note.textContent = dept.desc;
+    content.appendChild(note);
+
+    const grid = document.createElement('div');
+    grid.className = 'upgrade-grid';
+    dept.parts.forEach(part => {
+      const stage = devState[part.id] || 0;
+      const meta = getDevelopmentStageMeta(stage, part);
+      const afford = pd.coins >= meta.actionCost;
+      const totalSpend = part.researchCost + part.implementCost;
+      const div = document.createElement('div');
+      div.className = 'upgrade-card';
+      div.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.18em;color:rgba(255,255,255,.4);">${part.code}</div>
+          <div style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.1em;color:${meta.color};">${meta.status}</div>
+        </div>
+        <div style="font-size:26px">${dept.icon}</div>
+        <div class="upgrade-name">${part.name}</div>
+        <div style="font-size:11px;opacity:.62;line-height:1.45;min-height:48px;margin-top:8px;">${part.desc}</div>
+        <div style="font-size:10px;color:#4ade80;min-height:28px;margin-top:8px;line-height:1.4;">${formatDevelopmentBonus(part.bonus)}</div>
+        <div class="upgrade-bars">
+          <div class="upgrade-bar${stage >= 1 ? ' filled' : ''}"></div>
+          <div class="upgrade-bar${stage >= 2 ? ' filled' : ''}"></div>
+        </div>
+        <div style="font-size:10px;opacity:.45;margin-top:5px;">R&amp;D 💰${part.researchCost} · FIT 💰${part.implementCost} · TOTAL 💰${totalSpend}</div>
+        ${meta.canAdvance ? `<div style="margin-top:12px;"><button class="btn btn-sm ${afford ? 'btn-gold' : 'btn-pink'}" ${afford ? '' : 'disabled style="opacity:.4"'} onclick="advanceDevelopment('${player}','${part.id}')" style="font-size:10px;padding:6px 12px;">${afford ? meta.actionLabel : `NEED 💰${meta.actionCost}`}</button></div>` : `<div style="margin-top:12px;font-family:'Orbitron',sans-serif;font-size:10px;color:#4ade80;letter-spacing:.1em;">PACKAGE LIVE</div>`}
+      `;
+      grid.appendChild(div);
+    });
+    content.appendChild(grid);
   });
-  content.appendChild(grid);
 }
 
-function buyUpgrade(player, upgId) {
+function advanceDevelopment(player, partId) {
   const pd = getPlayerData();
-  const upg = UPG_DEFS.find(u=>u.id===upgId);
-  const upgs = pd[player+'upg'] || {};
-  const lvl = upgs[upgId]||0;
-  if(lvl >= upg.costs.length) return;
-  const cost = upg.costs[lvl];
+  const part = getDevelopmentPart(partId);
+  if(!part) return;
+  const devState = normalizeDevelopmentState(pd[player+'dev'], pd[player+'upg']);
+  const stage = devState[partId] || 0;
+  if(stage >= 2) return;
+  const cost = stage === 0 ? part.researchCost : part.implementCost;
   if(pd.coins < cost) return;
   pd.coins -= cost;
-  upgs[upgId] = lvl+1;
-  pd[player+'upg'] = upgs;
+  devState[partId] = stage + 1;
+  pd[player+'dev'] = devState;
   savePlayerData(pd); buildGarageContent();
   document.getElementById('garage-coins').textContent = `💰 COINS: ${pd.coins}`;
   beep(880,0.12,0.5,'square'); beep(1100,0.2,0.5,'square',0.08); beep(1320,0.3,0.6,'sine',0.14);
@@ -6238,15 +7120,15 @@ function showSetupScreen(trackIdx) {
     customWrap.innerHTML = `
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <div style="flex:1;min-width:220px;">
-          <div style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Top Speed Mult (${cust.speedMult.toFixed(2)})</div>
+          <div id="cust-speed-label" style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Top Speed Trim (${cust.speedMult.toFixed(2)})</div>
           <input id="cust-speed" type="range" min="0.70" max="1.25" step="0.01" value="${cust.speedMult}">
         </div>
         <div style="flex:1;min-width:220px;">
-          <div style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Turn Rate Mult (${cust.turnMult.toFixed(2)})</div>
+          <div id="cust-turn-label" style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Downforce Grip Bias (${cust.turnMult.toFixed(2)})</div>
           <input id="cust-turn" type="range" min="0.70" max="1.40" step="0.01" value="${cust.turnMult}">
         </div>
         <div style="flex:1;min-width:220px;">
-          <div style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Traction Bonus (${cust.tractBonus} units)</div>
+          <div id="cust-tract-label" style="font-size:12px;color:var(--cyan);margin-bottom:6px;">Mechanical Traction Assist (${cust.tractBonus} units)</div>
           <input id="cust-tract" type="range" min="-40" max="80" step="1" value="${cust.tractBonus}">
         </div>
       </div>
@@ -6258,24 +7140,24 @@ function showSetupScreen(trackIdx) {
     // Wire events
     customWrap.querySelector('#cust-speed').oninput = (e) => {
       const v = parseFloat(e.target.value);
-      customWrap.querySelector('div').querySelector('div').textContent = `Top Speed Mult (${v.toFixed(2)})`;
+      customWrap.querySelector('#cust-speed-label').textContent = `Top Speed Trim (${v.toFixed(2)})`;
     };
     customWrap.querySelector('#cust-turn').oninput = (e) => {
       const v = parseFloat(e.target.value);
-      // update label (second control)
-      const labels = customWrap.querySelectorAll('div > div');
-      if(labels[1]) labels[1].textContent = `Turn Rate Mult (${v.toFixed(2)})`;
+      customWrap.querySelector('#cust-turn-label').textContent = `Downforce Grip Bias (${v.toFixed(2)})`;
     };
     customWrap.querySelector('#cust-tract').oninput = (e) => {
       const v = parseInt(e.target.value,10);
-      const labels = customWrap.querySelectorAll('div > div');
-      if(labels[2]) labels[2].textContent = `Traction Bonus (${v} units)`;
+      customWrap.querySelector('#cust-tract-label').textContent = `Mechanical Traction Assist (${v} units)`;
     };
     customWrap.querySelector('#cust-save').onclick = () => {
       const speed = parseFloat(customWrap.querySelector('#cust-speed').value);
       const turn  = parseFloat(customWrap.querySelector('#cust-turn').value);
       const tract = parseInt(customWrap.querySelector('#cust-tract').value,10);
-      const pd2 = getPlayerData(); pd2.p1customSetup = { speedMult: speed, turnMult: turn, tractBonus: tract }; pd2.p1setup = 'custom'; savePlayerData(pd2);
+      const pd2 = getPlayerData();
+      pd2.p1customSetup = { ...(pd2.p1customSetup || {}), speedMult: speed, turnMult: turn, tractBonus: tract };
+      pd2.p1setup = 'custom';
+      savePlayerData(pd2);
       // Refresh the setup grid so selection shows
       showSetupScreen(pendingTrackIdx);
     };
@@ -6311,11 +7193,93 @@ function showSetupScreen(trackIdx) {
       const p = getPlayerData(); p.weather = w.id; savePlayerData(p);
       wxRow.querySelectorAll('.wx-card').forEach(c=>c.classList.remove('sel'));
       div.classList.add('sel');
-      // Refresh tyres list when weather changes
-      buildTyreRow();
+      showSetupScreen(pendingTrackIdx);
     };
     wxRow.appendChild(div);
   });
+
+  const pitStrategyRow = document.getElementById('pit-strategy-row');
+  const pitStrategyNote = document.getElementById('pit-strategy-note');
+  const pitPlan = getPlayerPitStrategyPlan(pd, pd.weather);
+  pitStrategyRow.innerHTML = `
+    <div class="pit-plan-wrap">
+      <div class="pit-plan-sliders">
+        <div class="pit-plan-panel">
+          <div class="pit-plan-label">PIT WINDOW OPENS</div>
+          <div class="pit-plan-value" id="pit-open-value"></div>
+          <input class="pit-plan-range" id="pit-open-range" type="range" min="20" max="88" step="1" value="${Math.round(pitPlan.wearOpen * 100)}">
+        </div>
+        <div class="pit-plan-panel">
+          <div class="pit-plan-label">BOX THIS LAP</div>
+          <div class="pit-plan-value" id="pit-now-value"></div>
+          <input class="pit-plan-range" id="pit-now-range" type="range" min="25" max="96" step="1" value="${Math.round(pitPlan.wearNow * 100)}">
+        </div>
+      </div>
+      <div class="pit-plan-panel">
+        <div class="pit-plan-label">NEXT TYRE TO FIT</div>
+        <div class="pit-plan-tyres" id="pit-plan-tyres"></div>
+      </div>
+    </div>
+  `;
+  const pitOpenValue = pitStrategyRow.querySelector('#pit-open-value');
+  const pitNowValue = pitStrategyRow.querySelector('#pit-now-value');
+  const pitOpenRange = pitStrategyRow.querySelector('#pit-open-range');
+  const pitNowRange = pitStrategyRow.querySelector('#pit-now-range');
+  const pitPlanTyres = pitStrategyRow.querySelector('#pit-plan-tyres');
+
+  function applyPitPlanPatch(patch) {
+    const nextData = getPlayerData();
+    const currentPlan = nextData.pitStrategyCustom || getPitStrategyDef(nextData.pitStrategy || 'balanced');
+    nextData.pitStrategyCustom = normalizePitStrategyCustom({ ...currentPlan, ...patch }, nextData.weather);
+    savePlayerData(nextData);
+    return getPlayerPitStrategyPlan(nextData, nextData.weather);
+  }
+
+  function refreshPitPlanSummary(plan) {
+    pitOpenValue.textContent = `${Math.round(plan.wearOpen * 100)}% wear`;
+    pitNowValue.textContent = `${Math.round(plan.wearNow * 100)}% wear`;
+    pitStrategyNote.textContent = `${plan.desc} The pit menu will preselect this tyre when you stop.`;
+    pitOpenRange.value = Math.round(plan.wearOpen * 100);
+    pitNowRange.value = Math.round(plan.wearNow * 100);
+  }
+
+  function renderPitPlanTyres(plan) {
+    pitPlanTyres.innerHTML = '';
+    TYRE_DEFS.forEach(tr => {
+      const allowed = isTyreSelectableForWeather(tr, pd.weather);
+      const wrongWeather = isTyreWrongForWeather(tr, pd.weather);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pit-plan-tyre' + (plan.tyrePref === tr.id ? ' sel' : '') + (allowed ? '' : ' disabled');
+      const lapLife = getTyreLapLifespan(t.id, tr.id);
+      b.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:6px;font-family:Orbitron,sans-serif;font-size:11px;"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:${tr.color};"></span>${tr.label}</div><div class="pit-plan-meta">~${lapLife} lap${lapLife===1?'':'s'}${wrongWeather && allowed ? ' · VERY SLOW' : ''}${!allowed ? ' · LOCKED' : ''}</div>`;
+      if(allowed) {
+        b.onclick = () => {
+          const updatedPlan = applyPitPlanPatch({ tyrePref: tr.id });
+          renderPitPlanTyres(updatedPlan);
+          refreshPitPlanSummary(updatedPlan);
+        };
+      }
+      pitPlanTyres.appendChild(b);
+    });
+  }
+
+  pitOpenRange.oninput = () => {
+    const openValue = Number(pitOpenRange.value) / 100;
+    const nowValue = Math.max(openValue + 0.05, Number(pitNowRange.value) / 100);
+    const updatedPlan = applyPitPlanPatch({ wearOpen: openValue, wearNow: nowValue });
+    renderPitPlanTyres(updatedPlan);
+    refreshPitPlanSummary(updatedPlan);
+  };
+  pitNowRange.oninput = () => {
+    const nowValue = Number(pitNowRange.value) / 100;
+    const openValue = Math.min(Number(pitOpenRange.value) / 100, nowValue - 0.05);
+    const updatedPlan = applyPitPlanPatch({ wearOpen: openValue, wearNow: nowValue });
+    renderPitPlanTyres(updatedPlan);
+    refreshPitPlanSummary(updatedPlan);
+  };
+  renderPitPlanTyres(pitPlan);
+  refreshPitPlanSummary(pitPlan);
 
   buildQualiSetupUI();
 
@@ -6400,7 +7364,7 @@ function confirmSetupAndStart() {
 
 function applyUpgradesToKart(kart, player) {
   const pd = getPlayerData();
-  const upgs = pd[player+'upg'] || {};
+  const devBonus = getDevelopmentBonuses(normalizeDevelopmentState(pd[player+'dev'], pd[player+'upg']));
   const setupId = pd[player+'setup'] || 'balanced';
   let setup = SETUP_DEFS.find(s=>s.id===setupId) || SETUP_DEFS[1];
   // If player selected a custom setup, read numeric values from saved player data
@@ -6409,16 +7373,11 @@ function applyUpgradesToKart(kart, player) {
     setup = { id:'custom', name:'CUSTOM', speedMult: Number(cust.speedMult) || 1.00, turnMult: Number(cust.turnMult) || 1.00, tractBonus: Number(cust.tractBonus) || 0 };
   }
 
-  const get = (id) => {
-    const upg = UPG_DEFS.find(u=>u.id===id);
-    const lvl = upgs[id]||0;
-    return lvl > 0 ? upg.bonuses[lvl-1] : 0;
-  };
-  kart.maxSpeed = ((469 + get('speed')) * setup.speedMult) * GAME_SPEED_MULT;
-  kart.accel    = 304 + get('accel');
-  kart.brakeForce = 620 + get('braking');
-  kart.turnRate = (2.55 + get('handling')) * setup.turnMult;
-  kart.offTrackMaxSpd = Math.max(30, 80 + get('traction') + setup.tractBonus) * GAME_SPEED_MULT;
+  kart.maxSpeed = ((469 + devBonus.speed) * setup.speedMult) * GAME_SPEED_MULT;
+  kart.accel    = 304 + devBonus.accel;
+  kart.brakeForce = 620 + devBonus.braking;
+  kart.turnRate = (2.55 + devBonus.handling) * setup.turnMult;
+  kart.offTrackMaxSpd = Math.max(30, 80 + devBonus.traction + setup.tractBonus) * GAME_SPEED_MULT;
   kart._baseAccel = kart.accel;
   // Store raw values for pit stop tyre re-application
   kart._upgradeBase = { maxSpeed: kart.maxSpeed, turnRate: kart.turnRate, accel: kart.accel };
