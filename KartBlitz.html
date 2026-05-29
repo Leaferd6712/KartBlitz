@@ -1136,11 +1136,66 @@ const TRACKS = [
   }
 ];
 
-// Build splines, checkpoint geometry, and spatial grid
-// Width-only scaling: keeps waypoints/spline layout unchanged while widening driveable surface.
-const TRACK_WIDTH_SCALE = 8.0;
+// Build splines, checkpoint geometry, and spatial grid.
+// Shared remap pass: widen corridors, sharpen larger corners, and let AI use more lane width.
+const TRACK_REMAP_PROFILES = {
+  easy:   { widthBoost:1.28, cornerThreshold:0.38, cornerPull:0.24, maxInsert:170, minSeg:170, aiBrakeLookaheadScale:0.92, aiLaneSpreadScale:1.18 },
+  medium: { widthBoost:1.24, cornerThreshold:0.34, cornerPull:0.22, maxInsert:155, minSeg:155, aiBrakeLookaheadScale:0.90, aiLaneSpreadScale:1.22 },
+  hard:   { widthBoost:1.18, cornerThreshold:0.30, cornerPull:0.20, maxInsert:140, minSeg:140, aiBrakeLookaheadScale:0.88, aiLaneSpreadScale:1.26 }
+};
+const TRACK_REMAP_OVERRIDES = {
+  0: { widthBoost:1.36, cornerThreshold:0.32, cornerPull:0.28, maxInsert:185, aiBrakeLookaheadScale:0.88, aiLaneSpreadScale:1.32 },
+  1: { widthBoost:1.30, cornerThreshold:0.34, cornerPull:0.25, maxInsert:172, aiBrakeLookaheadScale:0.90, aiLaneSpreadScale:1.28 },
+  3: { widthBoost:1.28, cornerThreshold:0.32, cornerPull:0.24, maxInsert:165, aiBrakeLookaheadScale:0.89, aiLaneSpreadScale:1.26 },
+  7: { widthBoost:1.16, cornerThreshold:0.28, cornerPull:0.18, maxInsert:132, aiBrakeLookaheadScale:0.87, aiLaneSpreadScale:1.18 }
+};
+const TRACK_WIDTH_SCALE = 9.0;
+const TRACK_CENTERLINE_BUFFER = 28;
+const TRACK_PIT_BUFFER = 12;
+
+function getTrackRemapProfile(tr) {
+  const base = TRACK_REMAP_PROFILES[(tr.difficulty || 'MEDIUM').toLowerCase()] || TRACK_REMAP_PROFILES.medium;
+  return {...base, ...(TRACK_REMAP_OVERRIDES[tr.id] || {})};
+}
+
+function remapTrackWaypointsForBraking(wps, remap) {
+  if(!wps || wps.length < 3) return wps;
+  const n = wps.length;
+  const out = [];
+  for(let i = 0; i < n; i++) {
+    const prev = wps[(i - 1 + n) % n];
+    const cur = wps[i];
+    const next = wps[(i + 1) % n];
+    const inX = cur.x - prev.x, inY = cur.y - prev.y;
+    const outX = next.x - cur.x, outY = next.y - cur.y;
+    const inLen = Math.hypot(inX, inY);
+    const outLen = Math.hypot(outX, outY);
+    if(inLen < remap.minSeg || outLen < remap.minSeg) {
+      out.push(cur);
+      continue;
+    }
+    const inNX = inX / inLen, inNY = inY / inLen;
+    const outNX = outX / outLen, outNY = outY / outLen;
+    const turnAngle = Math.acos(Math.max(-1, Math.min(1, inNX * outNX + inNY * outNY)));
+    if(turnAngle < remap.cornerThreshold) {
+      out.push(cur);
+      continue;
+    }
+    const preDist = Math.min(remap.maxInsert, inLen * remap.cornerPull);
+    const postDist = Math.min(remap.maxInsert, outLen * remap.cornerPull);
+    out.push({x: cur.x - inNX * preDist, y: cur.y - inNY * preDist});
+    out.push(cur);
+    out.push({x: cur.x + outNX * postDist, y: cur.y + outNY * postDist});
+  }
+  return out;
+}
 
 TRACKS.forEach(tr => {
+  const remap = getTrackRemapProfile(tr);
+  tr.trackWidth = Math.round(tr.trackWidth * remap.widthBoost);
+  tr.aiBrakeLookaheadScale = Math.min(tr.aiBrakeLookaheadScale || 1, remap.aiBrakeLookaheadScale);
+  tr.aiLaneSpreadScale = remap.aiLaneSpreadScale;
+  tr.waypoints = remapTrackWaypointsForBraking(tr.waypoints, remap);
   tr.spline = buildSpline(tr.waypoints, 28);
   const spl = tr.spline, n = spl.length;
   // cumulative distances
@@ -1148,6 +1203,7 @@ TRACKS.forEach(tr => {
   for(let i=1;i<n;i++) cum.push(cum[i-1]+Math.hypot(spl[i].x-spl[i-1].x,spl[i].y-spl[i-1].y));
   tr.totalLen = cum[n-1];
   tr.cum = cum;
+  tr.lapDistance = Math.round(tr.totalLen);
 
   // Widen each track aggressively, but clamp width based on local geometry
   // so nearby sections and pit lane corridors do not overlap.
@@ -1167,7 +1223,7 @@ TRACKS.forEach(tr => {
   }
   if(isFinite(minCenterDist)) {
     // Keep a separation buffer between nearby centerlines.
-    maxSafeWidth = Math.min(maxSafeWidth, Math.max(baseWidth, minCenterDist - 44));
+    maxSafeWidth = Math.min(maxSafeWidth, Math.max(baseWidth, minCenterDist - TRACK_CENTERLINE_BUFFER));
   }
 
   if(tr.pitLane && tr.pitLane.path && tr.pitLane.path.length >= 2) {
@@ -1183,7 +1239,7 @@ TRACKS.forEach(tr => {
     }
     if(isFinite(minPitDist)) {
       // Keep a small margin between main track edge and pit lane edge.
-      const pitSafeWidth = (minPitDist - pitHalf - 18) * 2;
+      const pitSafeWidth = (minPitDist - pitHalf - TRACK_PIT_BUFFER) * 2;
       maxSafeWidth = Math.min(maxSafeWidth, Math.max(baseWidth, pitSafeWidth));
     }
   }
@@ -3164,6 +3220,7 @@ function makeAIInput(track, difficulty, aiIndex) {
 
     // Low-speed racing line: outside on approach, inside near apex, then unwind.
     const halfW = track.trackWidth * 0.5;
+    const laneSpreadScale = track.aiLaneSpreadScale || 1;
     const tangNear = splineTangent(spl, nearIdx);
     const perpX0 = -tangNear.y, perpY0 = tangNear.x;
     const lateralErr = (k.x - spl[nearIdx].x) * perpX0 + (k.y - spl[nearIdx].y) * perpY0;
@@ -3188,7 +3245,7 @@ function makeAIInput(track, difficulty, aiIndex) {
     let laneVotes = 0;
     const allKarts = (typeof race !== 'undefined' && race && race.karts) ? race.karts : null;
     if(allKarts) {
-      const laneTolerance = Math.max(26, halfW * 0.22);
+      const laneTolerance = Math.max(24, halfW * 0.18);
       const trafficLookArc = Math.max(170, lookDist * 1.1);
       const trafficLookDist = Math.max(140, lookDist);
       for(const other of allKarts) {
@@ -3214,13 +3271,13 @@ function makeAIInput(track, difficulty, aiIndex) {
 
     if(trafficAhead && _laneHoldTimer <= 0) {
       _laneBias = laneVotes === 0 ? -_laneBias : Math.sign(laneVotes);
-      _laneHoldTimer = 0.72 + cornerSeverity * 0.35;
+      _laneHoldTimer = 0.95 + cornerSeverity * 0.45;
     }
     if(trafficAhead || _laneHoldTimer > 0) {
-      const laneShift = Math.min(Math.max(20, halfW * 0.24), Math.max(20, halfW - 16));
+      const laneShift = Math.min(Math.max(24, halfW * 0.24 * laneSpreadScale), Math.max(24, halfW - 16));
       lateralOffset += _laneBias * laneShift;
       if(trafficAhead && nearestTrafficArc < 90 && Math.abs(k.speed) > 80) {
-        lateralOffset += _laneBias * Math.min(14, halfW * 0.10);
+        lateralOffset += _laneBias * Math.min(18, halfW * 0.12 * laneSpreadScale);
       }
     }
     const edgeBuffer = Math.max(12, halfW * 0.08);
