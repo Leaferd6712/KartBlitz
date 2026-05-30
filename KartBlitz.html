@@ -2664,6 +2664,10 @@ class Kart {
     this.pitNavCooldown = 0;   // debounce for pit tyre navigation
     this._aiPitTimer  = 0;     // timer for AI auto-tyre selection in pit
     this._pitTooFarTimer = 0;   // flash timer when pressing pit key outside zone
+    this._pitIntentActive = false; // true when driver has committed to pit entry
+    this._pitEntryConfirmed = false; // true once kart has physically touched pit entry trigger
+    this._pitExitPos = null;
+    this._pitExitAngle = null;
     this._baseAccel = this.accel;
     // ERS (Energy Recovery System): X for P1, . for P2
     this.ersCharge = 1.0;       // 0.0 – 1.0 (full to empty)
@@ -2730,10 +2734,22 @@ class Kart {
       return;
     }
 
+    // Pit intent becomes active only after the kart physically reaches the pit-entry trigger.
+    if(this._pitIntentActive && !this.inPit && this.pitPhase === null && trackData && trackData.pitLane && trackData.pitLane.entryPt) {
+      const entryPt = trackData.pitLane.entryPt;
+      const entryTouchRadius = Math.max(150, ((trackData.pitLane.width || 60) * 1.4));
+      if(Math.hypot(this.x - entryPt.x, this.y - entryPt.y) <= entryTouchRadius || this._onPitLane) {
+        this._pitEntryConfirmed = true;
+      }
+    }
+
     let inp = this.getInput();
     if(this.isAI && !this.inPit && this.pitPhase === null && this._pitExitPos) {
       const pitExitInput = this._getPitExitInput(trackData);
       if(pitExitInput) inp = pitExitInput;
+    } else if(!this.inPit && this.pitPhase === null && this._pitIntentActive) {
+      const pitEntryInput = this._getPitEntryInput(trackData);
+      if(pitEntryInput) inp = pitEntryInput;
     }
     // Surface-specific off-track physics: each track has a unique offTrackMult
     const surfMult = (trackData && trackData.surface) ? trackData.surface.offTrackMult : 1.0;
@@ -3079,6 +3095,72 @@ class Kart {
       left: diff < -0.045,
       right: diff > 0.045,
       brakeMult: needsBrake ? 1.7 : 1,
+      ers:false,
+      drs:false,
+      pit:false
+    };
+  }
+
+  _getPitEntryInput(trackData) {
+    const pl = trackData && trackData.pitLane;
+    if(!pl || !pl.path || pl.path.length < 2 || !pl.garagePos || !pl.entryPt) return null;
+
+    // Stage 1: drive to the pit entry trigger first.
+    if(!this._pitEntryConfirmed) {
+      const entryTouchRadius = Math.max(150, ((pl.width || 60) * 1.4));
+      const dEntry = Math.hypot(this.x - pl.entryPt.x, this.y - pl.entryPt.y);
+      if(dEntry <= entryTouchRadius || this._onPitLane) {
+        this._pitEntryConfirmed = true;
+      }
+
+      let diffToEntry = Math.atan2(pl.entryPt.y - this.y, pl.entryPt.x - this.x) - this.angle;
+      while (diffToEntry >  Math.PI) diffToEntry -= Math.PI * 2;
+      while (diffToEntry < -Math.PI) diffToEntry += Math.PI * 2;
+
+      const needsBrakeEntry = (Math.abs(diffToEntry) > 0.92 && this.speed > 82) || (dEntry < 110 && this.speed > 58);
+      const holdSpeedEntry = dEntry > 190 ? 118 : (dEntry > 110 ? 92 : 64);
+      return {
+        up: this.speed < holdSpeedEntry && !needsBrakeEntry,
+        down: needsBrakeEntry,
+        left: diffToEntry < -0.045,
+        right: diffToEntry > 0.045,
+        brakeMult: needsBrakeEntry ? 1.8 : 1,
+        ers:false,
+        drs:false,
+        pit:false
+      };
+    }
+
+    // Stage 2: once entry is touched, follow pit lane toward the garage.
+    const path = pl.path;
+    let nearestIdx = 0, nearestDist = Infinity;
+    let garageIdx = 0, garageDist = Infinity;
+    for(let i = 0; i < path.length; i++) {
+      const dKart = Math.hypot(this.x - path[i].x, this.y - path[i].y);
+      if(dKart < nearestDist) { nearestDist = dKart; nearestIdx = i; }
+      const dGarage = Math.hypot(pl.garagePos.x - path[i].x, pl.garagePos.y - path[i].y);
+      if(dGarage < garageDist) { garageDist = dGarage; garageIdx = i; }
+    }
+    nearestIdx = Math.min(nearestIdx, garageIdx);
+    const lookAhead = this.speed > 94 ? 3 : (this.speed > 56 ? 2 : 1);
+    const targetIdx = Math.min(garageIdx, nearestIdx + lookAhead);
+    const remaining = Math.hypot(this.x - pl.garagePos.x, this.y - pl.garagePos.y);
+    const aim = remaining < 80
+      ? { x: pl.garagePos.x, y: pl.garagePos.y }
+      : (path[targetIdx] || pl.garagePos);
+
+    let diff = Math.atan2(aim.y - this.y, aim.x - this.x) - this.angle;
+    while (diff >  Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+
+    const needsBrake = (Math.abs(diff) > 0.84 && this.speed > 78) || (remaining < 85 && this.speed > 34);
+    const holdSpeed = remaining > 140 ? 122 : (remaining > 85 ? 94 : 58);
+    return {
+      up: this.speed < holdSpeed && !needsBrake,
+      down: needsBrake,
+      left: diff < -0.045,
+      right: diff > 0.045,
+      brakeMult: needsBrake ? 1.8 : 1,
       ers:false,
       drs:false,
       pit:false
@@ -4413,7 +4495,7 @@ function makeAIInput(track, difficulty, aiIndex) {
   // Ultra Easy/Easy/Medium are deliberately slow and cautious
   const sfBase  = {ultraeasy: 0.46, easy: 0.58, medium: 0.72, hard: 0.84, extreme: 0.94}[difficulty] || 0.72;
   const sf      = sfBase * 1.18;
-  const curvK   = {ultraeasy: 0.18, easy: 0.145, medium: 0.100, hard: 0.070, extreme: 0.030}[difficulty] || 0.115;
+  const curvK   = {ultraeasy: 0.18, easy: 0.145, medium: 0.100, hard: 0.050, extreme: 0.020}[difficulty] || 0.115;
   const brBase  = {ultraeasy: 920, easy: 780, medium: 660, hard: 560, extreme: 500}[difficulty] || 660;
   const brDist  = brBase * (track.aiBrakeLookaheadScale || 1);
   
@@ -4459,7 +4541,7 @@ function makeAIInput(track, difficulty, aiIndex) {
   const _cruiseLaneBias = cruiseLanePattern[aiIndex % cruiseLanePattern.length];
   const _pitStrategyId = getAiPitStrategyId(aiIndex, difficulty, 3);
   // Increase AI aggression: global multiplier to make AI faster by 25%
-  const AI_SPEED_MULT = 1.75; // 1.00 = baseline, 1.25 = +25%
+  const AI_SPEED_MULT = 1.5; // 1.00 = baseline, 1.25 = +25%
   const effectiveSF    = sf * v.speedMul * AI_SPEED_MULT;   // always 1.0
   const effectiveCurvK = curvK * v.brakeBias;
 
@@ -5545,6 +5627,10 @@ class Race {
     k.totalLaps = lapsForStage;
     k.pitPhase = null;
     k.inPit = false;
+    k._pitIntentActive = false;
+    k._pitEntryConfirmed = false;
+    k._pitExitPos = null;
+    k._pitExitAngle = null;
     k._hasPitted = false;
     k._ghostRecord = [];
     k._ghostSampleTimer = 0;
@@ -5835,13 +5921,15 @@ class Race {
             k.pitPhase = 'selecting';
             seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
             k.inPit = true; k.speed = 0; k._aiPitTimer = 0;
+            k._pitIntentActive = false;
+            k._pitEntryConfirmed = false;
             k._pitExitPos = pl.exitPos;
             k._pitExitAngle = pl.exitAngle !== undefined ? pl.exitAngle : 0;
             beep(440,0.08,0.3,'square');
           }
         });
         this.karts.forEach((k, i) => {
-          if(k.finished || k.pitPhase !== null) return;
+          if(k.finished || k.pitPhase !== null || k.inPit || k._hasPitted) return;
           const isAI = (this.mode === 'ai' && i > 0);
           const isHuman = !isAI;
           let pitPressed = false;
@@ -5860,7 +5948,7 @@ class Race {
               delete keys[pitKey];
               if(pitKey.length===1){ delete keys[pitKey.toLowerCase()]; delete keys[pitKey.toUpperCase()]; }
             }
-            
+
             const pp = this.track.pitLane ? this.track.pitLane.entryPt : this.track.pitPos;
             if(pp && Math.hypot(k.x - pp.x, k.y - pp.y) > PIT_RADIUS) {
               k._pitTooFarTimer = 2.5;
@@ -5870,9 +5958,10 @@ class Race {
             k.pitPhase   = 'selecting';
             seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
             k.inPit      = true;
+            k._pitIntentActive = false;
+            k._pitEntryConfirmed = false;
             k._aiPitTimer = 0;
             beep(440,0.08,0.3,'square');
-            // Teleport kart into the pit garage
             if(this.track.pitLane) {
               const pl = this.track.pitLane;
               k.x = pl.garagePos.x; k.y = pl.garagePos.y;
@@ -6035,13 +6124,15 @@ class Race {
           k.pitPhase = 'selecting';
           seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
           k.inPit = true; k.speed = 0; k._aiPitTimer = 0;
+          k._pitIntentActive = false;
+          k._pitEntryConfirmed = false;
           k._pitExitPos = pl.exitPos;
           k._pitExitAngle = pl.exitAngle !== undefined ? pl.exitAngle : 0;
           beep(440,0.08,0.3,'square');
         }
       });
       this.karts.forEach((k, i) => {
-        if(k.finished || k.pitPhase !== null) return;
+        if(k.finished || k.pitPhase !== null || k.inPit || k._hasPitted) return;
         const isAI = (this.mode === 'ai' && i > 0);
         const isHuman = !isAI;
         let pitPressed = false;
@@ -6062,7 +6153,7 @@ class Race {
             delete keys[pitKey];
             if(pitKey.length===1){ delete keys[pitKey.toLowerCase()]; delete keys[pitKey.toUpperCase()]; }
           }
-          
+
           const pp = this.track.pitLane ? this.track.pitLane.entryPt : this.track.pitPos;
           if(pp && Math.hypot(k.x - pp.x, k.y - pp.y) > PIT_RADIUS) {
             k._pitTooFarTimer = 2.5;
@@ -6072,9 +6163,10 @@ class Race {
           k.pitPhase   = 'selecting';
           seedPitStopSelection(k, i, this.weather || window._raceWeather || 'dry');
           k.inPit      = true;
+          k._pitIntentActive = false;
+          k._pitEntryConfirmed = false;
           k._aiPitTimer = 0;  // timer for AI to auto-select
           beep(440,0.08,0.3,'square');
-          // Teleport kart into the pit garage
           if(this.track.pitLane) {
             const pl = this.track.pitLane;
             k.x = pl.garagePos.x; k.y = pl.garagePos.y;
@@ -7400,7 +7492,7 @@ document.addEventListener('keydown', e => {
       _showDebugOverlay = !_showDebugOverlay;
       saveRuntimePrefs();
       try { beep(_showDebugOverlay ? 720 : 320, 0.05, 0.16, 'square'); } catch(err) {}
-    } else if(lowerKey === 'v' && race.karts && race.karts[0] && !race.karts[0].finished) {
+    } else if(lowerKey === 'v' && e.altKey && race.karts && race.karts[0] && !race.karts[0].finished) {
       race.karts[0]._pitIntentActive = !race.karts[0]._pitIntentActive;
       try { beep(race.karts[0]._pitIntentActive ? 540 : 260, 0.05, 0.18, 'square'); } catch(err) {}
       e.preventDefault();
@@ -7528,6 +7620,11 @@ function buildLeaderboardScreen() {
 
 // ── MENU KEYBOARD NAV ───────────────────────────────────
 document.addEventListener('keydown', e => {
+  const activePit = (typeof getActivePitSelectionKart === 'function') ? getActivePitSelectionKart() : null;
+  if (e.key === 'Escape' && activePit) {
+    e.preventDefault();
+    return;
+  }
   // Escape pauses/resumes during active race
   if (e.key === 'Escape' && canvas.style.display === 'block' && race && race.phase === 'racing') {
     e.preventDefault();
