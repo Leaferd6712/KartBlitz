@@ -1592,11 +1592,8 @@ function setSfxVolume(v) {
 function setEngineVolume(v) {
   _engineVolume = Math.max(0, Math.min(1, v));
   try { localStorage.setItem('kartblitz_vol_engine', String(_engineVolume)); } catch(e) {}
-  // update live engine gains
-  Object.values(engines).forEach(eng => {
-    const cur = eng.gain.gain.value;
-    eng.gain.gain.setTargetAtTime(cur * _engineVolume, AC.currentTime, 0.1);
-  });
+  // updateEngine() is called every frame and already applies _engineVolume to gain targets,
+  // so we do not need to patch running gains here — they will converge on the next frame.
 }
 
 function _buildAudioPane() {
@@ -1616,7 +1613,7 @@ function _buildAudioPane() {
     <div class="vol-section" style="margin-top:12px;">
       <div class="vol-section-title">QUALITY PRESET</div>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
-        ${['low','medium','high'].map(q=>`<button class="lap-opt${_qualityLevel===q?' sel':''}" onclick="setQuality('${q}',this)">${q.toUpperCase()}</button>`).join('')}
+        ${['low','medium','high'].map(q=>`<button class="lap-opt${(typeof _qualityLevel !== 'undefined' && _qualityLevel===q)?' sel':''}" onclick="setQuality('${q}',this)">${q.toUpperCase()}</button>`).join('')}
       </div>
       <div style="font-size:10px;opacity:.5;text-align:center;margin-top:8px;letter-spacing:.1em;">LOW = best performance · HIGH = best visuals</div>
     </div>`;
