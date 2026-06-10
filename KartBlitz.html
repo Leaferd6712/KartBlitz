@@ -963,6 +963,56 @@ body::after{
     grid-template-columns:1fr;
   }
 }
+
+/* ── FULLSCREEN BUTTON ─────────────────────────────────── */
+#fullscreen-btn{position:fixed;bottom:14px;right:14px;z-index:500;background:rgba(0,0,0,.72);border:1px solid rgba(0,245,255,.38);color:#00f5ff;font-family:'Orbitron',sans-serif;font-size:10px;padding:7px 13px;cursor:pointer;border-radius:8px;letter-spacing:.08em;transition:all .2s;backdrop-filter:blur(8px);}
+#fullscreen-btn:hover{background:rgba(0,245,255,.14);border-color:#00f5ff;box-shadow:0 0 12px rgba(0,245,255,.3);}
+
+/* ── GAMEPAD INDICATOR ─────────────────────────────────── */
+#gamepad-indicator{position:fixed;top:14px;right:14px;z-index:500;display:none;background:rgba(0,0,0,.72);border:1px solid rgba(0,245,255,.38);color:#00f5ff;font-family:'Orbitron',sans-serif;font-size:10px;padding:6px 13px;border-radius:8px;letter-spacing:.08em;pointer-events:none;backdrop-filter:blur(8px);}
+
+/* ── VOLUME / AUDIO SETTINGS ───────────────────────────── */
+.vol-section{width:min(680px,96vw);margin-top:14px;padding:16px 18px;background:linear-gradient(180deg,rgba(12,22,44,.80),rgba(5,10,22,.95));border:1px solid rgba(255,255,255,.1);border-radius:18px;}
+.vol-section-title{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--cyan);letter-spacing:.18em;margin-bottom:12px;}
+.vol-row{display:flex;align-items:center;gap:10px;margin:7px 0;}
+.vol-row label{font-family:'Orbitron',sans-serif;font-size:10px;color:rgba(255,255,255,.65);letter-spacing:.1em;min-width:110px;}
+.vol-row input[type="range"]{flex:1;accent-color:#00f5ff;cursor:pointer;}
+.vol-val{font-family:'Orbitron',sans-serif;font-size:10px;color:#00f5ff;min-width:34px;text-align:right;}
+
+/* ── LIVE TUNING OVERLAY ───────────────────────────────── */
+#live-tuning-overlay{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:270;background:rgba(4,8,22,.97);border:2px solid rgba(255,107,53,.5);padding:24px 28px 20px;min-width:360px;border-radius:18px;box-shadow:0 0 40px rgba(255,107,53,.18);}
+.tuning-title{font-family:'Orbitron',sans-serif;font-size:13px;color:#ff6b35;letter-spacing:.18em;margin-bottom:16px;text-align:center;}
+.tuning-row{display:flex;align-items:center;gap:8px;margin:8px 0;}
+.tuning-label{font-size:11px;opacity:.8;min-width:126px;letter-spacing:.06em;}
+.tuning-range{flex:1;accent-color:#ff6b35;cursor:pointer;}
+.tuning-val{font-family:'Orbitron',sans-serif;font-size:11px;color:#ff6b35;min-width:42px;text-align:right;}
+.tuning-reset{font-family:'Orbitron',sans-serif;font-size:10px;padding:5px 14px;border:1px solid rgba(255,107,53,.4);background:transparent;color:#ff6b35;cursor:pointer;border-radius:6px;letter-spacing:.08em;transition:all .15s;}
+.tuning-reset:hover{background:rgba(255,107,53,.12);}
+
+/* ── DRIFT COMBO HUD ───────────────────────────────────── */
+#combo-display{position:absolute;bottom:0;left:0;right:0;pointer-events:none;z-index:98;}
+
+/* ── GARAGE VISUALS TAB ────────────────────────────────── */
+.vis-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;max-width:780px;width:100%;}
+.vis-card{padding:16px 12px;border:1px solid rgba(0,245,255,.18);background:rgba(0,245,255,.04);text-align:center;cursor:pointer;transition:all .22s;border-radius:14px;}
+.vis-card:hover{border-color:var(--cyan);background:rgba(0,245,255,.10);transform:translateY(-2px);}
+.vis-card.owned{border-color:#4ade80;background:rgba(74,222,128,.06);}
+.vis-card.locked-vis{opacity:.55;cursor:default;pointer-events:none;}
+.vis-icon{font-size:30px;margin-bottom:8px;}
+.vis-name{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--cyan);letter-spacing:.12em;margin-top:4px;}
+.vis-desc{font-size:10px;opacity:.6;margin-top:5px;line-height:1.45;}
+.vis-price{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--gold);margin-top:8px;}
+.vis-owned-label{font-family:'Orbitron',sans-serif;font-size:10px;color:#4ade80;margin-top:8px;letter-spacing:.1em;}
+.vis-active-btn{font-family:'Orbitron',sans-serif;font-size:10px;padding:5px 12px;border:1px solid rgba(74,222,128,.45);background:transparent;color:#4ade80;cursor:pointer;border-radius:6px;margin-top:6px;transition:all .15s;}
+.vis-active-btn.on{background:rgba(74,222,128,.15);}
+.vis-active-btn:hover{background:rgba(74,222,128,.2);}
+.vis-btn{font-family:'Orbitron',sans-serif;font-size:10px;padding:6px 14px;border-radius:8px;cursor:pointer;margin-top:10px;transition:all .18s;letter-spacing:.08em;border:none;display:inline-block;}
+.vis-btn-buy{background:linear-gradient(135deg,var(--gold),#b8860b);color:#000;font-weight:700;}
+.vis-btn-buy:hover:not([disabled]){filter:brightness(1.15);transform:scale(1.04);}
+.vis-btn-buy.disabled,.vis-btn-buy[disabled]{background:rgba(255,255,255,.1);color:rgba(255,255,255,.35);cursor:not-allowed;}
+.vis-btn-toggle{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid rgba(0,245,255,.4);}
+.vis-btn-toggle:hover{background:rgba(0,245,255,.22);}
+.vis-card.vis-owned{border-color:#4ade80;background:rgba(74,222,128,.06);}
 </style>
 </head>
 <body> 
@@ -1161,6 +1211,7 @@ body::after{
     <button class="gtab active" onclick="switchGarageTab('p1',this)">P1 UPGRADES</button>
     <button class="gtab" onclick="switchGarageTab('p2',this)">P2 UPGRADES</button>
     <button class="gtab" onclick="switchGarageTab('paint',this)">🎨 PAINTS</button>
+    <button class="gtab" onclick="switchGarageTab('visuals',this)">✨ VISUALS</button>
   </div>
   <div id="garage-content"></div>
 </div>
@@ -1224,9 +1275,11 @@ body::after{
   <div class="ctrl-tab-bar">
     <button class="ctrl-tab active" id="ctab-bindings" onclick="switchCtrlTab('bindings')">🎮 KEY BINDINGS</button>
     <button class="ctrl-tab" id="ctab-howto" onclick="switchCtrlTab('howto')">📖 HOW TO PLAY</button>
+    <button class="ctrl-tab" id="ctab-audio" onclick="switchCtrlTab('audio')">🔊 AUDIO</button>
   </div>
   <div id="ctrl-pane-bindings" class="ctrl-pane"></div>
   <div id="ctrl-pane-howto" class="ctrl-pane" style="display:none;"></div>
+  <div id="ctrl-pane-audio" class="ctrl-pane" style="display:none;flex-direction:column;align-items:center;gap:0;">
 </div>
 
 <!-- GAME CANVAS -->
@@ -1275,8 +1328,9 @@ body::after{
   <div class="pause-title">⏸ PAUSED</div>
   <div class="pause-btns">
     <button class="btn btn-cyan" onclick="resumeGame()">▶ RESUME</button>
+    <button class="btn btn-orange btn-sm" onclick="openLiveTuning()">🔧 LIVE TUNING</button>
     <button class="btn btn-gold btn-sm" onclick="pauseRestartRace()">↺ RESTART RACE</button>
-    <button class="btn btn-orange btn-sm" onclick="pauseQuit()">⌂ QUIT TO MENU</button>
+    <button class="btn btn-pink btn-sm" onclick="pauseQuit()">⌂ QUIT TO MENU</button>
   </div>
   <div style="margin-top:14px;font-size:10px;opacity:.35;letter-spacing:.2em;">ESC TO RESUME</div>
 </div>
@@ -1289,6 +1343,27 @@ body::after{
 
 <!-- CONFETTI -->
 <canvas id="confetti-canvas"></canvas>
+
+<!-- FULLSCREEN BUTTON -->
+<button id="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">⛶ FULLSCREEN</button>
+
+<!-- GAMEPAD INDICATOR -->
+<div id="gamepad-indicator">🎮 GAMEPAD</div>
+
+<!-- LIVE TUNING OVERLAY -->
+<div id="live-tuning-overlay">
+  <div class="tuning-title">🔧 LIVE TUNING</div>
+  <div class="tuning-row"><label class="tuning-label">TOP SPEED</label><input class="tuning-range" type="range" id="tune-speed" min="0.6" max="1.4" step="0.01" oninput="applyLiveTune()"><span class="tuning-val" id="tune-speed-val">1.00×</span></div>
+  <div class="tuning-row"><label class="tuning-label">ACCELERATION</label><input class="tuning-range" type="range" id="tune-accel" min="0.5" max="1.5" step="0.01" oninput="applyLiveTune()"><span class="tuning-val" id="tune-accel-val">1.00×</span></div>
+  <div class="tuning-row"><label class="tuning-label">TURN RATE</label><input class="tuning-range" type="range" id="tune-turn" min="0.6" max="1.6" step="0.01" oninput="applyLiveTune()"><span class="tuning-val" id="tune-turn-val">1.00×</span></div>
+  <div class="tuning-row"><label class="tuning-label">BRAKE FORCE</label><input class="tuning-range" type="range" id="tune-brake" min="0.5" max="1.5" step="0.01" oninput="applyLiveTune()"><span class="tuning-val" id="tune-brake-val">1.00×</span></div>
+  <div class="tuning-row"><label class="tuning-label">DRIFT THRESHOLD</label><input class="tuning-range" type="range" id="tune-drift" min="0.5" max="1.5" step="0.01" oninput="applyLiveTune()"><span class="tuning-val" id="tune-drift-val">1.00×</span></div>
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+    <button class="tuning-reset" onclick="resetLiveTune()">↺ RESET</button>
+    <button class="tuning-reset" style="border-color:rgba(0,245,255,.4);color:#00f5ff;" onclick="closeLiveTuning()">✓ APPLY &amp; CLOSE</button>
+  </div>
+  <div style="font-size:9px;opacity:.38;text-align:center;margin-top:8px;letter-spacing:.1em;">CHANGES APPLY IMMEDIATELY — RESETS ON RACE RESTART</div>
+</div>
 
 <script>
 // kart blitz - main racing engine
@@ -1304,6 +1379,23 @@ function resizeCanvas() {
   canvas.style.height = (H * sc) + 'px';
 }
 window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+// ── FULLSCREEN ───────────────────────────────────────────
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fullscreen-btn');
+  if (btn) btn.textContent = document.fullscreenElement ? '⛶ EXIT FULL' : '⛶ FULLSCREEN';
+  resizeCanvas();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+});
 
 // ── CRAZYGAMES SDK WRAPPER ──────────────────────────────
 const CG = (() => {
@@ -1465,17 +1557,82 @@ document.addEventListener('keydown', e => {
 
 // ── AUDIO ───────────────────────────────────────────────
 let AC;
+let _masterGain = null;
+let _masterVolume = 0.85;
+let _sfxVolume = 0.85;
+let _engineVolume = 0.75;
+
 function initAudio() {
   if (AC) return;
   AC = new (window.AudioContext || window.webkitAudioContext)();
+  _masterGain = AC.createGain();
+  _masterGain.gain.value = _masterVolume;
+  _masterGain.connect(AC.destination);
+  // load saved volumes
+  try {
+    const sv = parseFloat(localStorage.getItem('kartblitz_vol_master')); if (!isNaN(sv)) _masterVolume = sv;
+    const ss = parseFloat(localStorage.getItem('kartblitz_vol_sfx'));    if (!isNaN(ss)) _sfxVolume = ss;
+    const se = parseFloat(localStorage.getItem('kartblitz_vol_engine')); if (!isNaN(se)) _engineVolume = se;
+    if (_masterGain) _masterGain.gain.value = _masterVolume;
+  } catch(e) {}
+  _buildAudioPane();
+}
+
+function _audioOut() { return _masterGain || (AC && AC.destination) || null; }
+
+function setMasterVolume(v) {
+  _masterVolume = Math.max(0, Math.min(1, v));
+  if (_masterGain) _masterGain.gain.setTargetAtTime(_masterVolume, AC.currentTime, 0.05);
+  try { localStorage.setItem('kartblitz_vol_master', String(_masterVolume)); } catch(e) {}
+}
+function setSfxVolume(v) {
+  _sfxVolume = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem('kartblitz_vol_sfx', String(_sfxVolume)); } catch(e) {}
+}
+function setEngineVolume(v) {
+  _engineVolume = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem('kartblitz_vol_engine', String(_engineVolume)); } catch(e) {}
+  // updateEngine() is called every frame and already applies _engineVolume to gain targets,
+  // so we do not need to patch running gains here — they will converge on the next frame.
+}
+
+function _buildAudioPane() {
+  const pane = document.getElementById('ctrl-pane-audio');
+  if (!pane || pane.dataset.built) return;
+  pane.dataset.built = '1';
+  const volMV = Math.round(_masterVolume * 100);
+  const volSV = Math.round(_sfxVolume * 100);
+  const volEV = Math.round(_engineVolume * 100);
+  pane.innerHTML = `
+    <div class="vol-section">
+      <div class="vol-section-title">VOLUME SETTINGS</div>
+      <div class="vol-row"><label>MASTER</label><input type="range" min="0" max="1" step="0.01" value="${_masterVolume}" oninput="setMasterVolume(+this.value);this.nextElementSibling.textContent=Math.round(this.value*100)+'%'"><span class="vol-val">${volMV}%</span></div>
+      <div class="vol-row"><label>SFX / MUSIC</label><input type="range" min="0" max="1" step="0.01" value="${_sfxVolume}" oninput="setSfxVolume(+this.value);this.nextElementSibling.textContent=Math.round(this.value*100)+'%'"><span class="vol-val">${volSV}%</span></div>
+      <div class="vol-row"><label>ENGINE</label><input type="range" min="0" max="1" step="0.01" value="${_engineVolume}" oninput="setEngineVolume(+this.value);this.nextElementSibling.textContent=Math.round(this.value*100)+'%'"><span class="vol-val">${volEV}%</span></div>
+    </div>
+    <div class="vol-section" style="margin-top:12px;">
+      <div class="vol-section-title">QUALITY PRESET</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px;">
+        ${['low','medium','high'].map(q=>`<button class="lap-opt${(typeof _qualityLevel !== 'undefined' && _qualityLevel===q)?' sel':''}" onclick="setQuality('${q}',this)">${q.toUpperCase()}</button>`).join('')}
+      </div>
+      <div style="font-size:10px;opacity:.5;text-align:center;margin-top:8px;letter-spacing:.1em;">LOW = best performance · HIGH = best visuals</div>
+    </div>`;
+}
+
+function setQuality(level, btn) {
+  _qualityLevel = level;
+  saveRuntimePrefs();
+  document.querySelectorAll('#ctrl-pane-audio .lap-opt').forEach(b => b.classList.toggle('sel', b.textContent.toLowerCase() === level));
+  try { beep(620, 0.05, 0.16, 'square'); } catch(e) {}
 }
 function beep(freq, dur, vol=0.5, type='sine', when=0) {
   if (!AC) return;
   const o = AC.createOscillator(), g = AC.createGain();
-  o.connect(g); g.connect(AC.destination);
+  const out = _audioOut(); if (!out) return;
+  o.connect(g); g.connect(out);
   o.type = type; o.frequency.value = freq;
   const t = AC.currentTime + when;
-  g.gain.setValueAtTime(vol, t);
+  g.gain.setValueAtTime(vol * _sfxVolume, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.start(t); o.stop(t + dur + 0.01);
 }
@@ -1498,10 +1655,11 @@ function startEngine(id) {
   const osc = AC.createOscillator();
   const gain = AC.createGain();
   const filt = AC.createBiquadFilter();
+  const out = _audioOut(); if (!out) return;
   osc.type = 'sawtooth'; osc.frequency.value = 55;
   filt.type = 'lowpass'; filt.frequency.value = 350;
-  gain.gain.value = 0.006;
-  osc.connect(filt); filt.connect(gain); gain.connect(AC.destination);
+  gain.gain.value = 0.006 * _engineVolume;
+  osc.connect(filt); filt.connect(gain); gain.connect(out);
   osc.start();
   engines[id] = {osc, gain, filt};
 }
@@ -1516,9 +1674,9 @@ function updateEngine(id, speed, maxSpeed, isThrottle=false, isBraking=false) {
 
   const targetFreq = 55 + rpm * 190;
   const targetFilter = 300 + rpm * 1400;
-  let targetGain = 0.004 + rpm * 0.012;
-  if (isThrottle) targetGain += 0.014;
-  if (!isThrottle && Math.abs(speed) < 4) targetGain = 0.003;
+  let targetGain = (0.004 + rpm * 0.012) * _engineVolume;
+  if (isThrottle) targetGain += 0.014 * _engineVolume;
+  if (!isThrottle && Math.abs(speed) < 4) targetGain = 0.003 * _engineVolume;
 
   eng.osc.frequency.setTargetAtTime(targetFreq, AC.currentTime, 0.05);
   eng.filt.frequency.setTargetAtTime(targetFilter, AC.currentTime, 0.06);
@@ -1538,16 +1696,17 @@ function startDriftSnd(id) {
   const osc = AC.createOscillator();
   const filt = AC.createBiquadFilter();
   const gain = AC.createGain();
+  const out = _audioOut(); if (!out) return;
   osc.type = 'sawtooth'; osc.frequency.value = 780;
   filt.type = 'bandpass'; filt.frequency.value = 1200; filt.Q.value = 0.55;
   gain.gain.value = 0;
-  osc.connect(filt); filt.connect(gain); gain.connect(AC.destination);
+  osc.connect(filt); filt.connect(gain); gain.connect(out);
   osc.start();
   driftNodes[id] = { osc, gain };
 }
 function updateDriftSnd(id, intensity) {
   if (!AC || !driftNodes[id]) return;
-  const target = Math.min(0.065, intensity * 0.065);
+  const target = Math.min(0.065, intensity * 0.065) * _sfxVolume;
   driftNodes[id].gain.gain.setTargetAtTime(target, AC.currentTime, 0.06);
 }
 function stopAllDriftSnds() {
@@ -1560,7 +1719,8 @@ function stopAllDriftSnds() {
 // ── COLLISION SOUND (metallic noise burst) ───────────────
 function playCollision(vol) {
   if (!AC) return;
-  vol = (vol !== undefined) ? vol : 0.45;
+  vol = (vol !== undefined) ? vol * _sfxVolume : 0.45 * _sfxVolume;
+  const out = _audioOut(); if (!out) return;
   const sr = AC.sampleRate;
   const bufSz = Math.floor(sr * 0.28);
   const buf = AC.createBuffer(1, bufSz, sr);
@@ -1574,19 +1734,20 @@ function playCollision(vol) {
   flt.type = 'bandpass'; flt.frequency.value = 290; flt.Q.value = 1.3;
   gn.gain.value = vol;
   src.buffer = buf;
-  src.connect(flt); flt.connect(gn); gn.connect(AC.destination);
+  src.connect(flt); flt.connect(gn); gn.connect(out);
   src.start();
 }
 
 // ── UI CLICK SOUND ───────────────────────────────────────
 function playUIClick() {
   if (!AC) return;
+  const out = _audioOut(); if (!out) return;
   const o = AC.createOscillator(), g = AC.createGain();
-  o.connect(g); g.connect(AC.destination);
+  o.connect(g); g.connect(out);
   o.type = 'sine';
   o.frequency.setValueAtTime(700, AC.currentTime);
   o.frequency.exponentialRampToValueAtTime(200, AC.currentTime + 0.065);
-  g.gain.setValueAtTime(0.15, AC.currentTime);
+  g.gain.setValueAtTime(0.15 * _sfxVolume, AC.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.08);
   o.start(AC.currentTime); o.stop(AC.currentTime + 0.09);
 }
@@ -2549,7 +2710,7 @@ TRACKS.forEach(tr => {
 });
 
 // ── PARTICLE SYSTEM (pooled — 100 slots, zero GC churn) ──
-const POOL_SIZE = 100;
+const POOL_SIZE = 150;
 const _pPool = [];
 for (let _pi = 0; _pi < POOL_SIZE; _pi++) {
   _pPool.push({ active:false, x:0, y:0, vx:0, vy:0, color:'#fff', life:0, maxLife:1, size:1 });
@@ -2604,7 +2765,122 @@ function spawnDust(x,y,a) {
   }
 }
 
-// ── KART CLASS ──────────────────────────────────────────
+// ── Visual effect toggles (driven by garage purchases) ──────────────────────
+let _bloomEnabled  = false;
+let _chromaEnabled = false;
+
+function drawComboHUD(ctx, kart, x, y, w, h) {
+  if (!kart || !kart._driftCombo || kart._driftCombo < 0.4) return;
+  const combo = kart._driftCombo;
+  const mult  = kart._comboMultiplier || 1;
+  const cx = x + w / 2;
+  const cy = y + h - 80;
+  const pulse = 0.8 + 0.2 * Math.sin(performance.now() * 0.012);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.round(20 * pulse)}px Orbitron,sans-serif`;
+  const hue = (performance.now() * 0.2) % 360;
+  ctx.fillStyle = `hsl(${hue},100%,65%)`;
+  ctx.shadowColor = `hsl(${hue},100%,50%)`;
+  ctx.shadowBlur = 12;
+  ctx.fillText(`DRIFT x${mult}`, cx, cy);
+  // thin progress bar filling from left to right toward next multiplier tier
+  const tierTime = 1.2; // seconds per tier
+  const progress = (combo % tierTime) / tierTime;
+  const bw = 180, bh = 5;
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(cx - bw/2, cy + 6, bw, bh);
+  ctx.fillStyle = `hsl(${hue},100%,60%)`;
+  ctx.shadowColor = `hsl(${hue},100%,50%)`;
+  ctx.shadowBlur = 6;
+  ctx.fillRect(cx - bw/2, cy + 6, bw * progress, bh);
+  ctx.restore();
+}
+
+// Neon skid sparks — colored burst tied to kart color, spawns during hard drift
+function spawnNeonSkid(x, y, color) {
+  if (_qualityLevel === 'low') return;
+  const count = Math.max(2, Math.round(4 * getQualityPreset().particleSpawnMul));
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 28 + Math.random() * 55;
+    _emit(
+      x + (Math.random()-0.5)*8, y + (Math.random()-0.5)*8,
+      Math.cos(ang)*spd, Math.sin(ang)*spd,
+      color, 0.35 + Math.random()*0.35, 1.5 + Math.random()*2
+    );
+  }
+}
+
+// ── NEON TRAIL SYSTEM ────────────────────────────────────
+// Draws a fading colored ribbon behind each kart
+const _TRAIL_LEN = 36; // number of segments to keep
+function drawNeonTrail(ctx, kart, camX, camY, viewW, viewH) {
+  const pts = kart._trailPoints;
+  if (!pts || pts.length < 3) return;
+  const now = performance.now();
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let i = 1; i < pts.length; i++) {
+    const age = (now - pts[i].t) * 0.001;
+    const alpha = Math.max(0, 0.52 - age * 1.1);
+    if (alpha <= 0) continue;
+    const ratio = i / pts.length;
+    const lw = Math.max(0.5, 3.5 * ratio);
+    ctx.globalAlpha = alpha * ratio;
+    ctx.strokeStyle = kart.color || '#00f5ff';
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(pts[i-1].x - camX + viewW/2, pts[i-1].y - camY + viewH/2);
+    ctx.lineTo(pts[i].x   - camX + viewW/2, pts[i].y   - camY + viewH/2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── BLOOM POST-PROCESS ───────────────────────────────────
+let _bloomCanvas = null, _bloomCtx = null;
+function _ensureBloomCanvas() {
+  if (_bloomCanvas) return;
+  _bloomCanvas = document.createElement('canvas');
+  _bloomCanvas.width = W; _bloomCanvas.height = H;
+  _bloomCtx = _bloomCanvas.getContext('2d');
+}
+function applyBloom(mainCtx) {
+  if (_qualityLevel === 'low') return;
+  _ensureBloomCanvas();
+  _bloomCtx.clearRect(0, 0, W, H);
+  _bloomCtx.filter = 'blur(7px) brightness(1.6)';
+  _bloomCtx.drawImage(canvas, 0, 0);
+  _bloomCtx.filter = 'none';
+  mainCtx.save();
+  mainCtx.globalCompositeOperation = 'screen';
+  mainCtx.globalAlpha = _qualityLevel === 'medium' ? 0.18 : 0.26;
+  mainCtx.drawImage(_bloomCanvas, 0, 0);
+  mainCtx.globalCompositeOperation = 'source-over';
+  mainCtx.globalAlpha = 1;
+  mainCtx.restore();
+}
+function applyChromatic(mainCtx) {
+  if (_qualityLevel === 'low') return;
+  _ensureBloomCanvas();
+  const shift = 2;
+  _bloomCtx.clearRect(0, 0, W, H);
+  _bloomCtx.drawImage(canvas, 0, 0);
+  mainCtx.save();
+  mainCtx.globalCompositeOperation = 'screen';
+  mainCtx.globalAlpha = 0.08;
+  // red channel offset
+  mainCtx.drawImage(_bloomCanvas, -shift, 0);
+  // blue channel offset
+  mainCtx.drawImage(_bloomCanvas, shift, 0);
+  mainCtx.globalCompositeOperation = 'source-over';
+  mainCtx.globalAlpha = 1;
+  mainCtx.restore();
+}
 const GAME_SPEED_MULT = 0.75; // global multiplier to reduce top speeds by 25%
 const GLOBAL_ACCEL_MULT = 0.45;
 const COAST_DECEL_PER_SEC = 25; // 10 km/h every 500 ms (HUD uses speed * 0.8)
@@ -2695,6 +2971,20 @@ class Kart {
     this._contactJamTimer = 0;
     this._contactLineTimer = 0;
     this._contactLineSign = 0;
+    // Neon trail positions
+    this._trailPoints = [];
+    this._trailTimer = 0;
+    // Drift combo
+    this._driftCombo = 0;      // seconds of continuous drift
+    this._comboMultiplier = 1; // current multiplier tier
+    this._comboPendingCoins = 0; // coins to award when combo ends
+    // Lateral slip for improved drift model
+    this._lateralVel = 0;      // lateral velocity component (side-slip)
+    this._slipAngle  = 0;      // current slip angle in radians
+    // Live tuning overrides (set by live tuning UI, cleared on restart)
+    this._tuneMult = { speed:1, accel:1, turn:1, brake:1, drift:1 };
+    // AI personality archetype
+    this.personality = 'consistent'; // consistent|aggressive|tactical|erratic
   }
 
   update(dt, trackData, otherKarts) {
@@ -2897,20 +3187,26 @@ class Kart {
     }
     this._drsPrevKey = !!inp.drs;
 
+    // Apply live-tuning speed multiplier
+    const tm = this._tuneMult || { speed:1, accel:1, turn:1, brake:1, drift:1 };
+
     // Apply speed boosts to spdLimit
     if(this.ersActive) spdLimit *= 1.25;
     if(this.drsActive) spdLimit *= 1.15;
+    spdLimit *= tm.speed;
     // Tyre failure hard cap: 0% wear → 100 km/h max (125 internal units)
     if(this.tyreWear >= 1.0) spdLimit = Math.min(spdLimit, 125);
 
     // Acceleration / braking — braking is always the strongest deceleration
+    const tunedAcc = acc * tm.accel;
+    const tunedBrake = this.brakeForce * tm.brake;
     if(throttleInput > 0.02) {
-      this.speed += acc * throttleInput * dt;
+      this.speed += tunedAcc * throttleInput * dt;
     } else if(brakeInput > 0.02) {
       const brakeMul = Math.max(1, Math.min(2.5, inp.brakeMult || 1));
-      if(this.speed > 0) this.speed -= this.brakeForce * brakeInput * dt;
-      else this.speed -= acc * 0.5 * dt;
-      if(this.speed > 0) this.speed -= this.brakeForce * (brakeMul - 1) * brakeInput * dt;
+      if(this.speed > 0) this.speed -= tunedBrake * brakeInput * dt;
+      else this.speed -= tunedAcc * 0.5 * dt;
+      if(this.speed > 0) this.speed -= tunedBrake * (brakeMul - 1) * brakeInput * dt;
     } else if(applyOffTrackSlowdown) {
       // Grass drag: heavier than coasting but weaker than braking
       this.speed *= Math.pow(0.96, dt * 60);
@@ -2927,11 +3223,28 @@ class Kart {
     if (this.isAI) this.speed = Math.max(0, Math.min(spdLimit, this.speed));
     else this.speed = Math.max(-maxSpd * 0.3, Math.min(spdLimit, this.speed));
 
+    // ── LATERAL SLIP / DRIFT MODEL ──────────────────────
+    // Compute slip angle from lateral velocity vs forward velocity
+    const fwdSpd = this.speed;
+    if (Math.abs(fwdSpd) > 10 && (inp.left || inp.right)) {
+      // Angular velocity from turn
+      const turnVel = (inp.left ? -1 : 1) * this.turnRate * (tm.turn || 1) * Math.max(0.45, 1.05 - Math.abs(fwdSpd)/this.maxSpeed * 0.48);
+      // Lateral velocity builds up proportional to speed and turning
+      const latBuildRate = 0.18 * Math.abs(fwdSpd) * 0.001;
+      this._lateralVel += (inp.left ? -1 : 1) * latBuildRate;
+    }
+    // Lateral grip: tire slip curve — grip falls off at high slip angles
+    const driftThresh = 175 * tm.drift;
+    const lateralDecay = Math.abs(fwdSpd) > driftThresh ? 0.82 : 0.94;
+    this._lateralVel *= Math.pow(lateralDecay, dt * 60);
+    if (Math.abs(this._lateralVel) < 0.01) this._lateralVel = 0;
+    this._slipAngle = Math.abs(this._lateralVel) > 0.001 ? Math.atan2(this._lateralVel, Math.max(1, Math.abs(fwdSpd))) : 0;
+
     // Speed-based steering: progressively less responsive at high speed (prevents spinouts at 350)
     if(Math.abs(this.speed) > 4) {
       const speedRatio = Math.abs(this.speed) / this.maxSpeed;
       // Preserve more authority at high speed so turn-in feels sharper without making launches twitchy.
-      const steerFactor = Math.max(0.45, 1.05 - speedRatio * 0.48);
+      const steerFactor = Math.max(0.45, (1.05 - speedRatio * 0.48)) * (tm.turn || 1);
       const dir = this.speed >= 0 ? 1 : -1;
       if(inp.left) this.angle -= this.turnRate * steerFactor * dt * dir;
       if(inp.right) this.angle += this.turnRate * steerFactor * dt * dir;
@@ -2952,20 +3265,52 @@ class Kart {
     this.turnRate = this.baseTurnRate * (1 - wear * 0.25);
     this.accel    = (this._baseAccel || (304 * GLOBAL_ACCEL_MULT)) * (1 - wear * 0.18);
 
-    // Particles: smoke when drifting, dust when on grass
+    // Particles: smoke when drifting, neon sparks on hard drift, dust on grass
     const _spd = Math.abs(this.speed);
-    const _drifting = (inp.left || inp.right) && _spd > 175 && !this.isOffTrack;
-    const _driftIntensity = _drifting ? Math.min(1, (_spd - 175) / 265) : 0;
+    const _drifting = (inp.left || inp.right) && _spd > driftThresh && !this.isOffTrack;
+    const _driftIntensity = _drifting ? Math.min(1, (_spd - driftThresh) / 265) : 0;
     // Drift screech oscillator disabled — engine sound stays constant
     this.slideParticleTimer -= dt;
     if(this.slideParticleTimer <= 0 && _spd > 120) {
       if(_drifting) {
         spawnSmoke(this.x, this.y, this.angle + Math.PI);
+        // Neon skid sparks when drifting hard (only for human karts with effect purchased)
+        if (!this.isAI && _driftIntensity > 0.4) {
+          const _pd = typeof getPlayerData === 'function' ? getPlayerData() : null;
+          const _visProp = this.id === 0 ? 'p1visuals' : 'p2visuals';
+          const _vis = _pd && _pd[_visProp];
+          if (_vis && _vis.skidSparks) spawnNeonSkid(this.x, this.y, this.color || '#00f5ff');
+        }
         this.slideParticleTimer = 0.08;
       } else if(this.isOffTrack) {
         spawnDust(this.x, this.y, this.angle + Math.PI);
         this.slideParticleTimer = 0.11;
       }
+    }
+
+    // ── DRIFT COMBO TRACKER ──────────────────────────────
+    if (!this.isAI) {
+      if (_drifting) {
+        this._driftCombo += dt;
+        this._comboMultiplier = Math.min(8, Math.floor(this._driftCombo / 1.2) + 1);
+      } else {
+        if (this._driftCombo > 0.5) {
+          // Award combo coins proportional to combo duration + multiplier
+          const earned = Math.round(this._driftCombo * this._comboMultiplier * 0.4);
+          this._comboPendingCoins = (this._comboPendingCoins || 0) + earned;
+        }
+        this._driftCombo = 0;
+        this._comboMultiplier = 1;
+      }
+    }
+
+    // ── NEON TRAIL RECORDING ─────────────────────────────
+    this._trailTimer = (this._trailTimer || 0) + dt;
+    if (this._trailTimer >= 0.028) {
+      this._trailTimer = 0;
+      if (!this._trailPoints) this._trailPoints = [];
+      this._trailPoints.push({ x: this.x, y: this.y, t: performance.now() });
+      if (this._trailPoints.length > _TRAIL_LEN) this._trailPoints.shift();
     }
 
     // Move
@@ -3245,6 +3590,13 @@ class Kart {
             }
             else { playLap(); }
             this.lap++;
+            // Drain drift combo coins earned this lap
+            if (!this.isAI && this._comboPendingCoins > 0) {
+              const pd = getPlayerData();
+              pd.coins += this._comboPendingCoins;
+              savePlayerData(pd);
+              this._comboPendingCoins = 0;
+            }
             if(this.lap >= this.totalLaps) {
               this.finished = true;
               this.finishTime = this.lapTimes.reduce((a,b)=>a+b,0);
@@ -6356,11 +6708,12 @@ class Race {
       karts.forEach(k => k.draw(ctx, cam.x, cam.y, W, H));
       drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
       drawHUD(ctx, karts[0], track, 0, 0, W, H, 0, mode);
+      drawComboHUD(ctx, karts[0], 0, 0, W, H);
       drawMinimap(ctx, track, karts, W-140, H-140, 130);
       drawRaceDirectorPanel(ctx, this, karts[0]);
       drawDebugOverlay(ctx, karts[0], W, H);
-
-    } else if(mode === 'ai' || mode === 'shootout') {
+      if (_bloomEnabled && _qualityLevel !== 'low') applyBloom(ctx);
+      if (_chromaEnabled && _qualityLevel !== 'low') applyChromatic(ctx);
       // Full screen mode with a single driving camera.
       ctx.clearRect(0,0,W,H);
       const activeIdx = mode === 'shootout' ? (this.shootoutStage === 'player' ? 0 : 1) : 0;
@@ -6400,6 +6753,7 @@ class Race {
       karts.forEach(k => k.draw(ctx, cam.x, cam.y, W, H));
       drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
       drawHUD(ctx, activeKart, track, 0, 0, W, H, 0, 'ai');
+      drawComboHUD(ctx, karts[0], 0, 0, W, H);
       drawPositionTracker(ctx, karts, W, H);
       drawMinimap(ctx, track, karts, W-140, H-140, 130);
       drawRaceDirectorPanel(ctx, this, karts[0]);
@@ -6416,9 +6770,8 @@ class Race {
         ctx.fillText(this.shootoutStage === 'player' ? 'SHOOTOUT • YOUR FLYING LAP' : `SHOOTOUT • AI LAP (${(this.shootoutDifficulty||'medium').toUpperCase()})`, W/2, 20);
         ctx.textAlign = 'left';
       }
-
-    } else {
-      // Split screen
+      if (_bloomEnabled && _qualityLevel !== 'low') applyBloom(ctx);
+      if (_chromaEnabled && _qualityLevel !== 'low') applyChromatic(ctx);
       const halfW = W/2;
       const quality = getQualityPreset();
 
@@ -6470,6 +6823,7 @@ class Race {
         karts.forEach(k => k.draw(ctx, cam.x, cam.y, halfW, H));
 
         drawHUD(ctx, kart, track, 0, 0, halfW, H, i, mode);
+        drawComboHUD(ctx, kart, 0, 0, halfW, H);
         drawDebugOverlay(ctx, kart, halfW, H);
 
         // Split line
@@ -6484,6 +6838,8 @@ class Race {
       // Minimap in bottom-right (matches time trial)
       drawMinimap(ctx, track, karts, W-140, H-140, 130);
       drawPositionTracker(ctx, karts, W, H);
+      if (_bloomEnabled && _qualityLevel !== 'low') applyBloom(ctx);
+      if (_chromaEnabled && _qualityLevel !== 'low') applyChromatic(ctx);
     }
 
     if(this.collisionMode === 'nocollision' && this.phase !== 'qualifying' && this.phase !== 'quali-turn') {
@@ -6986,11 +7342,71 @@ function pauseQuit() {
   location.reload();
 }
 
+// ── LIVE TUNING ───────────────────────────────────────────────────────────────
+function openLiveTuning() {
+  const overlay = document.getElementById('live-tuning-overlay');
+  if (!overlay) return;
+  // Sync slider positions from current kart tune if available
+  const k = race && race.karts && race.karts[0];
+  const tm = (k && k._tuneMult) || {speed:1,accel:1,turn:1,brake:1,drift:1};
+  const setSlider = (id, val, dispId) => {
+    const el = document.getElementById(id);
+    const disp = document.getElementById(dispId);
+    if (el) { el.value = String(val.toFixed(2)); }
+    if (disp) disp.textContent = val.toFixed(2) + '×';
+  };
+  setSlider('tune-speed', tm.speed, 'tune-speed-val');
+  setSlider('tune-accel', tm.accel, 'tune-accel-val');
+  setSlider('tune-turn',  tm.turn,  'tune-turn-val');
+  setSlider('tune-brake', tm.brake, 'tune-brake-val');
+  setSlider('tune-drift', tm.drift, 'tune-drift-val');
+  overlay.style.display = 'flex';
+}
+function closeLiveTuning() {
+  applyLiveTune();
+  const overlay = document.getElementById('live-tuning-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+function applyLiveTune() {
+  const readSlider = (id, dispId) => {
+    const el = document.getElementById(id);
+    const disp = document.getElementById(dispId);
+    const val = el ? parseFloat(el.value) : 1;
+    if (disp) disp.textContent = val.toFixed(2) + '×';
+    return val;
+  };
+  const tm = {
+    speed: readSlider('tune-speed','tune-speed-val'),
+    accel: readSlider('tune-accel','tune-accel-val'),
+    turn:  readSlider('tune-turn', 'tune-turn-val'),
+    brake: readSlider('tune-brake','tune-brake-val'),
+    drift: readSlider('tune-drift','tune-drift-val'),
+  };
+  if (race && race.karts) {
+    race.karts.forEach(k => {
+      if (!k.isAI) k._tuneMult = { ...tm };
+    });
+  }
+}
+function resetLiveTune() {
+  const ids = ['tune-speed','tune-accel','tune-turn','tune-brake','tune-drift'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '1';
+    const disp = document.getElementById(id+'-val');
+    if (disp) disp.textContent = '1.00×';
+  });
+  applyLiveTune();
+}
+
 // ── GAME LOOP ───────────────────────────────────────────
 function gameLoop(ts) {
   if(!lastTime) lastTime = ts;
   const dt = Math.min((ts - lastTime)/1000, 0.05);
   lastTime = ts;
+
+  // Poll gamepads every frame (required by spec — no events for axis changes)
+  pollGamepads();
 
   // FPS tracking (updates every 0.5 s)
   _fpsFrames++;
@@ -7178,6 +7594,7 @@ function selectTrackStart(idx) {
   canvas.style.display = 'block';
   showTouchOverlay(true);
   race = new Race(currentMode, t);
+  _applyVisualFlags();
   _pPool.forEach(p => { p.active = false; }); // reset particle pool
   if(race.phase === 'countdown') {
     document.getElementById('countdownOverlay').style.display = 'flex';
@@ -7191,12 +7608,33 @@ function selectTrackStart(idx) {
 function getP1Input() {
   const b = BINDINGS.p1;
   const kb = {up:keyActive(b.up),down:keyActive(b.down),left:keyActive(b.left),right:keyActive(b.right),ers:keyActive(b.ers),drs:keyActive(b.drs)};
-  if(!touchMode) return kb;
-  return {up:kb.up||touchKeys.up, down:kb.down||touchKeys.down, left:kb.left||touchKeys.left, right:kb.right||touchKeys.right, ers:kb.ers||touchKeys.ers, drs:kb.drs||touchKeys.drs};
+  const gp = _getGamepadInput(0);
+  const touch = touchMode ? {up:touchKeys.up,down:touchKeys.down,left:touchKeys.left,right:touchKeys.right,ers:touchKeys.ers,drs:touchKeys.drs} : {};
+  return {
+    up:    kb.up    || (gp && gp.up)    || !!touch.up,
+    down:  kb.down  || (gp && gp.down)  || !!touch.down,
+    left:  kb.left  || (gp && gp.left)  || !!touch.left,
+    right: kb.right || (gp && gp.right) || !!touch.right,
+    ers:   kb.ers   || (gp && gp.ers)   || !!touch.ers,
+    drs:   kb.drs   || (gp && gp.drs)   || !!touch.drs,
+    pit:   (gp && gp.pit) || false,
+    brakeMult: (gp && gp.brakeMult) || 1,
+  };
 }
 function getP2Input() {
   const b = BINDINGS.p2;
-  return {up:keyActive(b.up),down:keyActive(b.down),left:keyActive(b.left),right:keyActive(b.right),ers:keyActive(b.ers),drs:keyActive(b.drs)};
+  const kb = {up:keyActive(b.up),down:keyActive(b.down),left:keyActive(b.left),right:keyActive(b.right),ers:keyActive(b.ers),drs:keyActive(b.drs)};
+  const gp = _getGamepadInput(1);
+  return {
+    up:    kb.up    || (gp && gp.up),
+    down:  kb.down  || (gp && gp.down),
+    left:  kb.left  || (gp && gp.left),
+    right: kb.right || (gp && gp.right),
+    ers:   kb.ers   || (gp && gp.ers),
+    drs:   kb.drs   || (gp && gp.drs),
+    pit:   (gp && gp.pit) || false,
+    brakeMult: (gp && gp.brakeMult) || 1,
+  };
 }
 
 function restartRace() {
@@ -7501,6 +7939,91 @@ document.addEventListener('keydown', e => {
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
 });
 document.addEventListener('keyup', e => { delete keys[e.key]; });
+
+// ── GAMEPAD SUPPORT ──────────────────────────────────────
+const _gpState = { p1: null, p2: null };
+let _gpStartPrev = [false, false]; // previous Start button state per gamepad
+
+function pollGamepads() {
+  const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+  _gpState.p1 = gps[0] || null;
+  _gpState.p2 = gps[1] || null;
+  const anyGp = _gpState.p1 || _gpState.p2;
+  const ind = document.getElementById('gamepad-indicator');
+  if (ind) {
+    if (anyGp) {
+      const cnt = [_gpState.p1, _gpState.p2].filter(Boolean).length;
+      ind.style.display = 'block';
+      ind.textContent = `🎮 ${cnt} GAMEPAD${cnt > 1 ? 'S' : ''}`;
+    } else {
+      ind.style.display = 'none';
+    }
+  }
+  // Handle start button for pause
+  [_gpState.p1, _gpState.p2].forEach((gp, i) => {
+    if (!gp) return;
+    const startBtn = gp.buttons[9] && gp.buttons[9].pressed;
+    if (startBtn && !_gpStartPrev[i]) {
+      if (canvas.style.display === 'block' && race) {
+        if (document.getElementById('pause-overlay').style.display !== 'none' &&
+            document.getElementById('pause-overlay').style.display !== '') {
+          resumeGame();
+        } else {
+          pauseGame();
+        }
+      }
+    }
+    _gpStartPrev[i] = startBtn;
+  });
+}
+
+window.addEventListener('gamepadconnected', () => {
+  initAudio();
+  const ind = document.getElementById('gamepad-indicator');
+  if (ind) ind.style.display = 'block';
+});
+window.addEventListener('gamepaddisconnected', () => {
+  setTimeout(() => {
+    const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+    if (!gps[0] && !gps[1]) {
+      const ind = document.getElementById('gamepad-indicator');
+      if (ind) ind.style.display = 'none';
+    }
+  }, 200);
+});
+
+function _getGamepadInput(gpIndex) {
+  const gp = gpIndex === 0 ? _gpState.p1 : _gpState.p2;
+  if (!gp) return null;
+  const deadzone = 0.18;
+  const ax0 = gp.axes[0] || 0;  // left stick X
+  const ax1 = gp.axes[1] || 0;  // left stick Y
+  // R2/RT = throttle (button 7 on standard), L2/LT = brake (button 6)
+  // Fallback: face buttons A=up (0), B=down (1) for d-pad play style
+  const r2val = gp.buttons[7] ? gp.buttons[7].value : 0;
+  const l2val = gp.buttons[6] ? gp.buttons[6].value : 0;
+  const aBtn  = gp.buttons[0] && gp.buttons[0].pressed;  // A — also throttle
+  const bBtn  = gp.buttons[1] && gp.buttons[1].pressed;  // B — also brake
+  const dUp   = gp.buttons[12] && gp.buttons[12].pressed; // D-pad up
+  const dDn   = gp.buttons[13] && gp.buttons[13].pressed; // D-pad down
+  const dLt   = gp.buttons[14] && gp.buttons[14].pressed; // D-pad left
+  const dRt   = gp.buttons[15] && gp.buttons[15].pressed; // D-pad right
+  const xBtn  = gp.buttons[2] && gp.buttons[2].pressed;  // X — ERS
+  const yBtn  = gp.buttons[3] && gp.buttons[3].pressed;  // Y — DRS
+  const lbBtn = gp.buttons[4] && gp.buttons[4].pressed;  // LB — pit
+  const rbBtn = gp.buttons[5] && gp.buttons[5].pressed;  // RB — pit alt
+
+  return {
+    up:    r2val > 0.15 || aBtn || ax1 < -deadzone || dUp,
+    down:  l2val > 0.15 || bBtn || ax1 > deadzone  || dDn,
+    left:  ax0 < -deadzone || dLt,
+    right: ax0 > deadzone  || dRt,
+    ers:   xBtn,
+    drs:   yBtn,
+    pit:   lbBtn || rbBtn,
+    brakeMult: Math.max(1, l2val * 2.5),
+  };
+}
 
 // ── LEADERBOARD ─────────────────────────────────────────
 function getLB() {
@@ -8024,9 +8547,14 @@ function showControlsScreen(){
 function switchCtrlTab(tab){
   document.getElementById('ctab-bindings').classList.toggle('active', tab==='bindings');
   document.getElementById('ctab-howto').classList.toggle('active', tab==='howto');
+  const audioTab = document.getElementById('ctab-audio');
+  if (audioTab) audioTab.classList.toggle('active', tab==='audio');
   document.getElementById('ctrl-pane-bindings').style.display = tab==='bindings' ? '' : 'none';
   document.getElementById('ctrl-pane-howto').style.display   = tab==='howto'     ? '' : 'none';
+  const audioPane = document.getElementById('ctrl-pane-audio');
+  if (audioPane) audioPane.style.display = tab==='audio' ? '' : 'none';
   if(tab==='howto' && !document.getElementById('ctrl-pane-howto').dataset.built) buildHowToPane();
+  if(tab==='audio') _buildAudioPane();
 }
 function startRebind(player, action){
   _rebindState = {player, action};
@@ -8213,6 +8741,7 @@ function getPlayerData() {
   try {
     const d = JSON.parse(localStorage.getItem('kartblitz_player')||'{}');
     const def = () => ({speed:0,accel:0,traction:0,braking:0,handling:0});
+    const defVis = () => ({trail:false, skidSparks:false, bloom:false, chroma:false});
     return {
       coins: d.coins||0,
       p1upg: d.p1upg || def(),
@@ -8227,6 +8756,8 @@ function getPlayerData() {
       pitStrategyCustom: normalizePitStrategyCustom(d.pitStrategyCustom || getLegacyPitStrategySeed(d.pitStrategy || 'balanced'), normalizeWeatherId(d.weather||'dry')),
       p1paint: d.p1paint||'cyan',
       p2paint: d.p2paint||'orange',
+      p1visuals: d.p1visuals || defVis(),
+      p2visuals: d.p2visuals || defVis(),
       weather: normalizeWeatherId(d.weather||'dry'),
       tyres:   d.tyres||'med',
       brakeAssist: d.brakeAssist !== undefined ? !!d.brakeAssist : true,
@@ -8235,7 +8766,7 @@ function getPlayerData() {
       trialPits: d.trialPits !== undefined ? d.trialPits : false,
       collisionMode: normalizeCollisionMode(d.collisionMode),
     };
-  } catch(e) { return {coins:0,p1upg:{speed:0,accel:0,traction:0,braking:0,handling:0},p2upg:{speed:0,accel:0,traction:0,braking:0,handling:0},p1dev:createEmptyDevelopmentState(),p2dev:createEmptyDevelopmentState(),p1setup:'balanced',p2setup:'balanced',p1customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },p2customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },pitStrategy:'balanced',pitStrategyCustom:createDefaultPitStrategyCustom(),p1paint:'cyan',p2paint:'orange',weather:'dry',tyres:'med',brakeAssist:true,selectedLaps:3,unlockedTracks:[0,1,2,3,4],trialPits:false,collisionMode:'collision'}; }
+  } catch(e) { return {coins:0,p1upg:{speed:0,accel:0,traction:0,braking:0,handling:0},p2upg:{speed:0,accel:0,traction:0,braking:0,handling:0},p1dev:createEmptyDevelopmentState(),p2dev:createEmptyDevelopmentState(),p1setup:'balanced',p2setup:'balanced',p1customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },p2customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },pitStrategy:'balanced',pitStrategyCustom:createDefaultPitStrategyCustom(),p1paint:'cyan',p2paint:'orange',p1visuals:{trail:false,skidSparks:false,bloom:false,chroma:false},p2visuals:{trail:false,skidSparks:false,bloom:false,chroma:false},weather:'dry',tyres:'med',brakeAssist:true,selectedLaps:3,unlockedTracks:[0,1,2,3,4],trialPits:false,collisionMode:'collision'}; }
 }
 function savePlayerData(d) {
   if(d) {
@@ -8310,6 +8841,35 @@ function switchGarageTab(tab, btn) {
   buildGarageContent();
 }
 
+function buyVisual(player, itemId, cost) {
+  const pd = getPlayerData();
+  if (pd.coins < cost) return;
+  pd.coins -= cost;
+  if (!pd[player+'visuals']) pd[player+'visuals'] = {};
+  pd[player+'visuals'][itemId] = true;
+  pd[player+'visuals'][itemId+'_on'] = true;
+  savePlayerData(pd);
+  try { beep(880, 0.07, 0.22, 'triangle'); } catch(e){}
+  buildGarageContent();
+}
+
+function toggleVisual(player, itemId) {
+  const pd = getPlayerData();
+  if (!pd[player+'visuals']) pd[player+'visuals'] = {};
+  const isOn = pd[player+'visuals'][itemId+'_on'] !== false;
+  pd[player+'visuals'][itemId+'_on'] = !isOn;
+  savePlayerData(pd);
+  try { beep(isOn?320:620, 0.05, 0.14, 'square'); } catch(e){}
+  buildGarageContent();
+}
+
+function _applyVisualFlags() {
+  const pd = getPlayerData();
+  const p1v = pd.p1visuals || {};
+  _bloomEnabled  = !!(p1v.bloom  && p1v.bloom_on  !== false);
+  _chromaEnabled = !!(p1v.chroma && p1v.chroma_on !== false);
+}
+
 function buildGarageScreen() {
   const pd = getPlayerData();
   document.getElementById('garage-coins').textContent = `💰 COINS: ${pd.coins}`;
@@ -8344,6 +8904,41 @@ function buildGarageContent() {
         row.appendChild(sw);
       });
       content.appendChild(row);
+    });
+    return;
+  }
+
+  if(garageTab === 'visuals') {
+    const VISUAL_ITEMS = [
+      { id:'trail',     label:'Neon Trail',       desc:'Glowing colour trail behind your kart while drifting.',       cost:80,  icon:'🌈' },
+      { id:'skidSparks',label:'Skid Sparks',      desc:'Neon spark burst during hard cornering.',                     cost:60,  icon:'✨' },
+      { id:'bloom',     label:'Bloom Glow',       desc:'Bloom post-processing — makes lights bleed beautifully.',     cost:120, icon:'💫' },
+      { id:'chroma',    label:'Chromatic Shift',  desc:'Subtle chromatic aberration lens effect.',                    cost:160, icon:'🔮' },
+    ];
+    ['p1','p2'].forEach(pl => {
+      const sectionLabel = document.createElement('div');
+      sectionLabel.className = 'setup-section-label';
+      sectionLabel.textContent = pl.toUpperCase() + ' — VISUAL FX';
+      content.appendChild(sectionLabel);
+      const grid = document.createElement('div');
+      grid.className = 'vis-grid';
+      VISUAL_ITEMS.forEach(item => {
+        const owned = (pd[pl+'visuals'] || {})[item.id] || false;
+        const canAfford = pd.coins >= item.cost;
+        const card = document.createElement('div');
+        card.className = 'vis-card' + (owned ? ' vis-owned' : '');
+        card.innerHTML = `
+          <div class="vis-icon">${item.icon}</div>
+          <div class="vis-name">${item.label}</div>
+          <div class="vis-desc">${item.desc}</div>
+          ${owned
+            ? `<button class="vis-btn vis-btn-toggle" onclick="toggleVisual('${pl}','${item.id}')">${(pd[pl+'visuals']||{})[item.id+'_on']!==false?'✅ ON':'⬜ OFF'}</button>`
+            : `<button class="vis-btn vis-btn-buy${canAfford?'':' disabled'}" ${canAfford?'':'disabled'} onclick="buyVisual('${pl}','${item.id}',${item.cost})">💰 ${item.cost} COINS</button>`
+          }
+        `;
+        grid.appendChild(card);
+      });
+      content.appendChild(grid);
     });
     return;
   }
