@@ -8913,5 +8913,766 @@ function unlockTrack(trackId) {
 console.log('%cKART BLITZ ⚡ LOADED', 'color:#00f5ff;font-family:Orbitron;font-size:20px;font-weight:bold;');
 console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
 </script>
+
+<script>
+(function(){
+  if (window.__kbRndOverhaulApplied) return;
+  window.__kbRndOverhaulApplied = true;
+
+  const _kbOrigGetPlayerData = window.getPlayerData;
+  const _kbOrigSavePlayerData = window.savePlayerData;
+  const _kbOrigShowGarage = window.showGarage;
+  const _kbOrigBuildGarageScreen = window.buildGarageScreen;
+  const _kbOrigBuildGarageContent = window.buildGarageContent;
+  const _kbOrigSwitchGarageTab = window.switchGarageTab;
+  const _kbOrigApplyUpgradesToKart = window.applyUpgradesToKart;
+  const _kbOrigKartUpdate = window.Kart && window.Kart.prototype && window.Kart.prototype.update;
+  const _kbOrigRaceShowResults = window.Race && window.Race.prototype && window.Race.prototype.showResults;
+
+  const RND_MAX_ACTIVE = 2;
+  const RND_QUEUE_LIMIT = 6;
+
+  const RND_DEPTS = [
+    {
+      id: 'engine',
+      name: 'ENGINE',
+      icon: '⚙️',
+      accent: '#00f5ff',
+      summary: 'Power delivery, combustion efficiency, and straight-line pace.',
+      tree: [
+        { id:'engine-intake', tier:1, name:'High-Flow Intake', cost:120, time:1, chance:94, effects:{ speed:18, accel:14, reliability:-0.01 }, desc:'Sharper throttle response off slow corners.' },
+        { id:'engine-ecu', tier:2, name:'Race ECU Mapping', cost:210, time:1, chance:90, effects:{ speed:24, accel:18, ersCharge:0.03, reliability:-0.01 }, desc:'Cleaner delivery and stronger deployment logic.' },
+        { id:'engine-internals', tier:3, name:'Forged Internals', cost:360, time:2, chance:84, effects:{ speed:42, accel:22, reliability:-0.02 }, desc:'Higher rev ceiling and better top-end pull.' },
+        { id:'engine-ice', tier:4, name:'Split Cooling Package', cost:520, time:2, chance:80, effects:{ speed:24, accel:18, reliability:0.05 }, desc:'Balanced power with less thermal wear.' },
+      ]
+    },
+    {
+      id: 'chassis',
+      name: 'CHASSIS',
+      icon: '🛞',
+      accent: '#ffd700',
+      summary: 'Mechanical grip, braking stability, and direction change.',
+      tree: [
+        { id:'chassis-geometry', tier:1, name:'Suspension Geometry Kit', cost:110, time:1, chance:95, effects:{ handling:0.16, traction:12, reliability:0.03 }, desc:'Keeps the kart settled over weight transfer.' },
+        { id:'chassis-brakes', tier:2, name:'Brake Cooling Ducts', cost:220, time:1, chance:90, effects:{ braking:110, handling:0.08, reliability:0.03 }, desc:'Later braking with less fade.' },
+        { id:'chassis-weight', tier:3, name:'Lightweight Spine', cost:350, time:2, chance:86, effects:{ accel:18, handling:0.18, traction:10, reliability:-0.01 }, desc:'Sharper response with a lower inertial load.' },
+        { id:'chassis-rack', tier:4, name:'Quick Steering Rack', cost:540, time:2, chance:80, effects:{ handling:0.28, braking:80, reliability:-0.01 }, desc:'High-response steering for hairpins and chicanes.' },
+      ]
+    },
+    {
+      id: 'aero',
+      name: 'AERODYNAMICS',
+      icon: '💨',
+      accent: '#ff6b35',
+      summary: 'Drag reduction, loaded grip, and airflow management.',
+      tree: [
+        { id:'aero-canards', tier:1, name:'Front Canards', cost:120, time:1, chance:94, effects:{ handling:0.12, speed:8, reliability:0.01 }, desc:'Improves front-end bite at turn-in.' },
+        { id:'aero-floor', tier:2, name:'Floor Tunnels', cost:240, time:1, chance:90, effects:{ handling:0.18, traction:16, speed:10, reliability:0.01 }, desc:'Efficient downforce with a cleaner underbody.' },
+        { id:'aero-diffuser', tier:3, name:'Rear Diffuser', cost:380, time:2, chance:85, effects:{ handling:0.20, traction:20, speed:12, reliability:-0.01 }, desc:'Stabilises the rear at corner exit.' },
+        { id:'aero-wing', tier:4, name:'Low-Drag Wing', cost:560, time:2, chance:82, effects:{ speed:30, handling:0.14, reliability:-0.02 }, desc:'Balances straight-line efficiency with support.' },
+      ]
+    },
+    {
+      id: 'tyres',
+      name: 'TYRES',
+      icon: '🟨',
+      accent: '#ffffff',
+      summary: 'Tyre life, temperature control, and compound management.',
+      tree: [
+        { id:'tyres-temp', tier:1, name:'Temperature Window', cost:100, time:1, chance:95, effects:{ traction:14, tyreWear:0.04, reliability:0.02 }, desc:'More stable grip across a wider temp range.' },
+        { id:'tyres-structure', tier:2, name:'Reinforced Carcass', cost:210, time:1, chance:90, effects:{ traction:18, tyreWear:0.06, reliability:0.02 }, desc:'Improves life under hard load and kerb strikes.' },
+        { id:'tyres-compound', tier:3, name:'Compound Research', cost:360, time:2, chance:85, effects:{ traction:24, tyreWear:0.08, reliability:-0.01 }, desc:'Better grip without burning through the tyres.' },
+        { id:'tyres-window', tier:4, name:'Race Window Model', cost:520, time:2, chance:81, effects:{ traction:28, tyreWear:0.10, reliability:0.03 }, desc:'Keeps the tyre in its best operating window longer.' },
+      ]
+    },
+    {
+      id: 'ers',
+      name: 'ERS',
+      icon: '🔋',
+      accent: '#7cfcff',
+      summary: 'Harvesting, deployment, and battery efficiency.',
+      tree: [
+        { id:'ers-harvest', tier:1, name:'Regeneration Map', cost:130, time:1, chance:94, effects:{ ersCharge:0.03, speed:10, reliability:0.01 }, desc:'Improves how quickly energy returns under lift-off.' },
+        { id:'ers-deploy', tier:2, name:'Aggressive Deployment', cost:250, time:1, chance:89, effects:{ ersBoost:0.05, speed:18, reliability:-0.01 }, desc:'A stronger push on the straights.' },
+        { id:'ers-cell', tier:3, name:'High-Density Cell', cost:400, time:2, chance:84, effects:{ ersCharge:0.05, ersBoost:0.07, reliability:0.01 }, desc:'More sustained electric assistance over a stint.' },
+        { id:'ers-control', tier:4, name:'Smart Control Unit', cost:560, time:2, chance:80, effects:{ ersCharge:0.07, ersBoost:0.09, reliability:0.03 }, desc:'Makes deployment cleaner and more consistent.' },
+      ]
+    },
+    {
+      id: 'reliability',
+      name: 'RELIABILITY',
+      icon: '🛡️',
+      accent: '#4ade80',
+      summary: 'Cooling, fault protection, and component durability.',
+      tree: [
+        { id:'rel-cooling', tier:1, name:'Cooling Audit', cost:110, time:1, chance:95, effects:{ reliability:0.05, tyreWear:0.03 }, desc:'Reduces heat stress across the whole car.' },
+        { id:'rel-sensors', tier:2, name:'Fault Sensors', cost:220, time:1, chance:91, effects:{ reliability:0.06, ersCharge:0.02 }, desc:'Finds problems earlier and stops compound loss.' },
+        { id:'rel-durability', tier:3, name:'Stress Testing', cost:360, time:2, chance:86, effects:{ reliability:0.08, tyreWear:0.05, ersCharge:0.02 }, desc:'Raises component life and cut-out resistance.' },
+        { id:'rel-master', tier:4, name:'Race-Proof Package', cost:540, time:2, chance:82, effects:{ reliability:0.12, tyreWear:0.08, ersCharge:0.03 }, desc:'The full reliability push for long-run consistency.' },
+      ]
+    }
+  ];
+
+  function clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  function clamp(v, a, b) {
+    return Math.max(a, Math.min(b, v));
+  }
+
+  function getNodeDef(nodeId) {
+    for (const dept of RND_DEPTS) {
+      const node = dept.tree.find(n => n.id === nodeId);
+      if (node) return { ...node, deptId: dept.id, deptName: dept.name, deptIcon: dept.icon, accent: dept.accent };
+    }
+    return null;
+  }
+
+  function makeDefaultNodeState(node, idx) {
+    return {
+      id: node.id,
+      status: idx === 0 ? 'available' : 'locked',
+      remaining: 0,
+      attempts: 0,
+      lastChance: node.chance,
+      lastCost: node.cost,
+      lastResult: '',
+      completedAt: null,
+      startedAt: null
+    };
+  }
+
+  function createDefaultRnDState() {
+    const nodes = {};
+    RND_DEPTS.forEach(dept => {
+      dept.tree.forEach((node, idx) => {
+        nodes[node.id] = makeDefaultNodeState(node, idx);
+      });
+    });
+    return {
+      activeTab: 'engine',
+      queue: [],
+      history: [],
+      nodes
+    };
+  }
+
+  function normalizeRnDState(raw) {
+    const base = createDefaultRnDState();
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const srcNodes = src.nodes && typeof src.nodes === 'object' ? src.nodes : {};
+    const srcQueue = Array.isArray(src.queue) ? src.queue : [];
+    const srcHistory = Array.isArray(src.history) ? src.history : [];
+    base.activeTab = typeof src.activeTab === 'string' ? src.activeTab : base.activeTab;
+
+    RND_DEPTS.forEach(dept => {
+      dept.tree.forEach((node, idx) => {
+        const cur = srcNodes[node.id] || {};
+        const n = base.nodes[node.id];
+        n.status = ['locked','available','queued','researching','complete','failed'].includes(cur.status) ? cur.status : n.status;
+        n.remaining = Number.isFinite(Number(cur.remaining)) ? Math.max(0, Number(cur.remaining)) : n.remaining;
+        n.attempts = Number.isFinite(Number(cur.attempts)) ? Math.max(0, Number(cur.attempts)) : n.attempts;
+        n.lastChance = Number.isFinite(Number(cur.lastChance)) ? Number(cur.lastChance) : n.lastChance;
+        n.lastCost = Number.isFinite(Number(cur.lastCost)) ? Number(cur.lastCost) : n.lastCost;
+        n.lastResult = typeof cur.lastResult === 'string' ? cur.lastResult : n.lastResult;
+        n.startedAt = cur.startedAt || n.startedAt;
+        n.completedAt = cur.completedAt || n.completedAt;
+        if (idx === 0 && n.status === 'locked') n.status = 'available';
+      });
+    });
+
+    base.queue = srcQueue.filter(id => base.nodes[id]);
+    base.history = srcHistory.slice(0, 24).map(h => ({
+      t: h.t || Date.now(),
+      deptId: h.deptId || 'engine',
+      nodeId: h.nodeId || '',
+      nodeName: h.nodeName || '',
+      result: h.result || '',
+      detail: h.detail || ''
+    }));
+
+    // Clean queue/status mismatches
+    base.queue = base.queue.filter(id => {
+      const n = base.nodes[id];
+      return n && ['queued','researching'].includes(n.status);
+    });
+
+    // Ensure completed nodes unlock their children
+    RND_DEPTS.forEach(dept => {
+      dept.tree.forEach((node, idx) => {
+        const n = base.nodes[node.id];
+        if (n.status === 'complete' && idx < dept.tree.length - 1) {
+          const next = base.nodes[dept.tree[idx + 1].id];
+          if (next.status === 'locked') next.status = 'available';
+        }
+      });
+    });
+
+    return base;
+  }
+
+  function getRnDState() {
+    const pd = _kbOrigGetPlayerData ? _kbOrigGetPlayerData() : {};
+    pd.rnd = normalizeRnDState(pd.rnd || pd.teamRnd || pd.research || null);
+    return pd;
+  }
+
+  function computeRnDBonuses(rnd) {
+    const bonus = {
+      speed: 0,
+      accel: 0,
+      traction: 0,
+      braking: 0,
+      handling: 0,
+      tyreWear: 0,
+      ersCharge: 0,
+      ersBoost: 0,
+      reliability: 0
+    };
+    RND_DEPTS.forEach(dept => {
+      dept.tree.forEach(node => {
+        const state = rnd.nodes[node.id];
+        if (!state || state.status !== 'complete') return;
+        Object.keys(node.effects).forEach(key => {
+          bonus[key] = (bonus[key] || 0) + node.effects[key];
+        });
+      });
+    });
+    return bonus;
+  }
+
+  function fmtEffectLine(effects) {
+    const out = [];
+    if (effects.speed) out.push(`+${Math.round(effects.speed)} TOP SPEED`);
+    if (effects.accel) out.push(`+${Math.round(effects.accel)} ACCEL`);
+    if (effects.braking) out.push(`+${Math.round(effects.braking)} BRAKING`);
+    if (effects.handling) out.push(`+${Math.round(effects.handling * 100)}% TURN`);
+    if (effects.traction) out.push(`+${Math.round(effects.traction)} GRIP`);
+    if (effects.tyreWear) out.push(`-${Math.round(effects.tyreWear * 100)}% WEAR`);
+    if (effects.ersCharge) out.push(`+${Math.round(effects.ersCharge * 100)}% CHARGE`);
+    if (effects.ersBoost) out.push(`+${Math.round(effects.ersBoost * 100)}% BOOST`);
+    if (effects.reliability) out.push(`+${Math.round(effects.reliability * 100)}% RELIABILITY`);
+    return out.join(' · ');
+  }
+
+  function computeDeptSummary(rnd, dept) {
+    const complete = dept.tree.filter(node => rnd.nodes[node.id] && rnd.nodes[node.id].status === 'complete').length;
+    const queued = dept.tree.filter(node => {
+      const s = rnd.nodes[node.id];
+      return s && ['queued','researching'].includes(s.status);
+    }).length;
+    const failed = dept.tree.filter(node => rnd.nodes[node.id] && rnd.nodes[node.id].status === 'failed').length;
+    return { complete, queued, failed, total: dept.tree.length };
+  }
+
+  function unlockNextNodes(rnd, dept) {
+    dept.tree.forEach((node, idx) => {
+      const cur = rnd.nodes[node.id];
+      if (cur.status === 'complete' && idx < dept.tree.length - 1) {
+        const next = rnd.nodes[dept.tree[idx + 1].id];
+        if (next.status === 'locked') next.status = 'available';
+      }
+      if (idx > 0) {
+        const prev = rnd.nodes[dept.tree[idx - 1].id];
+        if (prev.status !== 'complete' && cur.status === 'available') cur.status = 'locked';
+      }
+    });
+  }
+
+  function startQueuedProjects(rnd) {
+    const active = () => rnd.queue.filter(id => rnd.nodes[id] && rnd.nodes[id].status === 'researching').length;
+    let free = RND_MAX_ACTIVE - active();
+    while (free > 0) {
+      const nextId = rnd.queue.find(id => rnd.nodes[id] && rnd.nodes[id].status === 'queued');
+      if (!nextId) break;
+      const node = getNodeDef(nextId);
+      const state = rnd.nodes[nextId];
+      state.status = 'researching';
+      state.startedAt = state.startedAt || Date.now();
+      state.remaining = Math.max(1, Math.round(state.remaining || node.time));
+      state.lastChance = clamp(state.lastChance || node.chance, 35, 98);
+      free--;
+      rnd.history.unshift({
+        t: Date.now(),
+        deptId: node.deptId,
+        nodeId: node.id,
+        nodeName: node.name,
+        result: 'STARTED',
+        detail: `ETA ${state.remaining} race${state.remaining === 1 ? '' : 's'}`
+      });
+    }
+    rnd.history = rnd.history.slice(0, 24);
+  }
+
+  function queueRnDProject(nodeId, redevelop) {
+    const pd = getRnDState();
+    const rnd = pd.rnd;
+    const node = getNodeDef(nodeId);
+    if (!node) return;
+
+    const state = rnd.nodes[nodeId];
+    if (!state) return;
+
+    if (state.status === 'complete' || state.status === 'queued' || state.status === 'researching') return;
+
+    if (rnd.queue.length >= RND_QUEUE_LIMIT) return;
+
+    // Check prerequisites through tier order
+    const dept = RND_DEPTS.find(d => d.id === node.deptId);
+    const nodeIndex = dept.tree.findIndex(n => n.id === node.id);
+    if (nodeIndex > 0) {
+      const prev = rnd.nodes[dept.tree[nodeIndex - 1].id];
+      if (!prev || prev.status !== 'complete') return;
+    }
+
+    const attempts = state.attempts + 1;
+    const costMult = redevelop ? 1.25 + (state.attempts * 0.15) : 1 + (state.attempts * 0.12);
+    const timeMult = redevelop ? 1 + (state.attempts * 0.20) : 1;
+    const cost = Math.round(node.cost * costMult);
+    const time = Math.max(1, Math.round(node.time * timeMult));
+    const chanceBoost = redevelop ? 7 + state.attempts * 3 : 0;
+    const chance = clamp(node.chance + chanceBoost + Math.min(6, state.attempts * 2), 40, 99);
+
+    if (pd.coins < cost) return;
+
+    pd.coins -= cost;
+    state.status = 'queued';
+    state.remaining = time;
+    state.attempts = attempts;
+    state.lastChance = chance;
+    state.lastCost = cost;
+    state.lastResult = redevelop ? 'REDEVELOPMENT QUEUED' : 'QUEUED';
+    state.startedAt = null;
+    state.completedAt = null;
+
+    if (!rnd.queue.includes(nodeId)) rnd.queue.push(nodeId);
+
+    rnd.history.unshift({
+      t: Date.now(),
+      deptId: node.deptId,
+      nodeId: node.id,
+      nodeName: node.name,
+      result: redevelop ? 'REDEV' : 'QUEUE',
+      detail: `£${cost} · ${time} race${time === 1 ? '' : 's'} · ${chance}%`
+    });
+    rnd.history = rnd.history.slice(0, 24);
+
+    startQueuedProjects(rnd);
+    pd.rnd = rnd;
+    savePlayerData(pd);
+    buildGarageScreen();
+    beep(830, 0.10, 0.50, 'square');
+    beep(1040, 0.16, 0.45, 'square', 0.07);
+    beep(1320, 0.22, 0.55, 'sine', 0.12);
+  }
+
+  function advanceRnDSession() {
+    const pd = getRnDState();
+    const rnd = pd.rnd;
+    let changed = false;
+
+    startQueuedProjects(rnd);
+
+    const researched = rnd.queue.filter(id => rnd.nodes[id] && rnd.nodes[id].status === 'researching');
+    researched.forEach(id => {
+      const node = getNodeDef(id);
+      const state = rnd.nodes[id];
+      if (!node || !state) return;
+      state.remaining = Math.max(0, (Number(state.remaining) || node.time) - 1);
+      changed = true;
+      if (state.remaining > 0) return;
+
+      const baseChance = clamp(Number(state.lastChance) || node.chance, 35, 99);
+      const roll = Math.random() * 100;
+      if (roll <= baseChance) {
+        state.status = 'complete';
+        state.lastResult = 'SUCCESS';
+        state.completedAt = Date.now();
+        rnd.history.unshift({
+          t: Date.now(),
+          deptId: node.deptId,
+          nodeId: node.id,
+          nodeName: node.name,
+          result: 'SUCCESS',
+          detail: `CONFIRMED · ${baseChance}%`
+        });
+        const dept = RND_DEPTS.find(d => d.id === node.deptId);
+        unlockNextNodes(rnd, dept);
+      } else {
+        state.status = 'failed';
+        state.lastResult = 'FAILURE';
+        state.completedAt = Date.now();
+        rnd.history.unshift({
+          t: Date.now(),
+          deptId: node.deptId,
+          nodeId: node.id,
+          nodeName: node.name,
+          result: 'FAIL',
+          detail: `RISK OVERRAN · ${baseChance}%`
+        });
+      }
+      state.remaining = 0;
+    });
+
+    rnd.queue = rnd.queue.filter(id => {
+      const n = rnd.nodes[id];
+      return n && ['queued','researching'].includes(n.status);
+    });
+
+    startQueuedProjects(rnd);
+    rnd.history = rnd.history.slice(0, 24);
+
+    if (changed) {
+      pd.rnd = rnd;
+      savePlayerData(pd);
+      if (document.getElementById('screen-garage') && !document.getElementById('screen-garage').classList.contains('hidden')) {
+        buildGarageContent();
+      }
+    }
+  }
+
+  function renderRnDTabs(activeTab) {
+    const tabs = document.getElementById('garage-tabs');
+    if (!tabs) return;
+    tabs.innerHTML = [
+      ['rnd', '🧪 R&D HQ'],
+      ['p1', 'P1 LEGACY'],
+      ['p2', 'P2 LEGACY'],
+      ['paint', '🎨 PAINTS']
+    ].map(([id, label]) => `<button class="gtab${activeTab === id ? ' active' : ''}" onclick="switchGarageTab('${id}', this)">${label}</button>`).join('');
+  }
+
+  function renderRnDGarage() {
+    const pd = getPlayerData();
+    const rnd = normalizeRnDState(pd.rnd);
+    pd.rnd = rnd;
+    savePlayerData(pd);
+
+    const content = document.getElementById('garage-content');
+    if (!content) return;
+    const bonuses = computeRnDBonuses(rnd);
+    const queueCount = rnd.queue.length;
+    const activeCount = rnd.queue.filter(id => rnd.nodes[id] && rnd.nodes[id].status === 'researching').length;
+    const completeCount = Object.values(rnd.nodes).filter(n => n.status === 'complete').length;
+    const failedCount = Object.values(rnd.nodes).filter(n => n.status === 'failed').length;
+
+    const deptCards = RND_DEPTS.map(dept => {
+      const s = computeDeptSummary(rnd, dept);
+      const accent = dept.accent;
+      return `
+        <div class="rnd-dept-card" style="--accent:${accent}">
+          <div class="rnd-dept-head">
+            <div class="rnd-dept-icon">${dept.icon}</div>
+            <div>
+              <div class="rnd-dept-name">${dept.name}</div>
+              <div class="rnd-dept-sub">${dept.summary}</div>
+            </div>
+          </div>
+          <div class="rnd-mini-row">
+            <span class="rnd-mini-pill">LIVE ${s.complete}/${s.total}</span>
+            <span class="rnd-mini-pill">QUEUE ${s.queued}</span>
+            <span class="rnd-mini-pill ${s.failed ? 'bad' : ''}">FAIL ${s.failed}</span>
+          </div>
+          <div class="rnd-dept-tree">
+            ${dept.tree.map(node => {
+              const state = rnd.nodes[node.id];
+              const canQueue = state.status === 'available' || state.status === 'failed';
+              const canRedevelop = state.status === 'failed';
+              const progress = state.status === 'researching' ? clamp(100 - (state.remaining / Math.max(1, node.time)) * 100, 0, 100) : (state.status === 'complete' ? 100 : 0);
+              const badgeClass = state.status;
+              const badgeText = state.status === 'queued' ? 'QUEUED' :
+                               state.status === 'researching' ? 'RESEARCHING' :
+                               state.status === 'complete' ? 'LIVE' :
+                               state.status === 'failed' ? 'FAILED' :
+                               state.status === 'available' ? 'READY' : 'LOCKED';
+              const action = state.status === 'failed'
+                ? `<button class="btn btn-sm btn-orange" onclick="queueRnDProject('${node.id}', true)">REDEVELOP</button>`
+                : canQueue
+                  ? (rnd.queue.length < RND_QUEUE_LIMIT ? `<button class="btn btn-sm btn-cyan" onclick="queueRnDProject('${node.id}', false)">QUEUE PROJECT</button>` : `<div class="rnd-node-foot">QUEUE FULL</div>`)
+                  : `<div class="rnd-node-foot">DEPENDENCY LOCKED</div>`;
+              return `
+                <div class="rnd-node ${badgeClass}">
+                  <div class="rnd-node-top">
+                    <div class="rnd-node-tier">T${node.tier}</div>
+                    <div class="rnd-node-badge">${badgeText}</div>
+                  </div>
+                  <div class="rnd-node-title">${node.name}</div>
+                  <div class="rnd-node-meta">${node.desc}</div>
+                  <div class="rnd-node-effects">${fmtEffectLine(node.effects)}</div>
+                  <div class="rnd-node-stats">
+                    <span>💰 ${state.lastCost || node.cost}</span>
+                    <span>⏱ ${node.time} RACE${node.time === 1 ? '' : 'S'}</span>
+                    <span>✅ ${state.lastChance || node.chance}%</span>
+                  </div>
+                  <div class="rnd-bar"><div class="rnd-bar-fill" style="width:${progress}%;"></div></div>
+                  <div class="rnd-node-action">${action}</div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }).join('');
+
+    const queueHtml = rnd.queue.length ? rnd.queue.map(id => {
+      const node = getNodeDef(id);
+      const state = rnd.nodes[id];
+      if (!node || !state) return '';
+      return `
+        <div class="rnd-queue-item ${state.status}">
+          <div class="rnd-queue-head">
+            <div>
+              <div class="rnd-queue-title">${node.deptName} · ${node.name}</div>
+              <div class="rnd-queue-sub">${state.status === 'researching' ? 'IN WORK' : 'WAITING'} · ${state.remaining || node.time} race${(state.remaining || node.time) === 1 ? '' : 's'} left</div>
+            </div>
+            <div class="rnd-queue-badge">${state.lastChance || node.chance}%</div>
+          </div>
+          <div class="rnd-queue-meta">${fmtEffectLine(node.effects)}</div>
+        </div>`;
+    }).join('') : '<div class="rnd-empty">No active research projects queued.</div>';
+
+    const historyHtml = rnd.history.length ? rnd.history.slice(0, 10).map(h => {
+      const node = getNodeDef(h.nodeId) || { deptName: h.deptId.toUpperCase(), name: h.nodeName || 'PROJECT' };
+      return `
+        <div class="rnd-history-item">
+          <div class="rnd-history-top">
+            <div class="rnd-history-title">${node.deptName} · ${node.name}</div>
+            <div class="rnd-history-tag ${String(h.result).toLowerCase()}">${h.result}</div>
+          </div>
+          <div class="rnd-history-sub">${h.detail || ''}</div>
+          ${h.result === 'FAIL' ? `<button class="btn btn-sm btn-orange" onclick="queueRnDProject('${h.nodeId}', true)">REDEVELOP</button>` : ''}
+        </div>`;
+    }).join('') : '<div class="rnd-empty">Research history will appear here.</div>';
+
+    content.innerHTML = `
+      <div class="rnd-shell">
+        <div class="rnd-banner">
+          <div class="rnd-banner-left">
+            <div class="upgrade-name">FACTORY R&D CONTROL</div>
+            <div class="rnd-banner-copy">Queue upgrades, manage risk, and turn completed projects into race-day performance gains.</div>
+          </div>
+          <div class="rnd-banner-stats">
+            <div class="rnd-stat"><span>COINS</span><b>${pd.coins}</b></div>
+            <div class="rnd-stat"><span>ACTIVE</span><b>${activeCount}/${RND_MAX_ACTIVE}</b></div>
+            <div class="rnd-stat"><span>QUEUE</span><b>${queueCount}/${RND_QUEUE_LIMIT}</b></div>
+            <div class="rnd-stat"><span>LIVE</span><b>${completeCount}</b></div>
+            <div class="rnd-stat"><span>FAILS</span><b>${failedCount}</b></div>
+          </div>
+        </div>
+
+        <div class="rnd-summary-grid">
+          <div class="rnd-summary-card">
+            <div class="rnd-summary-title">PERFORMANCE SUMMARY</div>
+            <div class="rnd-summary-line">${fmtEffectLine(bonuses) || 'No live research bonuses yet.'}</div>
+            <div class="rnd-summary-note">Bonuses apply to both kart builds, then stack with the legacy P1/P2 development packages.</div>
+          </div>
+          <div class="rnd-summary-card">
+            <div class="rnd-summary-title">RESEARCH PIPELINE</div>
+            <div class="rnd-summary-line">Up to ${RND_MAX_ACTIVE} projects can be active at once. Time advances on race completion.</div>
+            <div class="rnd-summary-note">Failures stay in the history log so you can relaunch the same concept as a redevelopment project.</div>
+          </div>
+        </div>
+
+        <div class="rnd-dept-grid">
+          ${deptCards}
+        </div>
+
+        <div class="rnd-lower-grid">
+          <div class="rnd-lower-panel">
+            <div class="rnd-panel-title">CURRENT QUEUE</div>
+            <div class="rnd-queue-list">${queueHtml}</div>
+          </div>
+          <div class="rnd-lower-panel">
+            <div class="rnd-panel-title">RESEARCH HISTORY</div>
+            <div class="rnd-history-list">${historyHtml}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Offer a compact dept jump bar
+    const jumpBar = document.createElement('div');
+    jumpBar.className = 'rnd-jump-bar';
+    jumpBar.innerHTML = RND_DEPTS.map(dept => `<button class="rnd-jump${rnd.activeTab === dept.id ? ' active' : ''}" onclick="(function(){ const p=getPlayerData(); p.rnd.activeTab='${dept.id}'; savePlayerData(p); buildGarageContent(); })()">${dept.name}</button>`).join('');
+    content.prepend(jumpBar);
+  }
+
+  function renderRndStyles() {
+    if (document.getElementById('kb-rnd-style')) return;
+    const st = document.createElement('style');
+    st.id = 'kb-rnd-style';
+    st.textContent = `
+      .rnd-shell{width:min(1120px,96vw);margin:0 auto;display:flex;flex-direction:column;gap:16px}
+      .rnd-banner,.rnd-summary-card,.rnd-dept-card,.rnd-lower-panel,.rnd-history-item,.rnd-queue-item{border-radius:22px;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(180deg, rgba(13,24,47,0.82), rgba(7,11,24,0.96));backdrop-filter:blur(16px);box-shadow:0 16px 34px rgba(0,0,0,0.26)}
+      .rnd-banner{padding:18px;display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+      .rnd-banner-copy{font-size:13px;opacity:.76;line-height:1.6;max-width:620px;margin-top:6px}
+      .rnd-banner-stats{display:grid;grid-template-columns:repeat(5,minmax(68px,1fr));gap:8px;min-width:min(100%,460px)}
+      .rnd-stat{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);text-align:center}
+      .rnd-stat span{display:block;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:.18em;opacity:.56}
+      .rnd-stat b{display:block;margin-top:6px;font-family:'Orbitron',sans-serif;font-size:14px;color:#fff}
+      .rnd-jump-bar,.rnd-mini-row{display:flex;flex-wrap:wrap;gap:8px}
+      .rnd-jump,.rnd-mini-pill,.rnd-queue-badge,.rnd-history-tag,.rnd-node-badge,.rnd-node-tier{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em;border-radius:999px;padding:6px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);color:rgba(220,236,255,0.80)}
+      .rnd-jump.active{border-color:#00f5ff;color:#00f5ff;background:rgba(0,245,255,0.10)}
+      .rnd-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+      .rnd-summary-card{padding:16px 18px}
+      .rnd-summary-title,.rnd-panel-title{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.18em;color:#00f5ff}
+      .rnd-summary-line{margin-top:10px;font-size:15px;line-height:1.6;color:rgba(228,240,255,0.82)}
+      .rnd-summary-note,.rnd-dept-sub,.rnd-node-meta,.rnd-queue-sub,.rnd-history-sub,.rnd-empty{margin-top:7px;font-size:12px;line-height:1.55;color:rgba(220,236,255,0.62)}
+      .rnd-dept-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+      .rnd-dept-card{padding:16px 16px 18px;position:relative;overflow:hidden}
+      .rnd-dept-card::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent, #00f5ff);opacity:.9}
+      .rnd-dept-head{display:flex;gap:12px;align-items:flex-start}
+      .rnd-dept-icon{font-size:28px;line-height:1}
+      .rnd-dept-name{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.16em;color:#fff}
+      .rnd-dept-tree{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
+      .rnd-node{padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(180deg, rgba(11,20,42,0.78), rgba(6,10,24,0.94))}
+      .rnd-node.queued,.rnd-queue-item.queued{border-color:rgba(0,245,255,0.32)}
+      .rnd-node.researching,.rnd-queue-item.researching{border-color:rgba(255,215,0,0.34)}
+      .rnd-node.complete{border-color:rgba(74,222,128,0.34)}
+      .rnd-node.failed,.rnd-queue-item.failed{border-color:rgba(255,107,53,0.34)}
+      .rnd-node-top,.rnd-queue-head,.rnd-history-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+      .rnd-node-tier,.rnd-node-badge,.rnd-queue-badge,.rnd-history-tag{padding:4px 8px}
+      .rnd-node-title{margin-top:8px;font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.08em;color:#f5fbff}
+      .rnd-node-effects{margin-top:8px;font-size:11px;line-height:1.5;color:#7ef0ff}
+      .rnd-node-stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em;color:rgba(220,236,255,0.68)}
+      .rnd-node-stats span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)}
+      .rnd-bar{height:7px;border-radius:999px;background:rgba(255,255,255,0.07);margin-top:10px;overflow:hidden}
+      .rnd-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#00f5ff,#ffd700,#4ade80)}
+      .rnd-node-action{margin-top:10px}
+      .rnd-node-foot{margin-top:8px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.14em;color:rgba(255,255,255,0.42)}
+      .rnd-lower-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+      .rnd-lower-panel{padding:16px}
+      .rnd-queue-list,.rnd-history-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+      .rnd-queue-item,.rnd-history-item{padding:14px}
+      .rnd-queue-title,.rnd-history-title{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:.08em}
+      .rnd-history-tag.success,.rnd-node-badge.complete{color:#4ade80;border-color:rgba(74,222,128,0.34)}
+      .rnd-history-tag.fail,.rnd-history-tag.failure{color:#ff6b35;border-color:rgba(255,107,53,0.34)}
+      .rnd-history-tag.queue,.rnd-history-tag.redev,.rnd-queue-badge{color:#00f5ff;border-color:rgba(0,245,255,0.34)}
+      .rnd-mini-pill.bad{color:#ff6b35;border-color:rgba(255,107,53,0.28)}
+      @media (max-width: 920px){.rnd-banner-stats,.rnd-lower-grid{grid-template-columns:1fr}.rnd-banner-stats{min-width:0}.rnd-lower-grid{display:grid}}
+    `;
+    document.head.appendChild(st);
+  }
+
+  function renderLegacyGarageContent() {
+    if (_kbOrigBuildGarageContent) {
+      _kbOrigBuildGarageContent();
+    }
+  }
+
+  window.getPlayerData = function() {
+    const d = _kbOrigGetPlayerData ? _kbOrigGetPlayerData() : {};
+    d.rnd = normalizeRnDState(d.rnd || d.teamRnd || d.research || null);
+    return d;
+  };
+
+  window.savePlayerData = function(d) {
+    if (!d) return _kbOrigSavePlayerData ? _kbOrigSavePlayerData(d) : undefined;
+    d.rnd = normalizeRnDState(d.rnd || d.teamRnd || d.research || null);
+    return _kbOrigSavePlayerData ? _kbOrigSavePlayerData(d) : undefined;
+  };
+
+  window.showGarage = function() {
+    initAudio();
+    garageTab = 'rnd';
+    renderRndStyles();
+    buildGarageScreen();
+    showScreen('garage');
+  };
+
+  window.buildGarageScreen = function() {
+    renderRndStyles();
+    const pd = getPlayerData();
+    const coins = document.getElementById('garage-coins');
+    if (coins) coins.textContent = `💰 COINS: ${pd.coins}`;
+    renderRnDTabs(garageTab || 'rnd');
+    buildGarageContent();
+  };
+
+  window.switchGarageTab = function(tab, btn) {
+    garageTab = tab;
+    document.querySelectorAll('.gtab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    buildGarageContent();
+  };
+
+  window.buildGarageContent = function() {
+    const content = document.getElementById('garage-content');
+    if (!content) return;
+    const pd = getPlayerData();
+    if (garageTab === 'rnd') {
+      renderRnDGarage();
+      return;
+    }
+    if (_kbOrigBuildGarageContent) _kbOrigBuildGarageContent();
+  };
+
+  window.queueRnDProject = function(nodeId, redevelop) {
+    queueRnDProject(nodeId, !!redevelop);
+  };
+
+  window.advanceRnDSession = function() {
+    advanceRnDSession();
+  };
+
+  window.applyUpgradesToKart = function(kart, player) {
+    if (_kbOrigApplyUpgradesToKart) _kbOrigApplyUpgradesToKart(kart, player);
+    const pd = getPlayerData();
+    const rnd = pd.rnd || createDefaultRnDState();
+    const b = computeRnDBonuses(rnd);
+
+    kart.maxSpeed = (kart.maxSpeed || 0) + b.speed;
+    kart.accel = (kart.accel || 0) + b.accel;
+    kart.brakeForce = (kart.brakeForce || 0) + b.braking;
+    kart.turnRate = (kart.turnRate || 0) + b.handling;
+    kart.offTrackMaxSpd = (kart.offTrackMaxSpd || 0) + b.traction;
+
+    kart._rndReliability = clamp(1 - (b.reliability || 0), 0.82, 1.08);
+    kart._rndTyreWearMult = clamp(1 - ((b.tyreWear || 0) + (b.reliability || 0)), 0.70, 1.08);
+    kart._rndERSRegen = clamp(b.ersCharge || 0, 0, 0.25);
+    kart._rndERSBoost = clamp(b.ersBoost || 0, 0, 0.25);
+
+    kart._upgradeBase = {
+      maxSpeed: kart.maxSpeed,
+      turnRate: kart.turnRate,
+      accel: kart.accel
+    };
+  };
+
+  if (window.Kart && window.Kart.prototype && _kbOrigKartUpdate) {
+    window.Kart.prototype.update = function(dt, trackData, otherKarts) {
+      _kbOrigKartUpdate.call(this, dt, trackData, otherKarts);
+      if (this._rndTyreWearMult && this.tyreWear > 0) {
+        const keep = clamp(this._rndTyreWearMult, 0.88, 1.02);
+        this.tyreWear = Math.max(0, this.tyreWear * (1 - (1 - keep) * 0.05));
+      }
+      if (this._rndERSRegen && !this.ersActive) {
+        this.ersCharge = Math.min(1, this.ersCharge + this._rndERSRegen * dt);
+      }
+      if (this._rndERSBoost && this.ersActive) {
+        this.speed *= 1 + this._rndERSBoost * 0.02;
+      }
+    };
+  }
+
+  if (window.Race && window.Race.prototype && _kbOrigRaceShowResults) {
+    window.Race.prototype.showResults = function() {
+      advanceRnDSession();
+      return _kbOrigRaceShowResults.apply(this, arguments);
+    };
+  }
+
+  // Seed the garage UI after the page is ready.
+  const _kbSeedGarage = () => {
+    renderRndStyles();
+    renderRnDTabs(garageTab || 'rnd');
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _kbSeedGarage, { once:true });
+  } else {
+    _kbSeedGarage();
+  }
+})();
+</script>
+
 </body>
 </html>
