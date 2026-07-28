@@ -2961,12 +2961,12 @@ class Kart {
     if (this.isAI) this.speed = Math.max(0, Math.min(spdLimit, this.speed));
     else this.speed = Math.max(-maxSpd * 0.3, Math.min(spdLimit, this.speed));
 
-    // Speed-based grip / understeer: high speed bleeds turn-in hard so you cannot flat-out every corner.
+    // Speed-based grip / understeer: high speed bleeds turn-in so you cannot flat-out every corner.
     if(Math.abs(this.speed) > 4) {
       const speedRatio = Math.abs(this.speed) / Math.max(1, this.maxSpeed);
       const grip = Math.max(0.35, Math.min(1.25, this.grip == null ? 1 : this.grip));
-      // Grip falls off with speed² — lots of understeer once you are carrying real pace.
-      const gripFactor = Math.max(0.10, (1.0 - speedRatio * speedRatio * 1.12) * grip);
+      // Grip falls off with speed² — understeer at pace, without dumping all forward speed.
+      const gripFactor = Math.max(0.14, (1.0 - speedRatio * speedRatio * 1.05) * grip);
       const maxYawRate = this.turnRate * gripFactor;
       const dir = this.speed >= 0 ? 1 : -1;
       let wantYaw = 0;
@@ -2975,9 +2975,9 @@ class Kart {
       const maxYaw = maxYawRate * dt;
       const appliedYaw = Math.max(-maxYaw, Math.min(maxYaw, wantYaw));
       this.angle += appliedYaw;
-      // Scrub speed when the driver asks for more yaw than the tyres can give (classic understeer).
-      if(Math.abs(wantYaw) > maxYaw * 1.02 && speedRatio > 0.42) {
-        const scrub = 0.012 + (speedRatio - 0.42) * 0.05;
+      // Light scrub only when heavily over-asking for yaw at high speed.
+      if(Math.abs(wantYaw) > maxYaw * 1.15 && speedRatio > 0.58) {
+        const scrub = 0.003 + (speedRatio - 0.58) * 0.012;
         this.speed *= Math.pow(1 - scrub, dt * 60);
       }
     }
