@@ -2765,7 +2765,7 @@ class Kart {
       let bestWake = 0;
       for(const other of otherKarts) {
         if(other === this) continue;
-        if(other.finished) continue;
+        if(other.finished || other._shootoutStowed) continue;
         const dx = other.x - this.x, dy = other.y - this.y;
         const dist = Math.hypot(dx, dy);
         if(dist < 600 && dist > 20) {
@@ -2808,7 +2808,7 @@ class Kart {
       let contactHits = 0;
       for(const other of otherKarts) {
         if(other === this) continue;
-        if(other.finished) continue;
+        if(other.finished || other._shootoutStowed || this._shootoutStowed) continue;
         const dx = this.x - other.x, dy = this.y - other.y;
         const dist = Math.hypot(dx, dy);
         if(dist < KART_R * 2 && dist > 0.1) {
@@ -4725,7 +4725,7 @@ function makeAIInput(track, difficulty, aiIndex) {
       const trafficLookArc = Math.max(170, lookDist * 1.1);
       const trafficLookDist = Math.max(140, lookDist);
       for(const other of allKarts) {
-        if(other === k || other.finished) continue;
+        if(other === k || other.finished || other._shootoutStowed) continue;
         if(other.inPit || other.pitPhase !== null) continue;
         const directDist = Math.hypot(other.x - k.x, other.y - k.y);
         if(directDist > trafficLookDist) continue;
@@ -5501,19 +5501,10 @@ class Race {
     });
     this.gridSlots = this.mode === 'shootout' ? null : initSlots.map(s => ({...s}));
 
-    // For shootout: reposition karts to the straight before S/F line (flying lap start).
+    // Shootout: only the active runner starts on track. The other waits in the garage.
     if(this.mode === 'shootout') {
-      const flySlot = this._getShootoutFlyingSlot();
-      if(flySlot) {
-        const perp = { x: -Math.sin(flySlot.a), y: Math.cos(flySlot.a) };
-        this.karts.forEach((k, i) => {
-          k.x = flySlot.x + perp.x * (i === 0 ? -10 : 10);
-          k.y = flySlot.y + perp.y * (i === 0 ? -10 : 10);
-          k.angle = flySlot.a;
-          k.prevX = k.x; k.prevY = k.y;
-          k.speed = 0;
-        });
-      }
+      this._deployShootoutKart(this.karts[0]);
+      this._stowShootoutKart(this.karts[1]);
     }
 
     this.karts.forEach(k => {
@@ -5604,6 +5595,88 @@ class Race {
     return { x: spl[best].x, y: spl[best].y, a: Math.atan2(tang.y, tang.x) };
   }
 
+  // Garage / pit hold bay for the inactive shootout competitor.
+  _getShootoutHoldSlot() {
+    const pl = this.track.pitLane;
+    if(pl && pl.garagePos) {
+      return {
+        x: pl.garagePos.x,
+        y: pl.garagePos.y,
+        a: pl.garageAngle !== undefined ? pl.garageAngle : Math.PI
+      };
+    }
+    if(this.track.pitPos) {
+      return { x: this.track.pitPos.x, y: this.track.pitPos.y, a: this.track.startAngle || 0 };
+    }
+    // Last resort: park far off-map so they cannot be hit.
+    return { x: -99999, y: -99999, a: 0 };
+  }
+
+  _stowShootoutKart(k) {
+    if(!k) return;
+    const hold = this._getShootoutHoldSlot();
+    k.x = hold.x;
+    k.y = hold.y;
+    k.angle = hold.a;
+    k.prevX = k.x;
+    k.prevY = k.y;
+    k.speed = 0;
+    k.finished = true;
+    k._shootoutStowed = true;
+    k.inPit = true;
+    k.pitPhase = null;
+    k._onPitLane = true;
+    k._pitIntentActive = false;
+    k.slipstreamBoost = false;
+    k.slipstreamStrength = 0;
+    k.ersActive = false;
+    k.drsActive = false;
+    k.drsAvailable = false;
+  }
+
+  _deployShootoutKart(k) {
+    if(!k) return;
+    const fly = this._getShootoutFlyingSlot() || {
+      x: this.track.startPos.x,
+      y: this.track.startPos.y,
+      a: this.track.startAngle || 0
+    };
+    k.x = fly.x;
+    k.y = fly.y;
+    k.angle = fly.a;
+    k.prevX = k.x;
+    k.prevY = k.y;
+    k.speed = 0;
+    k.finished = false;
+    k.finishTime = null;
+    k._shootoutStowed = false;
+    k.inPit = false;
+    k.pitPhase = null;
+    k._onPitLane = false;
+    k._pitIntentActive = false;
+    k._pitEntryConfirmed = false;
+    k._pitExitPos = null;
+    k._pitExitAngle = null;
+    k.lap = 0;
+    k.checkpointsBit = 0;
+    k.nextCp = 1;
+    k.lapTimes = [];
+    k.lapStart = null;
+    k.bestLap = Infinity;
+    k.splitTimes = [];
+    k._ghostRecord = [];
+    k._ghostSampleTimer = 0;
+    const spl = this.track.spline;
+    if(spl && spl.length) {
+      let best = Infinity, idx = 0;
+      for(let si = 0; si < spl.length; si++) {
+        const d = Math.hypot(k.x - spl[si].x, k.y - spl[si].y);
+        if(d < best) { best = d; idx = si; }
+      }
+      k._nearestSplineIdx = idx;
+    }
+  }
+
   _getPitQualifySlots() {
     const pl = this.track.pitLane;
     const n = this.karts.length;
@@ -5643,6 +5716,7 @@ class Race {
     k._hasPitted = false;
     k._ghostRecord = [];
     k._ghostSampleTimer = 0;
+    k._shootoutStowed = false;
   }
 
   _prepareQualifying() {
@@ -5847,13 +5921,13 @@ class Race {
     const shootoutActive = this.mode === 'shootout' ? (this.shootoutStage === 'player' ? 0 : 1) : -1;
     this.karts.forEach((k, i) => {
       if(this.mode === 'shootout' && i !== shootoutActive) {
-        k.speed = 0;
+        this._stowShootoutKart(k);
         return;
       }
       const rpm = Math.max(0, Math.min(1, this.launchRPM[i] || 0));
       const launch = this._gradeLaunch(rpm);
       k.speed = launch.speed;
-      if(i === 0) {
+      if(i === 0 || (this.mode === 'shootout' && i === shootoutActive)) {
         this.launchFeedback = {
           label: launch.label,
           detail: launch.detail,
@@ -5878,33 +5952,32 @@ class Race {
 
   _startShootoutAIRun() {
     const ai = this.karts[1];
-    const slots = this._getGridSlots(this.karts.length);
-    const s = slots[0] || slots[1] || {x:this.track.startPos.x, y:this.track.startPos.y, a:this.track.startAngle||0};
-    this._resetKartForStage(ai, s, 1);
-    // Reposition AI to flying lap start (straight before S/F line)
-    const flySlot = this._getShootoutFlyingSlot();
-    if(flySlot) {
-      ai.x = flySlot.x; ai.y = flySlot.y; ai.angle = flySlot.a;
-      ai.prevX = ai.x; ai.prevY = ai.y;
-    }
+    const p = this.karts[0];
+
+    // Player leaves the circuit and waits in the garage for the AI flying lap.
+    this._stowShootoutKart(p);
+
+    // Reset AI and bring them onto the flying-lap start only when it is their turn.
+    const hold = this._getShootoutHoldSlot();
+    this._resetKartForStage(ai, hold, 1);
     ai.tyreId = this.tyres;
     applyWeatherToKart(ai, this.weather, this.tyres);
     applyShootoutBoost(ai);
-
-    const p = this.karts[0];
-    p.speed = 0;
-    p.finished = true;
+    this._deployShootoutKart(ai);
 
     this.shootoutStage = 'ai';
     stopAllEngines();
     this.countdownVal = 3;
     this.countdownTimer = 0;
+    this.launchRPM[1] = 0.62;
     this.phase = 'countdown';
     document.getElementById('countdownOverlay').style.display = 'flex';
     showCountdown(3);
 
     this.cameras[0].x = ai.x;
     this.cameras[0].y = ai.y;
+    this.cameras[1].x = ai.x;
+    this.cameras[1].y = ai.y;
   }
 
   update(dt) {
@@ -6064,7 +6137,12 @@ class Race {
 
     if(this.phase === 'countdown') {
       this.countdownTimer += dt;
+      const shootoutActive = this.mode === 'shootout' ? (this.shootoutStage === 'player' ? 0 : 1) : -1;
       this.karts.forEach((k, i) => {
+        if(this.mode === 'shootout' && i !== shootoutActive) {
+          if(!k._shootoutStowed) this._stowShootoutKart(k);
+          return;
+        }
         this.updateCamera(i, dt);
         // Let human players build RPM during the countdown
         if(!k.isAI) {
@@ -6079,6 +6157,15 @@ class Race {
           this.launchRPM[i] = Math.max(0, Math.min(1, (this.launchRPM[i] || 0.62) + jitter));
         }
       });
+      if(this.mode === 'shootout' && shootoutActive >= 0) {
+        // Keep spectator camera locked on the active flying-lap runner.
+        this.updateCamera(shootoutActive, dt);
+        const camSrc = this.cameras[shootoutActive];
+        this.cameras.forEach(cam => {
+          cam.x = camSrc.x;
+          cam.y = camSrc.y;
+        });
+      }
       if(this.countdownTimer >= 1) {
         this.countdownTimer -= 1;
         this.countdownVal--;
@@ -6263,13 +6350,26 @@ class Race {
         k.drsAvailable = gapDist > 0 && gapDist < avgSpd; // other is ahead by < 1 second
       }
 
-      if(this.mode === 'shootout' && this.phase === 'racing' && i !== shootoutActive) {
+      if(this.mode === 'shootout' && i !== shootoutActive) {
+        // Inactive shootout competitor stays in the garage — never on track / never collidable.
+        if(!k._shootoutStowed) this._stowShootoutKart(k);
         k.speed = 0;
+        k.finished = true;
       } else {
         k.update(dt, this.track, this.karts);
       }
-      this.updateCamera(i, dt);
+      if(!(this.mode === 'shootout' && i !== shootoutActive)) {
+        this.updateCamera(i, dt);
+      }
     });
+    if(this.mode === 'shootout' && shootoutActive >= 0) {
+      this.updateCamera(shootoutActive, dt);
+      const camSrc = this.cameras[shootoutActive];
+      this.cameras.forEach(cam => {
+        cam.x = camSrc.x;
+        cam.y = camSrc.y;
+      });
+    }
 
     // Update particles (pool-based — no allocation/GC)
     for(let _pi=0;_pi<_pPool.length;_pi++){
@@ -6406,12 +6506,17 @@ class Race {
         }
         ctx.restore();
       }
-      karts.forEach(k => k.draw(ctx, cam.x, cam.y, W, H));
-      drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
+      karts.forEach(k => {
+        if(k._shootoutStowed) return;
+        k.draw(ctx, cam.x, cam.y, W, H);
+      });
+      if(mode !== 'shootout' || this.shootoutStage === 'player') {
+        drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
+      }
       drawHUD(ctx, activeKart, track, 0, 0, W, H, 0, 'ai');
-      drawPositionTracker(ctx, karts, W, H);
-      drawMinimap(ctx, track, karts, W-140, H-140, 130);
-      drawRaceDirectorPanel(ctx, this, karts[0]);
+      if(mode !== 'shootout') drawPositionTracker(ctx, karts, W, H);
+      drawMinimap(ctx, track, karts.filter(k => !k._shootoutStowed), W-140, H-140, 130);
+      drawRaceDirectorPanel(ctx, this, activeKart);
       drawDebugOverlay(ctx, activeKart, W, H);
 
       if(mode === 'shootout') {

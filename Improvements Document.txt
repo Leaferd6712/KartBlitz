@@ -440,25 +440,7 @@ Export tracks.
 
 The editor should integrate with the game's existing track generation system instead of replacing it.
 
----
 
-# FEATURE 6 — ONE LAP SHOOTOUT
-
-Improve the shootout mode.
-
-The inactive competitor should never remain on track.
-
-Instead:
-
-Wait in the garage.
-
-Wait in pit lane.
-
-Or become non-collidable.
-
-The player should never hit an opponent while completing their flying lap.
-
----
 
 # FEATURE 7 — AI IMPROVEMENTS
 
