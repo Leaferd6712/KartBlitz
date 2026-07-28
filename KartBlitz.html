@@ -2961,12 +2961,12 @@ class Kart {
     if (this.isAI) this.speed = Math.max(0, Math.min(spdLimit, this.speed));
     else this.speed = Math.max(-maxSpd * 0.3, Math.min(spdLimit, this.speed));
 
-    // Speed-based grip / understeer: high speed bleeds turn-in so you cannot flat-out every corner.
+    // Speed-based grip / understeer: some high-speed push, but with enough front bite to rotate.
     if(Math.abs(this.speed) > 4) {
       const speedRatio = Math.abs(this.speed) / Math.max(1, this.maxSpeed);
       const grip = Math.max(0.35, Math.min(1.25, this.grip == null ? 1 : this.grip));
-      // Grip falls off with speed² — understeer at pace, without dumping all forward speed.
-      const gripFactor = Math.max(0.14, (1.0 - speedRatio * speedRatio * 1.05) * grip);
+      // Softer grip falloff than before so turn-in stays responsive.
+      const gripFactor = Math.max(0.22, (1.0 - speedRatio * speedRatio * 0.82) * grip);
       const maxYawRate = this.turnRate * gripFactor;
       const dir = this.speed >= 0 ? 1 : -1;
       let wantYaw = 0;
@@ -2975,9 +2975,9 @@ class Kart {
       const maxYaw = maxYawRate * dt;
       const appliedYaw = Math.max(-maxYaw, Math.min(maxYaw, wantYaw));
       this.angle += appliedYaw;
-      // Light scrub only when heavily over-asking for yaw at high speed.
-      if(Math.abs(wantYaw) > maxYaw * 1.15 && speedRatio > 0.58) {
-        const scrub = 0.003 + (speedRatio - 0.58) * 0.012;
+      // Very light scrub only when massively over-asking at high speed.
+      if(Math.abs(wantYaw) > maxYaw * 1.22 && speedRatio > 0.68) {
+        const scrub = 0.0015 + (speedRatio - 0.68) * 0.007;
         this.speed *= Math.pow(1 - scrub, dt * 60);
       }
     }
@@ -9100,10 +9100,10 @@ function applyUpgradesToKart(kart, player) {
   kart.maxSpeed = ((469 + devBonus.speed) * setup.speedMult) * GAME_SPEED_MULT;
   kart.accel    = (304 + devBonus.accel) * GLOBAL_ACCEL_MULT;
   kart.brakeForce = 620 + devBonus.braking;
-  // Lower base turn-in so grip/understeer model has room to bite at speed.
-  kart.turnRate = (2.05 + devBonus.handling * 0.85) * setup.turnMult;
+  // Restore some base front-end bite so the kart rotates properly again.
+  kart.turnRate = (2.28 + devBonus.handling * 0.92) * setup.turnMult;
   kart.offTrackMaxSpd = Math.max(30, 80 + devBonus.traction + setup.tractBonus) * GAME_SPEED_MULT;
-  kart.grip = Math.max(0.55, Math.min(1.15, 0.72 + setup.tractBonus * 0.004 + (devBonus.traction || 0) * 0.0015));
+  kart.grip = Math.max(0.62, Math.min(1.18, 0.82 + setup.tractBonus * 0.004 + (devBonus.traction || 0) * 0.0017));
   kart._baseGrip = kart.grip;
   kart._baseAccel = kart.accel;
   // Store raw values for pit stop tyre re-application
@@ -9217,634 +9217,860 @@ console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
 
   const _kbOrigGetPlayerData = window.getPlayerData;
   const _kbOrigSavePlayerData = window.savePlayerData;
-  const _kbOrigShowGarage = window.showGarage;
-  const _kbOrigBuildGarageScreen = window.buildGarageScreen;
   const _kbOrigBuildGarageContent = window.buildGarageContent;
-  const _kbOrigSwitchGarageTab = window.switchGarageTab;
   const _kbOrigApplyUpgradesToKart = window.applyUpgradesToKart;
   const _kbOrigKartUpdate = window.Kart && window.Kart.prototype && window.Kart.prototype.update;
   const _kbOrigRaceShowResults = window.Race && window.Race.prototype && window.Race.prototype.showResults;
 
-  const RND_MAX_ACTIVE = 2;
-  const RND_QUEUE_LIMIT = 6;
+  const RND_MIGRATION_VERSION = 2;
+  const RND_QUEUE_LIMIT_PER_DEPT = 3;
+  const RND_HISTORY_LIMIT = 32;
+  const RND_TIERS = {
+    minor:    { label:'MINOR',    chance:95, redevelopBoost:4, costLoss:0.45 },
+    standard: { label:'STANDARD', chance:85, redevelopBoost:7, costLoss:0.60 },
+    major:    { label:'MAJOR',    chance:70, redevelopBoost:10, costLoss:0.78 },
+    ultimate: { label:'ULTIMATE', chance:55, redevelopBoost:14, costLoss:1.00 }
+  };
+  const RND_FAILURE_MESSAGES = [
+    'Prototype produced excessive vibration.',
+    'Manufacturing tolerances exceeded design limits.',
+    'Wind tunnel correlation failed.',
+    'Cooling efficiency below target.',
+    'ERS electronics overheated during testing.'
+  ];
 
   const RND_DEPTS = [
     {
-      id: 'engine',
-      name: 'ENGINE',
-      icon: '⚙️',
-      accent: '#00f5ff',
-      summary: 'Power delivery, combustion efficiency, and straight-line pace.',
-      tree: [
-        { id:'engine-intake', tier:1, name:'High-Flow Intake', cost:120, time:1, chance:94, effects:{ speed:18, accel:14, reliability:-0.01 }, desc:'Sharper throttle response off slow corners.' },
-        { id:'engine-ecu', tier:2, name:'Race ECU Mapping', cost:210, time:1, chance:90, effects:{ speed:24, accel:18, ersCharge:0.03, reliability:-0.01 }, desc:'Cleaner delivery and stronger deployment logic.' },
-        { id:'engine-internals', tier:3, name:'Forged Internals', cost:360, time:2, chance:84, effects:{ speed:42, accel:22, reliability:-0.02 }, desc:'Higher rev ceiling and better top-end pull.' },
-        { id:'engine-ice', tier:4, name:'Split Cooling Package', cost:520, time:2, chance:80, effects:{ speed:24, accel:18, reliability:0.05 }, desc:'Balanced power with less thermal wear.' },
+      id:'engine', name:'ENGINE', icon:'POWERTRAIN', accent:'#00f5ff', capacity:1,
+      summary:'Combustion, driveline efficiency, and power delivery.',
+      projects:[
+        { id:'engine-combustion', tier:'minor', name:'Combustion Mapping Study', desc:'Refines fuel burn and throttle pickup out of slow corners.', cost:120, durationWeeks:1, gainSummary:'+ACCEL / +TOP SPEED', reliabilityImpact:-0.01, effects:{ accel:12, speed:10 }, prereqs:[] },
+        { id:'engine-intake', tier:'standard', name:'Intake Pulse Tuning', desc:'Improves cylinder filling and response in the mid-range.', cost:210, durationWeeks:2, gainSummary:'+ACCEL / +TOP SPEED', reliabilityImpact:-0.01, effects:{ accel:16, speed:15 }, prereqs:['engine-combustion'] },
+        { id:'engine-friction', tier:'major', name:'Low-Friction Rotating Assembly', desc:'Cuts driveline losses for stronger pull all the way to the limiter.', cost:360, durationWeeks:3, gainSummary:'+TOP SPEED', reliabilityImpact:-0.02, effects:{ speed:28, accel:12 }, prereqs:['engine-intake'] },
+        { id:'engine-master', tier:'ultimate', name:'Race Engine Evolution', desc:'Full package integrating mapping, airflow, and internal load balancing.', cost:560, durationWeeks:4, gainSummary:'+POWER', reliabilityImpact:-0.03, effects:{ speed:36, accel:18 }, prereqs:['engine-friction'] }
       ]
     },
     {
-      id: 'chassis',
-      name: 'CHASSIS',
-      icon: '🛞',
-      accent: '#ffd700',
-      summary: 'Mechanical grip, braking stability, and direction change.',
-      tree: [
-        { id:'chassis-geometry', tier:1, name:'Suspension Geometry Kit', cost:110, time:1, chance:95, effects:{ handling:0.16, traction:12, reliability:0.03 }, desc:'Keeps the kart settled over weight transfer.' },
-        { id:'chassis-brakes', tier:2, name:'Brake Cooling Ducts', cost:220, time:1, chance:90, effects:{ braking:110, handling:0.08, reliability:0.03 }, desc:'Later braking with less fade.' },
-        { id:'chassis-weight', tier:3, name:'Lightweight Spine', cost:350, time:2, chance:86, effects:{ accel:18, handling:0.18, traction:10, reliability:-0.01 }, desc:'Sharper response with a lower inertial load.' },
-        { id:'chassis-rack', tier:4, name:'Quick Steering Rack', cost:540, time:2, chance:80, effects:{ handling:0.28, braking:80, reliability:-0.01 }, desc:'High-response steering for hairpins and chicanes.' },
+      id:'chassis', name:'CHASSIS', icon:'CHASSIS', accent:'#ffd700', capacity:1,
+      summary:'Platform balance, braking stability, and direction change.',
+      projects:[
+        { id:'chassis-balance', tier:'minor', name:'Weight Balance Audit', desc:'Repositions ballast and load paths to steady direction changes.', cost:110, durationWeeks:1, gainSummary:'+TURN / +BRAKING', reliabilityImpact:0.01, effects:{ handling:0.08, braking:40 }, prereqs:[] },
+        { id:'chassis-suspension', tier:'standard', name:'Suspension Geometry Revision', desc:'Improves mechanical grip through compression and rebound phases.', cost:220, durationWeeks:2, gainSummary:'+TURN / +GRIP', reliabilityImpact:0.01, effects:{ handling:0.12, traction:12 }, prereqs:['chassis-balance'] },
+        { id:'chassis-brakes', tier:'major', name:'Brake Stability Package', desc:'Keeps the kart flatter under trail braking and heavy decel.', cost:360, durationWeeks:3, gainSummary:'+BRAKING', reliabilityImpact:0.02, effects:{ braking:95, handling:0.08 }, prereqs:['chassis-suspension'] },
+        { id:'chassis-master', tier:'ultimate', name:'High-Rigidity Core Frame', desc:'Large-scale rework for sharper platform response through linked corners.', cost:540, durationWeeks:4, gainSummary:'+CHASSIS BALANCE', reliabilityImpact:-0.01, effects:{ handling:0.18, braking:70, traction:10 }, prereqs:['chassis-brakes'] }
       ]
     },
     {
-      id: 'aero',
-      name: 'AERODYNAMICS',
-      icon: '💨',
-      accent: '#ff6b35',
-      summary: 'Drag reduction, loaded grip, and airflow management.',
-      tree: [
-        { id:'aero-canards', tier:1, name:'Front Canards', cost:120, time:1, chance:94, effects:{ handling:0.12, speed:8, reliability:0.01 }, desc:'Improves front-end bite at turn-in.' },
-        { id:'aero-floor', tier:2, name:'Floor Tunnels', cost:240, time:1, chance:90, effects:{ handling:0.18, traction:16, speed:10, reliability:0.01 }, desc:'Efficient downforce with a cleaner underbody.' },
-        { id:'aero-diffuser', tier:3, name:'Rear Diffuser', cost:380, time:2, chance:85, effects:{ handling:0.20, traction:20, speed:12, reliability:-0.01 }, desc:'Stabilises the rear at corner exit.' },
-        { id:'aero-wing', tier:4, name:'Low-Drag Wing', cost:560, time:2, chance:82, effects:{ speed:30, handling:0.14, reliability:-0.02 }, desc:'Balances straight-line efficiency with support.' },
+      id:'aerodynamics', name:'AERODYNAMICS', icon:'AERO', accent:'#ff6b35', capacity:1,
+      summary:'Front load, underbody flow, and drag management.',
+      projects:[
+        { id:'aero-front', tier:'minor', name:'Front Aero Rebalance', desc:'Adds front-end load for cleaner turn-in on medium-speed corners.', cost:115, durationWeeks:1, gainSummary:'+TURN', reliabilityImpact:0.01, effects:{ handling:0.07 }, prereqs:[] },
+        { id:'aero-floor', tier:'standard', name:'Floor Edge Sealing', desc:'Improves underbody consistency without a large drag penalty.', cost:230, durationWeeks:2, gainSummary:'+TURN / +TOP SPEED', reliabilityImpact:0.00, effects:{ handling:0.10, speed:8 }, prereqs:['aero-front'] },
+        { id:'aero-diffuser', tier:'major', name:'Diffuser Expansion Study', desc:'Builds rear stability through high-load exits and long sweepers.', cost:380, durationWeeks:3, gainSummary:'+TURN / +GRIP', reliabilityImpact:-0.01, effects:{ handling:0.12, traction:14 }, prereqs:['aero-floor'] },
+        { id:'aero-master', tier:'ultimate', name:'Low-Drag Downforce Package', desc:'Integrated wing and floor concept with more efficient loaded speed.', cost:590, durationWeeks:4, gainSummary:'+AERO EFFICIENCY', reliabilityImpact:-0.02, effects:{ speed:20, handling:0.12, traction:10 }, prereqs:['aero-diffuser'] }
       ]
     },
     {
-      id: 'tyres',
-      name: 'TYRES',
-      icon: '🟨',
-      accent: '#ffffff',
-      summary: 'Tyre life, temperature control, and compound management.',
-      tree: [
-        { id:'tyres-temp', tier:1, name:'Temperature Window', cost:100, time:1, chance:95, effects:{ traction:14, tyreWear:0.04, reliability:0.02 }, desc:'More stable grip across a wider temp range.' },
-        { id:'tyres-structure', tier:2, name:'Reinforced Carcass', cost:210, time:1, chance:90, effects:{ traction:18, tyreWear:0.06, reliability:0.02 }, desc:'Improves life under hard load and kerb strikes.' },
-        { id:'tyres-compound', tier:3, name:'Compound Research', cost:360, time:2, chance:85, effects:{ traction:24, tyreWear:0.08, reliability:-0.01 }, desc:'Better grip without burning through the tyres.' },
-        { id:'tyres-window', tier:4, name:'Race Window Model', cost:520, time:2, chance:81, effects:{ traction:28, tyreWear:0.10, reliability:0.03 }, desc:'Keeps the tyre in its best operating window longer.' },
+      id:'tyres', name:'TYRES', icon:'TYRES', accent:'#f5fbff', capacity:1,
+      summary:'Compound control, temperature window, and wear behaviour.',
+      projects:[
+        { id:'tyres-temp', tier:'minor', name:'Temperature Mapping', desc:'Stabilises the tyre temperature window during transitions.', cost:105, durationWeeks:1, gainSummary:'+GRIP / -WEAR', reliabilityImpact:0.01, effects:{ grip:0.02, tyreWear:0.04 }, prereqs:[] },
+        { id:'tyres-carcass', tier:'standard', name:'Carcass Reinforcement', desc:'Reduces deformation under kerb strikes and heavy load.', cost:210, durationWeeks:2, gainSummary:'+GRIP / -WEAR', reliabilityImpact:0.02, effects:{ grip:0.03, tyreWear:0.05, traction:8 }, prereqs:['tyres-temp'] },
+        { id:'tyres-compound', tier:'major', name:'Compound Surface Revision', desc:'Improves peak bite while holding the race window longer.', cost:350, durationWeeks:3, gainSummary:'+GRIP', reliabilityImpact:-0.01, effects:{ grip:0.05, traction:12, tyreWear:0.05 }, prereqs:['tyres-carcass'] },
+        { id:'tyres-master', tier:'ultimate', name:'Long-Run Tyre Model', desc:'Full life-cycle tyre behaviour tuning for stints and restarts.', cost:530, durationWeeks:4, gainSummary:'+TYRE LIFE', reliabilityImpact:0.02, effects:{ grip:0.04, tyreWear:0.08, traction:10 }, prereqs:['tyres-compound'] }
       ]
     },
     {
-      id: 'ers',
-      name: 'ERS',
-      icon: '🔋',
-      accent: '#7cfcff',
-      summary: 'Harvesting, deployment, and battery efficiency.',
-      tree: [
-        { id:'ers-harvest', tier:1, name:'Regeneration Map', cost:130, time:1, chance:94, effects:{ ersCharge:0.03, speed:10, reliability:0.01 }, desc:'Improves how quickly energy returns under lift-off.' },
-        { id:'ers-deploy', tier:2, name:'Aggressive Deployment', cost:250, time:1, chance:89, effects:{ ersBoost:0.05, speed:18, reliability:-0.01 }, desc:'A stronger push on the straights.' },
-        { id:'ers-cell', tier:3, name:'High-Density Cell', cost:400, time:2, chance:84, effects:{ ersCharge:0.05, ersBoost:0.07, reliability:0.01 }, desc:'More sustained electric assistance over a stint.' },
-        { id:'ers-control', tier:4, name:'Smart Control Unit', cost:560, time:2, chance:80, effects:{ ersCharge:0.07, ersBoost:0.09, reliability:0.03 }, desc:'Makes deployment cleaner and more consistent.' },
+      id:'ers', name:'ERS', icon:'ERS', accent:'#8be9ff', capacity:1,
+      summary:'Harvesting, deployment, and electrical efficiency.',
+      projects:[
+        { id:'ers-regen', tier:'minor', name:'Harvest Calibration', desc:'Improves lift-off recovery and deployment consistency.', cost:125, durationWeeks:1, gainSummary:'+ERS CHARGE', reliabilityImpact:0.00, effects:{ ersCharge:0.02 }, prereqs:[] },
+        { id:'ers-control', tier:'standard', name:'Control Logic Update', desc:'Cleans up handoff between harvest and deployment states.', cost:235, durationWeeks:2, gainSummary:'+ERS CHARGE / +BOOST', reliabilityImpact:-0.01, effects:{ ersCharge:0.03, ersBoost:0.03 }, prereqs:['ers-regen'] },
+        { id:'ers-cell', tier:'major', name:'Cell Density Upgrade', desc:'Raises sustained output over long acceleration zones.', cost:390, durationWeeks:3, gainSummary:'+ERS BOOST', reliabilityImpact:-0.01, effects:{ ersCharge:0.04, ersBoost:0.05, speed:6 }, prereqs:['ers-control'] },
+        { id:'ers-master', tier:'ultimate', name:'Energy Deployment Suite', desc:'Top-spec calibration for aggressive yet stable energy delivery.', cost:580, durationWeeks:4, gainSummary:'+ERS PERFORMANCE', reliabilityImpact:-0.02, effects:{ ersCharge:0.05, ersBoost:0.07, speed:8 }, prereqs:['ers-cell'] }
       ]
     },
     {
-      id: 'reliability',
-      name: 'RELIABILITY',
-      icon: '🛡️',
-      accent: '#4ade80',
-      summary: 'Cooling, fault protection, and component durability.',
-      tree: [
-        { id:'rel-cooling', tier:1, name:'Cooling Audit', cost:110, time:1, chance:95, effects:{ reliability:0.05, tyreWear:0.03 }, desc:'Reduces heat stress across the whole car.' },
-        { id:'rel-sensors', tier:2, name:'Fault Sensors', cost:220, time:1, chance:91, effects:{ reliability:0.06, ersCharge:0.02 }, desc:'Finds problems earlier and stops compound loss.' },
-        { id:'rel-durability', tier:3, name:'Stress Testing', cost:360, time:2, chance:86, effects:{ reliability:0.08, tyreWear:0.05, ersCharge:0.02 }, desc:'Raises component life and cut-out resistance.' },
-        { id:'rel-master', tier:4, name:'Race-Proof Package', cost:540, time:2, chance:82, effects:{ reliability:0.12, tyreWear:0.08, ersCharge:0.03 }, desc:'The full reliability push for long-run consistency.' },
+      id:'reliability', name:'RELIABILITY', icon:'RELIABILITY', accent:'#4ade80', capacity:1,
+      summary:'Durability, thermal control, and fault prevention.',
+      projects:[
+        { id:'rel-cooling', tier:'minor', name:'Cooling Margin Review', desc:'Finds heat soak weak points before they become race issues.', cost:110, durationWeeks:1, gainSummary:'+RELIABILITY', reliabilityImpact:0.03, effects:{ reliability:0.03, tyreWear:0.02 }, prereqs:[] },
+        { id:'rel-sensors', tier:'standard', name:'Sensor Redundancy Pack', desc:'Improves diagnostics for the powertrain and ERS stack.', cost:220, durationWeeks:2, gainSummary:'+RELIABILITY / +ERS', reliabilityImpact:0.04, effects:{ reliability:0.05, ersCharge:0.02 }, prereqs:['rel-cooling'] },
+        { id:'rel-stress', tier:'major', name:'Stress Test Programme', desc:'Hardens components against repeated race-distance loads.', cost:360, durationWeeks:3, gainSummary:'+RELIABILITY / -WEAR', reliabilityImpact:0.06, effects:{ reliability:0.07, tyreWear:0.04 }, prereqs:['rel-sensors'] },
+        { id:'rel-master', tier:'ultimate', name:'Race-Proofing Initiative', desc:'Whole-car durability push for repeatable race-day performance.', cost:540, durationWeeks:4, gainSummary:'+RELIABILITY', reliabilityImpact:0.08, effects:{ reliability:0.10, tyreWear:0.05, ersCharge:0.02 }, prereqs:['rel-stress'] }
       ]
     }
   ];
 
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
+  const LEGACY_DEV_TO_PROJECT = {
+    'eng-intake':'engine-combustion',
+    'eng-ecu':'engine-intake',
+    'eng-internals':'engine-friction',
+    'eng-final-drive':'engine-master',
+    'aero-front':'aero-front',
+    'aero-floor':'aero-floor',
+    'aero-diffuser':'aero-diffuser',
+    'aero-wing':'aero-master',
+    'chassis-susp':'chassis-suspension',
+    'chassis-brakes':'chassis-brakes',
+    'chassis-weight':'chassis-balance',
+    'chassis-rack':'chassis-master'
+  };
+  const OLD_RND_TO_PROJECT = {
+    'engine-intake':'engine-combustion',
+    'engine-ecu':'engine-intake',
+    'engine-internals':'engine-friction',
+    'engine-ice':'engine-master',
+    'chassis-geometry':'chassis-balance',
+    'chassis-brakes':'chassis-brakes',
+    'chassis-weight':'chassis-suspension',
+    'chassis-rack':'chassis-master',
+    'aero-canards':'aero-front',
+    'aero-floor':'aero-floor',
+    'aero-diffuser':'aero-diffuser',
+    'aero-wing':'aero-master',
+    'tyres-temp':'tyres-temp',
+    'tyres-structure':'tyres-carcass',
+    'tyres-compound':'tyres-compound',
+    'tyres-window':'tyres-master',
+    'ers-harvest':'ers-regen',
+    'ers-deploy':'ers-control',
+    'ers-cell':'ers-cell',
+    'ers-control':'ers-master',
+    'rel-cooling':'rel-cooling',
+    'rel-sensors':'rel-sensors',
+    'rel-durability':'rel-stress',
+    'rel-master':'rel-master'
+  };
 
-  function clamp(v, a, b) {
-    return Math.max(a, Math.min(b, v));
+  function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function cap(str){ return String(str || '').toUpperCase(); }
+  function fmtWeeks(n){ return `${n} WEEK${n === 1 ? '' : 'S'}`; }
+  function fmtPct(v){ return `${Math.round(v * 100)}%`; }
+  function fmtDate(ts){
+    const d = new Date(ts || Date.now());
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
   }
-
-  function getNodeDef(nodeId) {
-    for (const dept of RND_DEPTS) {
-      const node = dept.tree.find(n => n.id === nodeId);
-      if (node) return { ...node, deptId: dept.id, deptName: dept.name, deptIcon: dept.icon, accent: dept.accent };
+  function getTierMeta(tier){ return RND_TIERS[tier] || RND_TIERS.standard; }
+  function getFailureMessage(projectId, attempts){
+    const seed = Math.abs(String(projectId).split('').reduce((a, c) => a + c.charCodeAt(0), 0) + (attempts || 0));
+    return RND_FAILURE_MESSAGES[seed % RND_FAILURE_MESSAGES.length];
+  }
+  function getDepartmentDef(deptId){ return RND_DEPTS.find(d => d.id === deptId) || null; }
+  function getProjectDef(projectId){
+    for(const dept of RND_DEPTS) {
+      const proj = dept.projects.find(p => p.id === projectId);
+      if(proj) return { ...proj, departmentId:dept.id, departmentName:dept.name, departmentAccent:dept.accent, departmentIcon:dept.icon };
     }
     return null;
   }
+  function flattenProjects(){ return RND_DEPTS.flatMap(d => d.projects.map(p => ({...p, departmentId:d.id}))); }
 
-  function makeDefaultNodeState(node, idx) {
+  function makeDefaultNodeState(project) {
     return {
-      id: node.id,
-      status: idx === 0 ? 'available' : 'locked',
-      remaining: 0,
+      id: project.id,
+      status: project.prereqs && project.prereqs.length ? 'locked' : 'available',
       attempts: 0,
-      lastChance: node.chance,
-      lastCost: node.cost,
-      lastResult: '',
-      completedAt: null,
-      startedAt: null
+      successes: 0,
+      failures: 0,
+      lastChance: getTierMeta(project.tier).chance,
+      lastCost: project.cost,
+      lastDuration: project.durationWeeks,
+      lastFailure: '',
+      cooldownUntilWeek: 0,
+      researching: null,
+      completedAtWeek: null
     };
+  }
+
+  function makeDefaultDepartmentState(dept){
+    return { id:dept.id, queue:[], activeSlots:dept.capacity || 1 };
   }
 
   function createDefaultRnDState() {
     const nodes = {};
+    const departments = {};
     RND_DEPTS.forEach(dept => {
-      dept.tree.forEach((node, idx) => {
-        nodes[node.id] = makeDefaultNodeState(node, idx);
-      });
+      departments[dept.id] = makeDefaultDepartmentState(dept);
+      dept.projects.forEach(project => { nodes[project.id] = makeDefaultNodeState(project); });
     });
     return {
+      version: RND_MIGRATION_VERSION,
+      migrationDone: false,
       activeTab: 'engine',
+      week: 1,
+      departments,
       queue: [],
+      activeProjects: [],
       history: [],
-      nodes
+      cooldowns: {},
+      migratedFrom: null,
+      lastAdvanceMode: ''
     };
   }
 
-  function normalizeRnDState(raw) {
-    const base = createDefaultRnDState();
-    const src = raw && typeof raw === 'object' ? raw : {};
-    const srcNodes = src.nodes && typeof src.nodes === 'object' ? src.nodes : {};
-    const srcQueue = Array.isArray(src.queue) ? src.queue : [];
-    const srcHistory = Array.isArray(src.history) ? src.history : [];
-    base.activeTab = typeof src.activeTab === 'string' ? src.activeTab : base.activeTab;
+  function pushHistory(rnd, item) {
+    rnd.history.unshift({
+      t: item.t || Date.now(),
+      week: item.week || rnd.week || 1,
+      departmentId: item.departmentId || 'engine',
+      projectId: item.projectId || '',
+      projectName: item.projectName || '',
+      result: item.result || '',
+      detail: item.detail || ''
+    });
+    rnd.history = rnd.history.slice(0, RND_HISTORY_LIMIT);
+  }
 
+  function syncDepartmentQueues(rnd) {
+    rnd.queue = [];
     RND_DEPTS.forEach(dept => {
-      dept.tree.forEach((node, idx) => {
-        const cur = srcNodes[node.id] || {};
-        const n = base.nodes[node.id];
-        n.status = ['locked','available','queued','researching','complete','failed'].includes(cur.status) ? cur.status : n.status;
-        n.remaining = Number.isFinite(Number(cur.remaining)) ? Math.max(0, Number(cur.remaining)) : n.remaining;
-        n.attempts = Number.isFinite(Number(cur.attempts)) ? Math.max(0, Number(cur.attempts)) : n.attempts;
-        n.lastChance = Number.isFinite(Number(cur.lastChance)) ? Number(cur.lastChance) : n.lastChance;
-        n.lastCost = Number.isFinite(Number(cur.lastCost)) ? Number(cur.lastCost) : n.lastCost;
-        n.lastResult = typeof cur.lastResult === 'string' ? cur.lastResult : n.lastResult;
-        n.startedAt = cur.startedAt || n.startedAt;
-        n.completedAt = cur.completedAt || n.completedAt;
-        if (idx === 0 && n.status === 'locked') n.status = 'available';
+      const depState = rnd.departments[dept.id];
+      depState.queue = (depState.queue || []).filter(id => rnd.nodes[id] && (rnd.nodes[id].status === 'available' || rnd.nodes[id].status === 'redevelopment_available'));
+      depState.queue.forEach(id => { if(!rnd.queue.includes(id)) rnd.queue.push(id); });
+      rnd.activeProjects.filter(p => p.departmentId === dept.id).forEach(p => {
+        if(!rnd.queue.includes(p.projectId)) rnd.queue.push(p.projectId);
       });
     });
+  }
 
-    base.queue = srcQueue.filter(id => base.nodes[id]);
-    base.history = srcHistory.slice(0, 24).map(h => ({
+  function refreshNodeAvailability(rnd) {
+    RND_DEPTS.forEach(dept => {
+      dept.projects.forEach(project => {
+        const node = rnd.nodes[project.id];
+        if(!node) return;
+        if(node.status === 'completed' || node.status === 'researching' || node.status === 'failed' || node.status === 'redevelopment_available') return;
+        const prereqsMet = !(project.prereqs || []).length || project.prereqs.every(id => rnd.nodes[id] && rnd.nodes[id].status === 'completed');
+        const coolingDown = (node.cooldownUntilWeek || 0) > rnd.week;
+        node.status = prereqsMet ? (coolingDown ? 'cooldown' : 'available') : 'locked';
+      });
+    });
+  }
+
+  function normalizeHistory(srcHistory, rnd) {
+    return (Array.isArray(srcHistory) ? srcHistory : []).slice(0, RND_HISTORY_LIMIT).map(h => ({
       t: h.t || Date.now(),
-      deptId: h.deptId || 'engine',
-      nodeId: h.nodeId || '',
-      nodeName: h.nodeName || '',
+      week: Number.isFinite(Number(h.week)) ? Number(h.week) : rnd.week,
+      departmentId: h.departmentId || h.deptId || 'engine',
+      projectId: h.projectId || h.nodeId || '',
+      projectName: h.projectName || h.nodeName || '',
       result: h.result || '',
-      detail: h.detail || ''
+      detail: h.detail || h.reason || ''
     }));
+  }
 
-    // Clean queue/status mismatches
-    base.queue = base.queue.filter(id => {
-      const n = base.nodes[id];
-      return n && ['queued','researching'].includes(n.status);
+  function markProjectCompleted(rnd, projectId, detail) {
+    const project = getProjectDef(projectId);
+    const node = rnd.nodes[projectId];
+    if(!project || !node) return;
+    node.status = 'completed';
+    node.successes = (node.successes || 0) + 1;
+    node.completedAtWeek = rnd.week;
+    node.researching = null;
+    node.lastFailure = '';
+    pushHistory(rnd, {
+      departmentId: project.departmentId,
+      projectId: project.id,
+      projectName: project.name,
+      result: 'COMPLETED',
+      detail: detail || `${project.gainSummary} now live`
     });
+  }
 
-    // Ensure completed nodes unlock their children
-    RND_DEPTS.forEach(dept => {
-      dept.tree.forEach((node, idx) => {
-        const n = base.nodes[node.id];
-        if (n.status === 'complete' && idx < dept.tree.length - 1) {
-          const next = base.nodes[dept.tree[idx + 1].id];
-          if (next.status === 'locked') next.status = 'available';
+  function migrateLegacyDevelopmentIntoRnD(rnd, rawSave) {
+    let migrated = false;
+    const combined = {...(rawSave.p1dev || {}), ...(rawSave.p2dev || {})};
+    Object.keys(combined).forEach(legacyId => {
+      if((combined[legacyId] || 0) < 2) return;
+      const newId = LEGACY_DEV_TO_PROJECT[legacyId];
+      if(newId && rnd.nodes[newId] && rnd.nodes[newId].status !== 'completed') {
+        markProjectCompleted(rnd, newId, 'Migrated from previous garage progression');
+        migrated = true;
+      }
+    });
+    return migrated;
+  }
+
+  function migrateOldRndIntoRnD(rnd, oldRnd) {
+    let migrated = false;
+    if(!oldRnd || typeof oldRnd !== 'object' || !oldRnd.nodes) return false;
+    Object.keys(oldRnd.nodes).forEach(oldId => {
+      const mapped = OLD_RND_TO_PROJECT[oldId];
+      const oldNode = oldRnd.nodes[oldId];
+      if(!mapped || !oldNode) return;
+      if(oldNode.status === 'complete' || oldNode.status === 'completed') {
+        if(rnd.nodes[mapped] && rnd.nodes[mapped].status !== 'completed') {
+          markProjectCompleted(rnd, mapped, 'Migrated from earlier team research');
+          migrated = true;
         }
-      });
+      } else if(oldNode.status === 'failed' && rnd.nodes[mapped] && rnd.nodes[mapped].status !== 'completed') {
+        const n = rnd.nodes[mapped];
+        n.status = 'redevelopment_available';
+        n.failures = Math.max(n.failures || 0, 1);
+        n.attempts = Math.max(n.attempts || 0, Number(oldNode.attempts) || 1);
+        n.lastFailure = oldNode.lastResult || 'Previous prototype failed validation.';
+        migrated = true;
+      }
     });
+    return migrated;
+  }
 
+  function normalizeRnDState(raw, saveData) {
+    const base = createDefaultRnDState();
+    const src = raw && typeof raw === 'object' ? clone(raw) : {};
+
+    if(Number(src.version || 0) >= RND_MIGRATION_VERSION && src.nodes && src.departments) {
+      base.version = RND_MIGRATION_VERSION;
+      base.migrationDone = !!src.migrationDone;
+      base.activeTab = typeof src.activeTab === 'string' ? src.activeTab : base.activeTab;
+      base.week = Math.max(1, Number(src.week) || 1);
+      base.lastAdvanceMode = typeof src.lastAdvanceMode === 'string' ? src.lastAdvanceMode : '';
+      base.migratedFrom = src.migratedFrom || null;
+      base.cooldowns = src.cooldowns && typeof src.cooldowns === 'object' ? src.cooldowns : {};
+      base.history = normalizeHistory(src.history, base);
+      RND_DEPTS.forEach(dept => {
+        const depSrc = (src.departments && src.departments[dept.id]) || {};
+        base.departments[dept.id].queue = Array.isArray(depSrc.queue) ? depSrc.queue.filter(id => base.nodes[id]) : [];
+      });
+      RND_DEPTS.forEach(dept => {
+        dept.projects.forEach(project => {
+          const cur = (src.nodes && src.nodes[project.id]) || {};
+          const node = base.nodes[project.id];
+          node.status = ['locked','available','researching','completed','failed','redevelopment_available','cooldown'].includes(cur.status) ? cur.status : node.status;
+          node.attempts = Math.max(0, Number(cur.attempts) || 0);
+          node.successes = Math.max(0, Number(cur.successes) || 0);
+          node.failures = Math.max(0, Number(cur.failures) || 0);
+          node.lastChance = Number.isFinite(Number(cur.lastChance)) ? Number(cur.lastChance) : node.lastChance;
+          node.lastCost = Number.isFinite(Number(cur.lastCost)) ? Number(cur.lastCost) : node.lastCost;
+          node.lastDuration = Number.isFinite(Number(cur.lastDuration)) ? Number(cur.lastDuration) : node.lastDuration;
+          node.lastFailure = typeof cur.lastFailure === 'string' ? cur.lastFailure : '';
+          node.cooldownUntilWeek = Math.max(0, Number(cur.cooldownUntilWeek) || 0);
+          node.researching = cur.researching && typeof cur.researching === 'object' ? cur.researching : null;
+          node.completedAtWeek = Number.isFinite(Number(cur.completedAtWeek)) ? Number(cur.completedAtWeek) : null;
+        });
+      });
+      base.activeProjects = Array.isArray(src.activeProjects) ? src.activeProjects.filter(p => p && base.nodes[p.projectId]) : [];
+      refreshNodeAvailability(base);
+      syncDepartmentQueues(base);
+      return base;
+    }
+
+    let migratedAny = false;
+    base.migratedFrom = src && Object.keys(src).length ? 'legacy' : null;
+    base.activeTab = typeof src.activeTab === 'string' ? src.activeTab : base.activeTab;
+    migratedAny = migrateOldRndIntoRnD(base, src) || migratedAny;
+    migratedAny = migrateLegacyDevelopmentIntoRnD(base, saveData || {}) || migratedAny;
+    base.migrationDone = true;
+    refreshNodeAvailability(base);
+    syncDepartmentQueues(base);
+    if(migratedAny) {
+      pushHistory(base, { result:'MIGRATED', detail:'Previous garage research was converted into the new team R&D structure.' });
+    }
     return base;
   }
 
   function getRnDState() {
     const pd = _kbOrigGetPlayerData ? _kbOrigGetPlayerData() : {};
-    pd.rnd = normalizeRnDState(pd.rnd || pd.teamRnd || pd.research || null);
+    pd.rnd = normalizeRnDState(pd.rnd || pd.teamRnd || pd.research || null, pd);
     return pd;
   }
 
   function computeRnDBonuses(rnd) {
     const bonus = {
-      speed: 0,
-      accel: 0,
-      traction: 0,
-      braking: 0,
-      handling: 0,
-      tyreWear: 0,
-      ersCharge: 0,
-      ersBoost: 0,
-      reliability: 0
+      speed:0, accel:0, traction:0, braking:0, handling:0,
+      tyreWear:0, ersCharge:0, ersBoost:0, reliability:0, grip:0
     };
-    RND_DEPTS.forEach(dept => {
-      dept.tree.forEach(node => {
-        const state = rnd.nodes[node.id];
-        if (!state || state.status !== 'complete') return;
-        Object.keys(node.effects).forEach(key => {
-          bonus[key] = (bonus[key] || 0) + node.effects[key];
-        });
+    flattenProjects().forEach(project => {
+      const state = rnd.nodes[project.id];
+      if(!state || state.status !== 'completed') return;
+      Object.keys(project.effects || {}).forEach(key => {
+        bonus[key] = (bonus[key] || 0) + project.effects[key];
       });
     });
     return bonus;
   }
 
+  function getPerformanceSummaryRows(bonus) {
+    return [
+      ['Top Speed', `${bonus.speed >= 0 ? '+' : ''}${Math.round(bonus.speed)}`],
+      ['Acceleration', `${bonus.accel >= 0 ? '+' : ''}${Math.round(bonus.accel)}`],
+      ['Corner Grip', `${Math.round(((bonus.grip || 0) + (bonus.traction || 0) * 0.002) * 100)}%`],
+      ['Braking', `${bonus.braking >= 0 ? '+' : ''}${Math.round(bonus.braking)}`],
+      ['Tyre Life', `${Math.round((bonus.tyreWear || 0) * 100)}% better`],
+      ['ERS', `${Math.round(((bonus.ersCharge || 0) + (bonus.ersBoost || 0)) * 100)}% uplift`],
+      ['Reliability', `${Math.round((bonus.reliability || 0) * 100)}%`]
+    ];
+  }
+
   function fmtEffectLine(effects) {
     const out = [];
-    if (effects.speed) out.push(`+${Math.round(effects.speed)} TOP SPEED`);
-    if (effects.accel) out.push(`+${Math.round(effects.accel)} ACCEL`);
-    if (effects.braking) out.push(`+${Math.round(effects.braking)} BRAKING`);
-    if (effects.handling) out.push(`+${Math.round(effects.handling * 100)}% TURN`);
-    if (effects.traction) out.push(`+${Math.round(effects.traction)} GRIP`);
-    if (effects.tyreWear) out.push(`-${Math.round(effects.tyreWear * 100)}% WEAR`);
-    if (effects.ersCharge) out.push(`+${Math.round(effects.ersCharge * 100)}% CHARGE`);
-    if (effects.ersBoost) out.push(`+${Math.round(effects.ersBoost * 100)}% BOOST`);
-    if (effects.reliability) out.push(`+${Math.round(effects.reliability * 100)}% RELIABILITY`);
+    if(effects.speed) out.push(`+${Math.round(effects.speed)} TOP`);
+    if(effects.accel) out.push(`+${Math.round(effects.accel)} ACCEL`);
+    if(effects.handling) out.push(`+${Math.round(effects.handling * 100)}% TURN`);
+    if(effects.braking) out.push(`+${Math.round(effects.braking)} BRAKE`);
+    if(effects.traction) out.push(`+${Math.round(effects.traction)} GRIP`);
+    if(effects.grip) out.push(`+${Math.round(effects.grip * 100)}% TYRE GRIP`);
+    if(effects.tyreWear) out.push(`-${Math.round(effects.tyreWear * 100)}% WEAR`);
+    if(effects.ersCharge) out.push(`+${Math.round(effects.ersCharge * 100)}% CHARGE`);
+    if(effects.ersBoost) out.push(`+${Math.round(effects.ersBoost * 100)}% BOOST`);
+    if(effects.reliability) out.push(`+${Math.round(effects.reliability * 100)}% REL`);
     return out.join(' · ');
   }
 
   function computeDeptSummary(rnd, dept) {
-    const complete = dept.tree.filter(node => rnd.nodes[node.id] && rnd.nodes[node.id].status === 'complete').length;
-    const queued = dept.tree.filter(node => {
-      const s = rnd.nodes[node.id];
-      return s && ['queued','researching'].includes(s.status);
-    }).length;
-    const failed = dept.tree.filter(node => rnd.nodes[node.id] && rnd.nodes[node.id].status === 'failed').length;
-    return { complete, queued, failed, total: dept.tree.length };
+    const projects = dept.projects.map(p => rnd.nodes[p.id]).filter(Boolean);
+    return {
+      completed: projects.filter(n => n.status === 'completed').length,
+      researching: projects.filter(n => n.status === 'researching').length,
+      failed: projects.filter(n => n.status === 'failed' || n.status === 'redevelopment_available').length,
+      total: projects.length,
+      queue: (rnd.departments[dept.id] && rnd.departments[dept.id].queue || []).length
+    };
   }
 
-  function unlockNextNodes(rnd, dept) {
-    dept.tree.forEach((node, idx) => {
-      const cur = rnd.nodes[node.id];
-      if (cur.status === 'complete' && idx < dept.tree.length - 1) {
-        const next = rnd.nodes[dept.tree[idx + 1].id];
-        if (next.status === 'locked') next.status = 'available';
-      }
-      if (idx > 0) {
-        const prev = rnd.nodes[dept.tree[idx - 1].id];
-        if (prev.status !== 'complete' && cur.status === 'available') cur.status = 'locked';
-      }
-    });
+  function getProjectStatusLabel(node) {
+    switch(node.status) {
+      case 'available': return 'AVAILABLE';
+      case 'researching': return 'RESEARCHING';
+      case 'completed': return 'COMPLETED';
+      case 'failed': return 'FAILED';
+      case 'redevelopment_available': return 'REDEVELOP';
+      case 'cooldown': return 'COOLDOWN';
+      default: return 'LOCKED';
+    }
+  }
+
+  function canQueueProject(rnd, project, node) {
+    if(!project || !node) return false;
+    if(node.status !== 'available' && node.status !== 'redevelopment_available') return false;
+    if((rnd.departments[project.departmentId].queue || []).length >= RND_QUEUE_LIMIT_PER_DEPT) return false;
+    return true;
+  }
+
+  function getProjectResearchPlan(project, node, isRedevelop) {
+    const tierMeta = getTierMeta(project.tier);
+    const attemptCount = (node.attempts || 0) + 1;
+    const cost = Math.round(project.cost * (isRedevelop ? 0.62 : 1));
+    const durationWeeks = Math.max(1, Math.round(project.durationWeeks * (isRedevelop ? 0.65 : 1)));
+    const successChance = clamp((isRedevelop ? tierMeta.chance + tierMeta.redevelopBoost : tierMeta.chance), 35, 98);
+    return { attemptCount, cost, durationWeeks, successChance };
   }
 
   function startQueuedProjects(rnd) {
-    const active = () => rnd.queue.filter(id => rnd.nodes[id] && rnd.nodes[id].status === 'researching').length;
-    let free = RND_MAX_ACTIVE - active();
-    while (free > 0) {
-      const nextId = rnd.queue.find(id => rnd.nodes[id] && rnd.nodes[id].status === 'queued');
-      if (!nextId) break;
-      const node = getNodeDef(nextId);
-      const state = rnd.nodes[nextId];
-      state.status = 'researching';
-      state.startedAt = state.startedAt || Date.now();
-      state.remaining = Math.max(1, Math.round(state.remaining || node.time));
-      state.lastChance = clamp(state.lastChance || node.chance, 35, 98);
-      free--;
-      rnd.history.unshift({
-        t: Date.now(),
-        deptId: node.deptId,
-        nodeId: node.id,
-        nodeName: node.name,
-        result: 'STARTED',
-        detail: `ETA ${state.remaining} race${state.remaining === 1 ? '' : 's'}`
-      });
-    }
-    rnd.history = rnd.history.slice(0, 24);
+    RND_DEPTS.forEach(dept => {
+      const depState = rnd.departments[dept.id];
+      const activeCount = rnd.activeProjects.filter(p => p.departmentId === dept.id).length;
+      let freeSlots = Math.max(0, (depState.activeSlots || dept.capacity || 1) - activeCount);
+      while(freeSlots > 0 && depState.queue.length) {
+        const nextId = depState.queue[0];
+        const node = rnd.nodes[nextId];
+        const project = getProjectDef(nextId);
+        if(!node || !project || node.status !== 'available' && node.status !== 'redevelopment_available') {
+          depState.queue.shift();
+          continue;
+        }
+        const isRedevelop = node.status === 'redevelopment_available';
+        const plan = getProjectResearchPlan(project, node, isRedevelop);
+        node.status = 'researching';
+        node.attempts = plan.attemptCount;
+        node.lastChance = plan.successChance;
+        node.lastCost = plan.cost;
+        node.lastDuration = plan.durationWeeks;
+        node.researching = {
+          departmentId: dept.id,
+          projectId: project.id,
+          startWeek: rnd.week,
+          remainingWeeks: plan.durationWeeks,
+          successChance: plan.successChance,
+          costPaid: plan.cost,
+          redevelopFrom: isRedevelop ? project.id : null
+        };
+        rnd.activeProjects.push({
+          departmentId: dept.id,
+          projectId: project.id,
+          startWeek: rnd.week,
+          remainingWeeks: plan.durationWeeks,
+          successChance: plan.successChance,
+          costPaid: plan.cost,
+          redevelopFrom: isRedevelop ? project.id : null
+        });
+        depState.queue.shift();
+        pushHistory(rnd, {
+          departmentId: dept.id,
+          projectId: project.id,
+          projectName: project.name,
+          result: isRedevelop ? 'REDEVELOPMENT STARTED' : 'RESEARCH STARTED',
+          detail: `${fmtWeeks(plan.durationWeeks)} · ${plan.successChance}% success chance`
+        });
+        freeSlots--;
+      }
+    });
+    syncDepartmentQueues(rnd);
   }
 
-  function queueRnDProject(nodeId, redevelop) {
+  function queueRnDProject(projectId, redevelop) {
     const pd = getRnDState();
     const rnd = pd.rnd;
-    const node = getNodeDef(nodeId);
-    if (!node) return;
+    const project = getProjectDef(projectId);
+    const node = project && rnd.nodes[projectId];
+    if(!project || !node) return;
+    const isRedevelop = !!redevelop;
+    if(isRedevelop && node.status !== 'redevelopment_available') return;
+    if(!isRedevelop && node.status !== 'available') return;
+    if(!canQueueProject(rnd, project, node)) return;
 
-    const state = rnd.nodes[nodeId];
-    if (!state) return;
-
-    if (state.status === 'complete' || state.status === 'queued' || state.status === 'researching') return;
-
-    if (rnd.queue.length >= RND_QUEUE_LIMIT) return;
-
-    // Check prerequisites through tier order
-    const dept = RND_DEPTS.find(d => d.id === node.deptId);
-    const nodeIndex = dept.tree.findIndex(n => n.id === node.id);
-    if (nodeIndex > 0) {
-      const prev = rnd.nodes[dept.tree[nodeIndex - 1].id];
-      if (!prev || prev.status !== 'complete') return;
-    }
-
-    const attempts = state.attempts + 1;
-    const costMult = redevelop ? 1.25 + (state.attempts * 0.15) : 1 + (state.attempts * 0.12);
-    const timeMult = redevelop ? 1 + (state.attempts * 0.20) : 1;
-    const cost = Math.round(node.cost * costMult);
-    const time = Math.max(1, Math.round(node.time * timeMult));
-    const chanceBoost = redevelop ? 7 + state.attempts * 3 : 0;
-    const chance = clamp(node.chance + chanceBoost + Math.min(6, state.attempts * 2), 40, 99);
-
-    if (pd.coins < cost) return;
-
-    pd.coins -= cost;
-    state.status = 'queued';
-    state.remaining = time;
-    state.attempts = attempts;
-    state.lastChance = chance;
-    state.lastCost = cost;
-    state.lastResult = redevelop ? 'REDEVELOPMENT QUEUED' : 'QUEUED';
-    state.startedAt = null;
-    state.completedAt = null;
-
-    if (!rnd.queue.includes(nodeId)) rnd.queue.push(nodeId);
-
-    rnd.history.unshift({
-      t: Date.now(),
-      deptId: node.deptId,
-      nodeId: node.id,
-      nodeName: node.name,
-      result: redevelop ? 'REDEV' : 'QUEUE',
-      detail: `£${cost} · ${time} race${time === 1 ? '' : 's'} · ${chance}%`
+    const plan = getProjectResearchPlan(project, node, isRedevelop);
+    if(pd.coins < plan.cost) { beep(180, 0.12, 0.35, 'sawtooth'); return; }
+    pd.coins -= plan.cost;
+    node.lastCost = plan.cost;
+    node.lastDuration = plan.durationWeeks;
+    node.lastChance = plan.successChance;
+    node.lastFailure = isRedevelop ? node.lastFailure : '';
+    node.status = isRedevelop ? 'redevelopment_available' : 'available';
+    rnd.departments[project.departmentId].queue.push(project.id);
+    syncDepartmentQueues(rnd);
+    pushHistory(rnd, {
+      departmentId: project.departmentId,
+      projectId: project.id,
+      projectName: project.name,
+      result: isRedevelop ? 'REDEVELOPMENT QUEUED' : 'PROJECT QUEUED',
+      detail: `${fmtWeeks(plan.durationWeeks)} · ${plan.successChance}% success chance · £${plan.cost}`
     });
-    rnd.history = rnd.history.slice(0, 24);
-
     startQueuedProjects(rnd);
     pd.rnd = rnd;
     savePlayerData(pd);
     buildGarageScreen();
     beep(830, 0.10, 0.50, 'square');
     beep(1040, 0.16, 0.45, 'square', 0.07);
-    beep(1320, 0.22, 0.55, 'sine', 0.12);
   }
 
-  function advanceRnDSession() {
+  function resolveProjectFailure(rnd, project, node, active) {
+    const tierMeta = getTierMeta(project.tier);
+    const retryWeekDelay = project.tier === 'ultimate' ? 3 : project.tier === 'major' ? 2 : 1;
+    node.status = 'redevelopment_available';
+    node.failures = (node.failures || 0) + 1;
+    node.lastFailure = getFailureMessage(project.id, node.attempts);
+    node.cooldownUntilWeek = rnd.week + retryWeekDelay;
+    node.researching = null;
+    rnd.cooldowns[project.id] = node.cooldownUntilWeek;
+    pushHistory(rnd, {
+      departmentId: project.departmentId,
+      projectId: project.id,
+      projectName: project.name,
+      result: 'FAILED',
+      detail: `${node.lastFailure} Redevelopment unlocks in ${retryWeekDelay} week${retryWeekDelay === 1 ? '' : 's'}.`
+    });
+  }
+
+  function advanceRnDSession(mode) {
     const pd = getRnDState();
     const rnd = pd.rnd;
+    rnd.week = Math.max(1, (rnd.week || 1) + 1);
+    rnd.lastAdvanceMode = mode || '';
     let changed = false;
-
     startQueuedProjects(rnd);
 
-    const researched = rnd.queue.filter(id => rnd.nodes[id] && rnd.nodes[id].status === 'researching');
-    researched.forEach(id => {
-      const node = getNodeDef(id);
-      const state = rnd.nodes[id];
-      if (!node || !state) return;
-      state.remaining = Math.max(0, (Number(state.remaining) || node.time) - 1);
+    rnd.activeProjects = rnd.activeProjects.filter(active => {
+      const project = getProjectDef(active.projectId);
+      const node = rnd.nodes[active.projectId];
+      if(!project || !node || node.status !== 'researching' || !node.researching) return false;
+      active.remainingWeeks = Math.max(0, (active.remainingWeeks || node.researching.remainingWeeks || project.durationWeeks) - 1);
+      node.researching.remainingWeeks = active.remainingWeeks;
       changed = true;
-      if (state.remaining > 0) return;
+      if(active.remainingWeeks > 0) return true;
 
-      const baseChance = clamp(Number(state.lastChance) || node.chance, 35, 99);
       const roll = Math.random() * 100;
-      if (roll <= baseChance) {
-        state.status = 'complete';
-        state.lastResult = 'SUCCESS';
-        state.completedAt = Date.now();
-        rnd.history.unshift({
-          t: Date.now(),
-          deptId: node.deptId,
-          nodeId: node.id,
-          nodeName: node.name,
-          result: 'SUCCESS',
-          detail: `CONFIRMED · ${baseChance}%`
-        });
-        const dept = RND_DEPTS.find(d => d.id === node.deptId);
-        unlockNextNodes(rnd, dept);
+      if(roll <= (node.lastChance || getTierMeta(project.tier).chance)) {
+        markProjectCompleted(rnd, project.id, `${project.gainSummary} validated and released to race operations.`);
       } else {
-        state.status = 'failed';
-        state.lastResult = 'FAILURE';
-        state.completedAt = Date.now();
-        rnd.history.unshift({
-          t: Date.now(),
-          deptId: node.deptId,
-          nodeId: node.id,
-          nodeName: node.name,
-          result: 'FAIL',
-          detail: `RISK OVERRAN · ${baseChance}%`
-        });
+        resolveProjectFailure(rnd, project, node, active);
       }
-      state.remaining = 0;
+      return false;
     });
 
-    rnd.queue = rnd.queue.filter(id => {
-      const n = rnd.nodes[id];
-      return n && ['queued','researching'].includes(n.status);
+    Object.keys(rnd.cooldowns || {}).forEach(id => {
+      if((rnd.cooldowns[id] || 0) <= rnd.week && rnd.nodes[id] && rnd.nodes[id].status === 'cooldown') {
+        rnd.nodes[id].status = 'redevelopment_available';
+      }
     });
 
+    refreshNodeAvailability(rnd);
+    Object.values(rnd.nodes).forEach(node => {
+      if(node.status === 'redevelopment_available' && (node.cooldownUntilWeek || 0) > rnd.week) {
+        node.status = 'cooldown';
+      }
+      if(node.status === 'cooldown' && (node.cooldownUntilWeek || 0) <= rnd.week) {
+        node.status = 'redevelopment_available';
+      }
+    });
     startQueuedProjects(rnd);
-    rnd.history = rnd.history.slice(0, 24);
+    syncDepartmentQueues(rnd);
 
-    if (changed) {
+    if(changed || true) {
       pd.rnd = rnd;
       savePlayerData(pd);
-      if (document.getElementById('screen-garage') && !document.getElementById('screen-garage').classList.contains('hidden')) {
+      if(document.getElementById('screen-garage') && !document.getElementById('screen-garage').classList.contains('hidden')) {
         buildGarageContent();
       }
     }
   }
 
+  function setRndTab(tab) {
+    const pd = getRnDState();
+    pd.rnd.activeTab = tab;
+    savePlayerData(pd);
+    buildGarageContent();
+  }
+
+  function getProjectedQueueEffects(rnd) {
+    const out = { speed:0, accel:0, traction:0, braking:0, handling:0, tyreWear:0, ersCharge:0, ersBoost:0, reliability:0, grip:0 };
+    rnd.queue.forEach(id => {
+      const p = getProjectDef(id);
+      if(!p) return;
+      Object.keys(p.effects).forEach(key => { out[key] = (out[key] || 0) + p.effects[key]; });
+    });
+    return out;
+  }
+
   function renderRnDTabs(activeTab) {
     const tabs = document.getElementById('garage-tabs');
-    if (!tabs) return;
+    if(!tabs) return;
     tabs.innerHTML = [
-      ['rnd', '🧪 R&D HQ'],
-      ['p1', 'P1 LEGACY'],
-      ['p2', 'P2 LEGACY'],
-      ['paint', '🎨 PAINTS']
+      ['rnd', 'R&D HQ'],
+      ['paint', 'PAINT']
     ].map(([id, label]) => `<button class="gtab${activeTab === id ? ' active' : ''}" onclick="switchGarageTab('${id}', this)">${label}</button>`).join('');
   }
 
   function renderRnDGarage() {
     const pd = getPlayerData();
-    const rnd = normalizeRnDState(pd.rnd);
-    pd.rnd = rnd;
-    savePlayerData(pd);
-
+    const rnd = normalizeRnDState(pd.rnd, pd);
+    if(JSON.stringify(pd.rnd || {}) !== JSON.stringify(rnd)) {
+      pd.rnd = rnd;
+      savePlayerData(pd);
+    }
     const content = document.getElementById('garage-content');
-    if (!content) return;
+    if(!content) return;
+    const activeTab = getDepartmentDef(rnd.activeTab) ? rnd.activeTab : 'engine';
+    const selectedDept = getDepartmentDef(activeTab) || RND_DEPTS[0];
     const bonuses = computeRnDBonuses(rnd);
-    const queueCount = rnd.queue.length;
-    const activeCount = rnd.queue.filter(id => rnd.nodes[id] && rnd.nodes[id].status === 'researching').length;
-    const completeCount = Object.values(rnd.nodes).filter(n => n.status === 'complete').length;
-    const failedCount = Object.values(rnd.nodes).filter(n => n.status === 'failed').length;
+    const projected = getProjectedQueueEffects(rnd);
+    const activeProjects = rnd.activeProjects.slice().sort((a,b) => a.remainingWeeks - b.remainingWeeks);
+    const completedProjects = flattenProjects().filter(p => rnd.nodes[p.id] && rnd.nodes[p.id].status === 'completed');
+    const failedProjects = flattenProjects().filter(p => {
+      const s = rnd.nodes[p.id];
+      return s && (s.status === 'failed' || s.status === 'redevelopment_available' || s.status === 'cooldown');
+    });
 
-    const deptCards = RND_DEPTS.map(dept => {
+    const deptNav = RND_DEPTS.map(dept => {
       const s = computeDeptSummary(rnd, dept);
-      const accent = dept.accent;
-      return `
-        <div class="rnd-dept-card" style="--accent:${accent}">
-          <div class="rnd-dept-head">
-            <div class="rnd-dept-icon">${dept.icon}</div>
-            <div>
-              <div class="rnd-dept-name">${dept.name}</div>
-              <div class="rnd-dept-sub">${dept.summary}</div>
-            </div>
-          </div>
-          <div class="rnd-mini-row">
-            <span class="rnd-mini-pill">LIVE ${s.complete}/${s.total}</span>
-            <span class="rnd-mini-pill">QUEUE ${s.queued}</span>
-            <span class="rnd-mini-pill ${s.failed ? 'bad' : ''}">FAIL ${s.failed}</span>
-          </div>
-          <div class="rnd-dept-tree">
-            ${dept.tree.map(node => {
-              const state = rnd.nodes[node.id];
-              const canQueue = state.status === 'available' || state.status === 'failed';
-              const canRedevelop = state.status === 'failed';
-              const progress = state.status === 'researching' ? clamp(100 - (state.remaining / Math.max(1, node.time)) * 100, 0, 100) : (state.status === 'complete' ? 100 : 0);
-              const badgeClass = state.status;
-              const badgeText = state.status === 'queued' ? 'QUEUED' :
-                               state.status === 'researching' ? 'RESEARCHING' :
-                               state.status === 'complete' ? 'LIVE' :
-                               state.status === 'failed' ? 'FAILED' :
-                               state.status === 'available' ? 'READY' : 'LOCKED';
-              const action = state.status === 'failed'
-                ? `<button class="btn btn-sm btn-orange" onclick="queueRnDProject('${node.id}', true)">REDEVELOP</button>`
-                : canQueue
-                  ? (rnd.queue.length < RND_QUEUE_LIMIT ? `<button class="btn btn-sm btn-cyan" onclick="queueRnDProject('${node.id}', false)">QUEUE PROJECT</button>` : `<div class="rnd-node-foot">QUEUE FULL</div>`)
-                  : `<div class="rnd-node-foot">DEPENDENCY LOCKED</div>`;
-              return `
-                <div class="rnd-node ${badgeClass}">
-                  <div class="rnd-node-top">
-                    <div class="rnd-node-tier">T${node.tier}</div>
-                    <div class="rnd-node-badge">${badgeText}</div>
-                  </div>
-                  <div class="rnd-node-title">${node.name}</div>
-                  <div class="rnd-node-meta">${node.desc}</div>
-                  <div class="rnd-node-effects">${fmtEffectLine(node.effects)}</div>
-                  <div class="rnd-node-stats">
-                    <span>💰 ${state.lastCost || node.cost}</span>
-                    <span>⏱ ${node.time} RACE${node.time === 1 ? '' : 'S'}</span>
-                    <span>✅ ${state.lastChance || node.chance}%</span>
-                  </div>
-                  <div class="rnd-bar"><div class="rnd-bar-fill" style="width:${progress}%;"></div></div>
-                  <div class="rnd-node-action">${action}</div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>`;
+      return `<button class="rnd-dept-tab${dept.id === activeTab ? ' active' : ''}" onclick="setRndTab('${dept.id}')" style="--accent:${dept.accent}">${dept.name}<span>${s.completed}/${s.total}</span></button>`;
     }).join('');
 
-    const queueHtml = rnd.queue.length ? rnd.queue.map(id => {
-      const node = getNodeDef(id);
-      const state = rnd.nodes[id];
-      if (!node || !state) return '';
-      return `
-        <div class="rnd-queue-item ${state.status}">
-          <div class="rnd-queue-head">
-            <div>
-              <div class="rnd-queue-title">${node.deptName} · ${node.name}</div>
-              <div class="rnd-queue-sub">${state.status === 'researching' ? 'IN WORK' : 'WAITING'} · ${state.remaining || node.time} race${(state.remaining || node.time) === 1 ? '' : 's'} left</div>
-            </div>
-            <div class="rnd-queue-badge">${state.lastChance || node.chance}%</div>
-          </div>
-          <div class="rnd-queue-meta">${fmtEffectLine(node.effects)}</div>
-        </div>`;
-    }).join('') : '<div class="rnd-empty">No active research projects queued.</div>';
+    const projectCards = selectedDept.projects.map(project => {
+      const node = rnd.nodes[project.id];
+      const isRedevelop = node.status === 'redevelopment_available' || node.status === 'cooldown';
+      const plan = getProjectResearchPlan(project, node, isRedevelop);
+      const cooldownText = node.status === 'cooldown' ? `RETRY WEEK ${node.cooldownUntilWeek}` : '';
+      let action = `<div class="rnd-node-foot">LOCKED</div>`;
+      if(node.status === 'completed') action = `<div class="rnd-node-foot good">LIVE ON CAR</div>`;
+      else if(node.status === 'researching') action = `<div class="rnd-node-foot">IN PROGRESS · ${fmtWeeks(node.researching ? node.researching.remainingWeeks : plan.durationWeeks)}</div>`;
+      else if(node.status === 'available') action = `<button class="btn btn-sm btn-cyan" onclick="queueRnDProject('${project.id}', false)">START RESEARCH</button>`;
+      else if(node.status === 'redevelopment_available') action = `<button class="btn btn-sm btn-orange" onclick="queueRnDProject('${project.id}', true)">START REDEVELOPMENT</button>`;
+      else if(node.status === 'cooldown') action = `<div class="rnd-node-foot">${cooldownText}</div>`;
 
-    const historyHtml = rnd.history.length ? rnd.history.slice(0, 10).map(h => {
-      const node = getNodeDef(h.nodeId) || { deptName: h.deptId.toUpperCase(), name: h.nodeName || 'PROJECT' };
+      const riskClass = project.tier;
       return `
-        <div class="rnd-history-item">
-          <div class="rnd-history-top">
-            <div class="rnd-history-title">${node.deptName} · ${node.name}</div>
-            <div class="rnd-history-tag ${String(h.result).toLowerCase()}">${h.result}</div>
+        <div class="rnd-node ${node.status}">
+          <div class="rnd-node-top">
+            <div class="rnd-node-tier ${riskClass}">${cap(getTierMeta(project.tier).label)}</div>
+            <div class="rnd-node-badge">${getProjectStatusLabel(node)}</div>
           </div>
-          <div class="rnd-history-sub">${h.detail || ''}</div>
-          ${h.result === 'FAIL' ? `<button class="btn btn-sm btn-orange" onclick="queueRnDProject('${h.nodeId}', true)">REDEVELOP</button>` : ''}
-        </div>`;
-    }).join('') : '<div class="rnd-empty">Research history will appear here.</div>';
+          <div class="rnd-node-title">${project.name}</div>
+          <div class="rnd-node-meta">${project.desc}</div>
+          <div class="rnd-node-effects">${project.gainSummary} · ${fmtEffectLine(project.effects)}</div>
+          <div class="rnd-node-stats">
+            <span>COST £${plan.cost}</span>
+            <span>TIME ${fmtWeeks(plan.durationWeeks)}</span>
+            <span>SUCCESS ${plan.successChance}%</span>
+            <span>REL ${project.reliabilityImpact >= 0 ? '+' : ''}${Math.round(project.reliabilityImpact * 100)}%</span>
+          </div>
+          ${node.lastFailure ? `<div class="rnd-node-fail">${node.lastFailure}</div>` : ''}
+          ${action}
+        </div>
+      `;
+    }).join('');
+
+    const queueHtml = activeProjects.length ? activeProjects.map(active => {
+      const p = getProjectDef(active.projectId);
+      return `<div class="rnd-list-item">
+        <div class="rnd-list-head"><strong>${p.departmentName}</strong><span>${fmtWeeks(active.remainingWeeks)}</span></div>
+        <div class="rnd-list-title">${p.name}</div>
+        <div class="rnd-list-sub">${active.successChance}% success chance · ${p.gainSummary}</div>
+      </div>`;
+    }).join('') : '<div class="rnd-empty">No projects are currently in progress.</div>';
+
+    const queueBacklogHtml = rnd.queue.length ? rnd.queue.map(id => {
+      const p = getProjectDef(id);
+      const n = rnd.nodes[id];
+      if(!p || !n || n.status === 'completed') return '';
+      return `<div class="rnd-list-item compact">
+        <div class="rnd-list-head"><strong>${p.departmentName}</strong><span>${cap(getProjectStatusLabel(n))}</span></div>
+        <div class="rnd-list-title">${p.name}</div>
+        <div class="rnd-list-sub">${fmtWeeks(n.lastDuration || p.durationWeeks)} · ${n.lastChance || getTierMeta(p.tier).chance}%</div>
+      </div>`;
+    }).join('') : '<div class="rnd-empty">No queued projects waiting for department capacity.</div>';
+
+    const completedHtml = completedProjects.length ? completedProjects.map(p => `
+      <div class="rnd-list-item compact">
+        <div class="rnd-list-head"><strong>${p.departmentName}</strong><span>LIVE</span></div>
+        <div class="rnd-list-title">${p.name}</div>
+        <div class="rnd-list-sub">${p.gainSummary}</div>
+      </div>`).join('') : '<div class="rnd-empty">No completed upgrades yet.</div>';
+
+    const failedHtml = failedProjects.length ? failedProjects.map(p => {
+      const n = rnd.nodes[p.id];
+      const retry = n.status === 'redevelopment_available'
+        ? `<button class="btn btn-sm btn-orange" onclick="queueRnDProject('${p.id}', true)">REDEVELOP</button>`
+        : `<div class="rnd-node-foot">RETRY WEEK ${n.cooldownUntilWeek}</div>`;
+      return `<div class="rnd-list-item compact fail">
+        <div class="rnd-list-head"><strong>${p.departmentName}</strong><span>${cap(getProjectStatusLabel(n))}</span></div>
+        <div class="rnd-list-title">${p.name}</div>
+        <div class="rnd-list-sub">${n.lastFailure || 'Validation issue logged.'}</div>
+        ${retry}
+      </div>`;
+    }).join('') : '<div class="rnd-empty">No failed projects.</div>';
+
+    const historyHtml = rnd.history.length ? rnd.history.slice(0, 12).map(h => `
+      <div class="rnd-list-item compact">
+        <div class="rnd-list-head"><strong>WEEK ${h.week}</strong><span>${h.result}</span></div>
+        <div class="rnd-list-title">${h.projectName || h.projectId || 'Project Event'}</div>
+        <div class="rnd-list-sub">${h.detail}</div>
+      </div>`).join('') : '<div class="rnd-empty">Research history will appear here.</div>';
+
+    const perfRows = getPerformanceSummaryRows(bonuses).map(([label, value]) => `<div class="rnd-kv"><span>${label}</span><b>${value}</b></div>`).join('');
+    const projRows = getPerformanceSummaryRows(projected).map(([label, value]) => `<div class="rnd-kv"><span>${label}</span><b>${value}</b></div>`).join('');
 
     content.innerHTML = `
       <div class="rnd-shell">
         <div class="rnd-banner">
-          <div class="rnd-banner-left">
-            <div class="upgrade-name">FACTORY R&D CONTROL</div>
-            <div class="rnd-banner-copy">Queue upgrades, manage risk, and turn completed projects into race-day performance gains.</div>
+          <div>
+            <div class="upgrade-name">TEAM RESEARCH HQ</div>
+            <div class="rnd-banner-copy">Manage six departments, balance risk against race-week timing, and keep failed concepts moving through redevelopment instead of instant retries.</div>
           </div>
           <div class="rnd-banner-stats">
             <div class="rnd-stat"><span>COINS</span><b>${pd.coins}</b></div>
-            <div class="rnd-stat"><span>ACTIVE</span><b>${activeCount}/${RND_MAX_ACTIVE}</b></div>
-            <div class="rnd-stat"><span>QUEUE</span><b>${queueCount}/${RND_QUEUE_LIMIT}</b></div>
-            <div class="rnd-stat"><span>LIVE</span><b>${completeCount}</b></div>
-            <div class="rnd-stat"><span>FAILS</span><b>${failedCount}</b></div>
+            <div class="rnd-stat"><span>R&D WEEK</span><b>${rnd.week}</b></div>
+            <div class="rnd-stat"><span>LIVE</span><b>${completedProjects.length}</b></div>
+            <div class="rnd-stat"><span>ACTIVE</span><b>${activeProjects.length}</b></div>
+            <div class="rnd-stat"><span>FAILED</span><b>${failedProjects.length}</b></div>
           </div>
         </div>
 
-        <div class="rnd-summary-grid">
-          <div class="rnd-summary-card">
-            <div class="rnd-summary-title">PERFORMANCE SUMMARY</div>
-            <div class="rnd-summary-line">${fmtEffectLine(bonuses) || 'No live research bonuses yet.'}</div>
-            <div class="rnd-summary-note">Bonuses apply to both kart builds, then stack with the legacy P1/P2 development packages.</div>
+        <div class="rnd-main-grid">
+          <div class="rnd-sidebar">
+            <div class="rnd-panel-title">DEPARTMENTS</div>
+            <div class="rnd-dept-tabs">${deptNav}</div>
+            <div class="rnd-summary-card">
+              <div class="rnd-summary-title">PERFORMANCE SUMMARY</div>
+              <div class="rnd-kv-grid">${perfRows}</div>
+            </div>
+            <div class="rnd-summary-card">
+              <div class="rnd-summary-title">PROJECTED GAINS</div>
+              <div class="rnd-kv-grid">${projRows}</div>
+            </div>
           </div>
-          <div class="rnd-summary-card">
-            <div class="rnd-summary-title">RESEARCH PIPELINE</div>
-            <div class="rnd-summary-line">Up to ${RND_MAX_ACTIVE} projects can be active at once. Time advances on race completion.</div>
-            <div class="rnd-summary-note">Failures stay in the history log so you can relaunch the same concept as a redevelopment project.</div>
-          </div>
-        </div>
 
-        <div class="rnd-dept-grid">
-          ${deptCards}
+          <div class="rnd-content">
+            <div class="rnd-summary-card">
+              <div class="rnd-summary-title">${selectedDept.name}</div>
+              <div class="rnd-summary-line">${selectedDept.summary}</div>
+              <div class="rnd-summary-note">Each department runs ${selectedDept.capacity || 1} active project at a time with a waiting queue behind it.</div>
+            </div>
+            <div class="rnd-project-grid">${projectCards}</div>
+          </div>
         </div>
 
         <div class="rnd-lower-grid">
           <div class="rnd-lower-panel">
-            <div class="rnd-panel-title">CURRENT QUEUE</div>
-            <div class="rnd-queue-list">${queueHtml}</div>
+            <div class="rnd-panel-title">PROJECTS IN PROGRESS</div>
+            <div class="rnd-list">${queueHtml}</div>
+          </div>
+          <div class="rnd-lower-panel">
+            <div class="rnd-panel-title">RESEARCH QUEUE</div>
+            <div class="rnd-list">${queueBacklogHtml}</div>
+          </div>
+          <div class="rnd-lower-panel">
+            <div class="rnd-panel-title">COMPLETED UPGRADES</div>
+            <div class="rnd-list">${completedHtml}</div>
+          </div>
+          <div class="rnd-lower-panel">
+            <div class="rnd-panel-title">FAILED / REDEVELOPMENT</div>
+            <div class="rnd-list">${failedHtml}</div>
           </div>
           <div class="rnd-lower-panel">
             <div class="rnd-panel-title">RESEARCH HISTORY</div>
-            <div class="rnd-history-list">${historyHtml}</div>
+            <div class="rnd-list">${historyHtml}</div>
           </div>
         </div>
       </div>
     `;
-
-    // Offer a compact dept jump bar
-    const jumpBar = document.createElement('div');
-    jumpBar.className = 'rnd-jump-bar';
-    jumpBar.innerHTML = RND_DEPTS.map(dept => `<button class="rnd-jump${rnd.activeTab === dept.id ? ' active' : ''}" onclick="(function(){ const p=getPlayerData(); p.rnd.activeTab='${dept.id}'; savePlayerData(p); buildGarageContent(); })()">${dept.name}</button>`).join('');
-    content.prepend(jumpBar);
   }
 
   function renderRndStyles() {
-    if (document.getElementById('kb-rnd-style')) return;
+    if(document.getElementById('kb-rnd-style')) return;
     const st = document.createElement('style');
     st.id = 'kb-rnd-style';
     st.textContent = `
-      .rnd-shell{width:min(1120px,96vw);margin:0 auto;display:flex;flex-direction:column;gap:16px}
-      .rnd-banner,.rnd-summary-card,.rnd-dept-card,.rnd-lower-panel,.rnd-history-item,.rnd-queue-item{border-radius:22px;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(180deg, rgba(13,24,47,0.82), rgba(7,11,24,0.96));backdrop-filter:blur(16px);box-shadow:0 16px 34px rgba(0,0,0,0.26)}
-      .rnd-banner{padding:18px;display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
-      .rnd-banner-copy{font-size:13px;opacity:.76;line-height:1.6;max-width:620px;margin-top:6px}
-      .rnd-banner-stats{display:grid;grid-template-columns:repeat(5,minmax(68px,1fr));gap:8px;min-width:min(100%,460px)}
-      .rnd-stat{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);text-align:center}
-      .rnd-stat span{display:block;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:.18em;opacity:.56}
-      .rnd-stat b{display:block;margin-top:6px;font-family:'Orbitron',sans-serif;font-size:14px;color:#fff}
-      .rnd-jump-bar,.rnd-mini-row{display:flex;flex-wrap:wrap;gap:8px}
-      .rnd-jump,.rnd-mini-pill,.rnd-queue-badge,.rnd-history-tag,.rnd-node-badge,.rnd-node-tier{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em;border-radius:999px;padding:6px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);color:rgba(220,236,255,0.80)}
-      .rnd-jump.active{border-color:#00f5ff;color:#00f5ff;background:rgba(0,245,255,0.10)}
-      .rnd-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+      .rnd-shell{width:min(1220px,96vw);margin:0 auto;display:flex;flex-direction:column;gap:16px}
+      .rnd-banner,.rnd-summary-card,.rnd-lower-panel,.rnd-node,.rnd-list-item,.rnd-dept-tab{border-radius:20px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg, rgba(13,24,47,.84), rgba(7,11,24,.97));box-shadow:0 14px 32px rgba(0,0,0,.24)}
+      .rnd-banner{padding:18px;display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+      .rnd-banner-copy{font-size:13px;line-height:1.6;opacity:.74;max-width:680px;margin-top:6px}
+      .rnd-banner-stats{display:grid;grid-template-columns:repeat(5,minmax(74px,1fr));gap:8px;min-width:min(100%,460px)}
+      .rnd-stat{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);text-align:center}
+      .rnd-stat span{display:block;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:.16em;opacity:.56}
+      .rnd-stat b{display:block;margin-top:6px;font-family:'Orbitron',sans-serif;font-size:14px}
+      .rnd-main-grid{display:grid;grid-template-columns:280px 1fr;gap:14px}
+      .rnd-sidebar,.rnd-content{display:flex;flex-direction:column;gap:14px}
+      .rnd-panel-title,.rnd-summary-title{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.18em;color:#00f5ff}
       .rnd-summary-card{padding:16px 18px}
-      .rnd-summary-title,.rnd-panel-title{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.18em;color:#00f5ff}
-      .rnd-summary-line{margin-top:10px;font-size:15px;line-height:1.6;color:rgba(228,240,255,0.82)}
-      .rnd-summary-note,.rnd-dept-sub,.rnd-node-meta,.rnd-queue-sub,.rnd-history-sub,.rnd-empty{margin-top:7px;font-size:12px;line-height:1.55;color:rgba(220,236,255,0.62)}
-      .rnd-dept-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
-      .rnd-dept-card{padding:16px 16px 18px;position:relative;overflow:hidden}
-      .rnd-dept-card::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent, #00f5ff);opacity:.9}
-      .rnd-dept-head{display:flex;gap:12px;align-items:flex-start}
-      .rnd-dept-icon{font-size:28px;line-height:1}
-      .rnd-dept-name{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.16em;color:#fff}
-      .rnd-dept-tree{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
-      .rnd-node{padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(180deg, rgba(11,20,42,0.78), rgba(6,10,24,0.94))}
-      .rnd-node.queued,.rnd-queue-item.queued{border-color:rgba(0,245,255,0.32)}
-      .rnd-node.researching,.rnd-queue-item.researching{border-color:rgba(255,215,0,0.34)}
-      .rnd-node.complete{border-color:rgba(74,222,128,0.34)}
-      .rnd-node.failed,.rnd-queue-item.failed{border-color:rgba(255,107,53,0.34)}
-      .rnd-node-top,.rnd-queue-head,.rnd-history-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
-      .rnd-node-tier,.rnd-node-badge,.rnd-queue-badge,.rnd-history-tag{padding:4px 8px}
-      .rnd-node-title{margin-top:8px;font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.08em;color:#f5fbff}
+      .rnd-summary-line{margin-top:8px;font-size:14px;line-height:1.6;color:rgba(232,244,255,.84)}
+      .rnd-summary-note{margin-top:8px;font-size:12px;line-height:1.5;color:rgba(220,236,255,.62)}
+      .rnd-dept-tabs{display:grid;gap:8px}
+      .rnd-dept-tab{padding:12px 14px;text-align:left;cursor:pointer}
+      .rnd-dept-tab.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+      .rnd-dept-tab span{display:block;margin-top:6px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.14em;opacity:.62}
+      .rnd-project-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+      .rnd-node{padding:14px}
+      .rnd-node.completed{border-color:rgba(74,222,128,.35)}
+      .rnd-node.researching{border-color:rgba(255,215,0,.35)}
+      .rnd-node.redevelopment_available,.rnd-node.failed,.rnd-list-item.fail{border-color:rgba(255,107,53,.35)}
+      .rnd-node-top,.rnd-list-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+      .rnd-node-tier,.rnd-node-badge{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+      .rnd-node-title,.rnd-list-title{margin-top:8px;font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:.06em}
+      .rnd-node-meta,.rnd-list-sub,.rnd-empty{margin-top:7px;font-size:12px;line-height:1.55;color:rgba(220,236,255,.62)}
       .rnd-node-effects{margin-top:8px;font-size:11px;line-height:1.5;color:#7ef0ff}
-      .rnd-node-stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em;color:rgba(220,236,255,0.68)}
-      .rnd-node-stats span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)}
-      .rnd-bar{height:7px;border-radius:999px;background:rgba(255,255,255,0.07);margin-top:10px;overflow:hidden}
-      .rnd-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#00f5ff,#ffd700,#4ade80)}
-      .rnd-node-action{margin-top:10px}
-      .rnd-node-foot{margin-top:8px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.14em;color:rgba(255,255,255,0.42)}
-      .rnd-lower-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+      .rnd-node-stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+      .rnd-node-stats span,.rnd-node-foot{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em}
+      .rnd-node-stats span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+      .rnd-node-fail{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(255,107,53,.09);border:1px solid rgba(255,107,53,.18);font-size:12px;line-height:1.5;color:#ffd4bf}
+      .rnd-node-foot{margin-top:12px;color:rgba(255,255,255,.56)}
+      .rnd-node-foot.good{color:#4ade80}
+      .rnd-lower-grid{display:grid;grid-template-columns:repeat(2,minmax(280px,1fr));gap:14px}
       .rnd-lower-panel{padding:16px}
-      .rnd-queue-list,.rnd-history-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-      .rnd-queue-item,.rnd-history-item{padding:14px}
-      .rnd-queue-title,.rnd-history-title{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:.08em}
-      .rnd-history-tag.success,.rnd-node-badge.complete{color:#4ade80;border-color:rgba(74,222,128,0.34)}
-      .rnd-history-tag.fail,.rnd-history-tag.failure{color:#ff6b35;border-color:rgba(255,107,53,0.34)}
-      .rnd-history-tag.queue,.rnd-history-tag.redev,.rnd-queue-badge{color:#00f5ff;border-color:rgba(0,245,255,0.34)}
-      .rnd-mini-pill.bad{color:#ff6b35;border-color:rgba(255,107,53,0.28)}
-      @media (max-width: 920px){.rnd-banner-stats,.rnd-lower-grid{grid-template-columns:1fr}.rnd-banner-stats{min-width:0}.rnd-lower-grid{display:grid}}
+      .rnd-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+      .rnd-list-item{padding:12px 14px}
+      .rnd-list-item.compact .rnd-list-title{font-size:12px}
+      .rnd-list-head strong{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.08em}
+      .rnd-list-head span{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em;opacity:.66}
+      .rnd-kv-grid{display:grid;gap:8px;margin-top:10px}
+      .rnd-kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
+      .rnd-kv:last-child{border-bottom:none}
+      .rnd-kv b{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.08em}
+      @media (max-width: 980px){
+        .rnd-main-grid{grid-template-columns:1fr}
+        .rnd-banner-stats,.rnd-lower-grid{grid-template-columns:1fr}
+      }
     `;
     document.head.appendChild(st);
   }
@@ -9855,33 +10081,58 @@ console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
     }
   }
 
+  function renderGarageFallback(err) {
+    try { console.error('R&D garage fallback', err); } catch(e) {}
+    if(typeof window.showScreen === 'function') window.showScreen('garage');
+    if(typeof _kbOrigBuildGarageContent === 'function') {
+      garageTab = 'p1';
+      const tabs = document.getElementById('garage-tabs');
+      if(tabs) {
+        tabs.innerHTML = `
+          <button class="gtab active" onclick="switchGarageTab('p1',this)">P1 UPGRADES</button>
+          <button class="gtab" onclick="switchGarageTab('p2',this)">P2 UPGRADES</button>
+          <button class="gtab" onclick="switchGarageTab('paint',this)">PAINTS</button>
+        `;
+      }
+      _kbOrigBuildGarageContent();
+    }
+  }
+
   window.getPlayerData = function() {
     const d = _kbOrigGetPlayerData ? _kbOrigGetPlayerData() : {};
-    d.rnd = normalizeRnDState(d.rnd || d.teamRnd || d.research || null);
+    d.rnd = normalizeRnDState(d.rnd || d.teamRnd || d.research || null, d);
     return d;
   };
 
   window.savePlayerData = function(d) {
     if (!d) return _kbOrigSavePlayerData ? _kbOrigSavePlayerData(d) : undefined;
-    d.rnd = normalizeRnDState(d.rnd || d.teamRnd || d.research || null);
+    d.rnd = normalizeRnDState(d.rnd || d.teamRnd || d.research || null, d);
     return _kbOrigSavePlayerData ? _kbOrigSavePlayerData(d) : undefined;
   };
 
   window.showGarage = function() {
     initAudio();
-    garageTab = 'rnd';
-    renderRndStyles();
-    buildGarageScreen();
-    showScreen('garage');
+    try {
+      garageTab = 'rnd';
+      renderRndStyles();
+      showScreen('garage');
+      buildGarageScreen();
+    } catch(err) {
+      renderGarageFallback(err);
+    }
   };
 
   window.buildGarageScreen = function() {
-    renderRndStyles();
-    const pd = getPlayerData();
-    const coins = document.getElementById('garage-coins');
-    if (coins) coins.textContent = `💰 COINS: ${pd.coins}`;
-    renderRnDTabs(garageTab || 'rnd');
-    buildGarageContent();
+    try {
+      renderRndStyles();
+      const pd = getPlayerData();
+      const coins = document.getElementById('garage-coins');
+      if (coins) coins.textContent = `💰 COINS: ${pd.coins}`;
+      renderRnDTabs(garageTab || 'rnd');
+      buildGarageContent();
+    } catch(err) {
+      renderGarageFallback(err);
+    }
   };
 
   window.switchGarageTab = function(tab, btn) {
@@ -9894,21 +10145,20 @@ console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
   window.buildGarageContent = function() {
     const content = document.getElementById('garage-content');
     if (!content) return;
-    const pd = getPlayerData();
-    if (garageTab === 'rnd') {
-      renderRnDGarage();
-      return;
+    try {
+      if (garageTab === 'rnd') {
+        renderRnDGarage();
+        return;
+      }
+      renderLegacyGarageContent();
+    } catch(err) {
+      renderGarageFallback(err);
     }
-    if (_kbOrigBuildGarageContent) _kbOrigBuildGarageContent();
   };
 
-  window.queueRnDProject = function(nodeId, redevelop) {
-    queueRnDProject(nodeId, !!redevelop);
-  };
-
-  window.advanceRnDSession = function() {
-    advanceRnDSession();
-  };
+  window.queueRnDProject = function(projectId, redevelop) { queueRnDProject(projectId, !!redevelop); };
+  window.advanceRnDSession = function(mode) { advanceRnDSession(mode || 'manual'); };
+  window.setRndTab = setRndTab;
 
   window.applyUpgradesToKart = function(kart, player) {
     if (_kbOrigApplyUpgradesToKart) _kbOrigApplyUpgradesToKart(kart, player);
@@ -9921,16 +10171,18 @@ console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
     kart.brakeForce = (kart.brakeForce || 0) + b.braking;
     kart.turnRate = (kart.turnRate || 0) + b.handling;
     kart.offTrackMaxSpd = (kart.offTrackMaxSpd || 0) + b.traction;
+    kart.grip = (kart.grip == null ? 0.72 : kart.grip) + (b.grip || 0);
 
     kart._rndReliability = clamp(1 - (b.reliability || 0), 0.82, 1.08);
-    kart._rndTyreWearMult = clamp(1 - ((b.tyreWear || 0) + (b.reliability || 0)), 0.70, 1.08);
+    kart._rndTyreWearMult = clamp(1 - ((b.tyreWear || 0) + (b.reliability || 0) * 0.6), 0.68, 1.05);
     kart._rndERSRegen = clamp(b.ersCharge || 0, 0, 0.25);
     kart._rndERSBoost = clamp(b.ersBoost || 0, 0, 0.25);
 
     kart._upgradeBase = {
       maxSpeed: kart.maxSpeed,
       turnRate: kart.turnRate,
-      accel: kart.accel
+      accel: kart.accel,
+      grip: kart.grip
     };
   };
 
@@ -9952,7 +10204,8 @@ console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
 
   if (window.Race && window.Race.prototype && _kbOrigRaceShowResults) {
     window.Race.prototype.showResults = function() {
-      advanceRnDSession();
+      const mode = this && this.mode;
+      if (mode === 'ai' || mode === 'versus') advanceRnDSession(mode);
       return _kbOrigRaceShowResults.apply(this, arguments);
     };
   }
