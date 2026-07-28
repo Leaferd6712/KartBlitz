@@ -2314,6 +2314,22 @@ function remapTrackWaypointsForBraking(wps, remap) {
   return bestSafe;
 }
 
+function densifyPolyline(path, spacing) {
+  if(!path || path.length < 2) return path || [];
+  const step = Math.max(12, spacing || 24);
+  const out = [{ x: path[0].x, y: path[0].y }];
+  for(let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const n = Math.max(1, Math.ceil(len / step));
+    for(let s = 1; s <= n; s++) {
+      const t = s / n;
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    }
+  }
+  return out;
+}
+
 TRACKS.forEach(tr => {
   const remap = getTrackRemapProfile(tr);
   tr.trackWidth = Math.round(tr.trackWidth * remap.widthBoost);
@@ -2323,6 +2339,11 @@ TRACKS.forEach(tr => {
   tr.cornerCount = countWaypointCorners(tr.waypoints, remap.cornerCountAngle);
   tr.centerlineClearance = minWaypointSegmentClearance(tr.waypoints);
   tr.spline = buildSpline(tr.waypoints, 28);
+  // Densify pit lane so AI/player routing follows the painted road, not sparse corner-cutting chords.
+  if(tr.pitLane && tr.pitLane.path && tr.pitLane.path.length >= 2) {
+    tr.pitLane.rawPath = tr.pitLane.path.map(p => ({ x: p.x, y: p.y }));
+    tr.pitLane.path = densifyPolyline(tr.pitLane.path, 22);
+  }
   const spl = tr.spline, n = spl.length;
   // cumulative distances
   const cum = [0];
@@ -2623,6 +2644,7 @@ class Kart {
     this.brakeForce = 700;
     this.friction = 0.9915;
     this.turnRate = 2.68;
+    this.grip = 1.0; // 1 = full mechanical grip; lower = more understeer at speed
     this.offTrackMaxSpd = 255 * GAME_SPEED_MULT;
     this.offTrackAccel = 165 * GLOBAL_ACCEL_MULT;
     this.slipstreamBoost = false;
@@ -2913,9 +2935,16 @@ class Kart {
       this.speed += acc * throttleInput * dt;
     } else if(brakeInput > 0.02) {
       const brakeMul = Math.max(1, Math.min(2.5, inp.brakeMult || 1));
+      const speedBeforeBrake = this.speed;
       if(this.speed > 0) this.speed -= this.brakeForce * brakeInput * dt;
       else this.speed -= acc * 0.5 * dt;
       if(this.speed > 0) this.speed -= this.brakeForce * (brakeMul - 1) * brakeInput * dt;
+      // AI: limit sudden speed dumps so they do not collapse mid-corner for no reason.
+      if(this.isAI && speedBeforeBrake > 0) {
+        const maxDecel = 150 + Math.min(120, (brakeMul - 1) * 95); // units/sec
+        const floorSpd = speedBeforeBrake - maxDecel * dt;
+        if(this.speed < floorSpd) this.speed = floorSpd;
+      }
     } else if(applyOffTrackSlowdown) {
       // Grass drag: heavier than coasting but weaker than braking
       this.speed *= Math.pow(0.96, dt * 60);
@@ -2932,14 +2961,25 @@ class Kart {
     if (this.isAI) this.speed = Math.max(0, Math.min(spdLimit, this.speed));
     else this.speed = Math.max(-maxSpd * 0.3, Math.min(spdLimit, this.speed));
 
-    // Speed-based steering: progressively less responsive at high speed (prevents spinouts at 350)
+    // Speed-based grip / understeer: high speed bleeds turn-in hard so you cannot flat-out every corner.
     if(Math.abs(this.speed) > 4) {
-      const speedRatio = Math.abs(this.speed) / this.maxSpeed;
-      // Preserve more authority at high speed so turn-in feels sharper without making launches twitchy.
-      const steerFactor = Math.max(0.45, 1.05 - speedRatio * 0.48);
+      const speedRatio = Math.abs(this.speed) / Math.max(1, this.maxSpeed);
+      const grip = Math.max(0.35, Math.min(1.25, this.grip == null ? 1 : this.grip));
+      // Grip falls off with speed² — lots of understeer once you are carrying real pace.
+      const gripFactor = Math.max(0.10, (1.0 - speedRatio * speedRatio * 1.12) * grip);
+      const maxYawRate = this.turnRate * gripFactor;
       const dir = this.speed >= 0 ? 1 : -1;
-      if(inp.left) this.angle -= this.turnRate * steerFactor * dt * dir;
-      if(inp.right) this.angle += this.turnRate * steerFactor * dt * dir;
+      let wantYaw = 0;
+      if(inp.left) wantYaw -= this.turnRate * dt * dir;
+      if(inp.right) wantYaw += this.turnRate * dt * dir;
+      const maxYaw = maxYawRate * dt;
+      const appliedYaw = Math.max(-maxYaw, Math.min(maxYaw, wantYaw));
+      this.angle += appliedYaw;
+      // Scrub speed when the driver asks for more yaw than the tyres can give (classic understeer).
+      if(Math.abs(wantYaw) > maxYaw * 1.02 && speedRatio > 0.42) {
+        const scrub = 0.012 + (speedRatio - 0.42) * 0.05;
+        this.speed *= Math.pow(1 - scrub, dt * 60);
+      }
     }
 
     // ── TYRE WEAR ──────────────────────────────────────
@@ -2956,6 +2996,9 @@ class Kart {
     this.maxSpeed = this.baseMaxSpeed * (1 - wear * 0.35);
     this.turnRate = this.baseTurnRate * (1 - wear * 0.25);
     this.accel    = (this._baseAccel || (304 * GLOBAL_ACCEL_MULT)) * (1 - wear * 0.18);
+    // Worn tyres also lose mechanical grip (more understeer).
+    if(this._baseGrip == null) this._baseGrip = this.grip == null ? 1 : this.grip;
+    this.grip = this._baseGrip * (1 - wear * 0.40);
 
     // Particles: smoke when drifting, dust when on grass
     const _spd = Math.abs(this.speed);
@@ -2977,6 +3020,39 @@ class Kart {
     this.prevX = this.x; this.prevY = this.y;
     this.x += Math.cos(this.angle) * this.speed * dt;
     this.y += Math.sin(this.angle) * this.speed * dt;
+
+    // While pit-routing, hard-pull onto the densified pit centreline so cars cannot cut the painted corners.
+    const pitRoutingActive = !this.inPit && this.pitPhase === null &&
+      (this._pitIntentActive || this._pitEntryConfirmed || this._pitExiting || this._pitExitPos);
+    if(pitRoutingActive && trackData.pitLane && trackData.pitLane.path && trackData.pitLane.path.length >= 2) {
+      const _plPath = trackData.pitLane.path;
+      const pitHalf = (trackData.pitLane.width || 60) * 0.42;
+      let bestD = Infinity, bestX = this.x, bestY = this.y, bestAng = null;
+      for(let i = 0; i < _plPath.length - 1; i++) {
+        const a = _plPath[i], b = _plPath[i + 1];
+        const abx = b.x - a.x, aby = b.y - a.y;
+        const abLen2 = abx * abx + aby * aby || 1;
+        const tt = Math.max(0, Math.min(1, ((this.x - a.x) * abx + (this.y - a.y) * aby) / abLen2));
+        const px = a.x + abx * tt, py = a.y + aby * tt;
+        const d = Math.hypot(this.x - px, this.y - py);
+        if(d < bestD) {
+          bestD = d; bestX = px; bestY = py;
+          bestAng = Math.atan2(aby, abx);
+        }
+      }
+      if(bestD > pitHalf) {
+        const pull = Math.min(1, (bestD - pitHalf) / Math.max(1, pitHalf));
+        this.x += (bestX - this.x) * Math.min(1, 0.55 + pull * 0.35);
+        this.y += (bestY - this.y) * Math.min(1, 0.55 + pull * 0.35);
+        if(bestAng !== null && this.speed > 8) {
+          let ad = bestAng - this.angle;
+          while (ad >  Math.PI) ad -= Math.PI * 2;
+          while (ad < -Math.PI) ad += Math.PI * 2;
+          this.angle += ad * Math.min(1, 0.20 + pull * 0.35);
+        }
+        if(this.speed > 70) this.speed *= Math.pow(0.94, dt * 60);
+      }
+    }
 
     // Pit lane speed limiter — cap speed only inside pit lane corridor, not on adjacent race line
     this._onPitLane = false;
@@ -3077,7 +3153,8 @@ class Kart {
     if (this.isAI) fixAIKartOrientation(this, trackData);
   }
 
-  // Follow a pit-lane polyline toward destPos. Returns steering/throttle input.
+  // Follow the densified pit-lane centreline. Look-ahead is in world units along the path
+  // so sharp 90° pit corners are taken on the painted road, not as a chord cut.
   _followPitLanePath(path, destPos, speedFar, speedNear, stopDist) {
     if(!path || path.length < 2 || !destPos) return null;
 
@@ -3092,29 +3169,44 @@ class Kart {
 
     // Always progress toward the destination along the path (never reverse along pit lane).
     if(nearestIdx > destIdx) nearestIdx = destIdx;
-    const remaining = Math.hypot(this.x - destPos.x, this.y - destPos.y);
-    const lookAhead = this.speed > 96 ? 3 : (this.speed > 56 ? 2 : 1);
-    const targetIdx = Math.min(destIdx, nearestIdx + lookAhead);
 
-    // Lateral pull onto the nearest path segment so AI cannot cut corners across the grass.
-    let aimX = path[targetIdx].x, aimY = path[targetIdx].y;
+    // Project onto the local segment for a true centreline target.
+    const segI = Math.min(nearestIdx, path.length - 2);
+    const a = path[segI], b = path[segI + 1];
+    const abx = b.x - a.x, aby = b.y - a.y;
+    const abLen = Math.hypot(abx, aby) || 1;
+    const t = Math.max(0, Math.min(1, ((this.x - a.x) * abx + (this.y - a.y) * aby) / (abLen * abLen)));
+    const projX = a.x + abx * t, projY = a.y + aby * t;
+    const latX = this.x - projX, latY = this.y - projY;
+    const latDist = Math.hypot(latX, latY);
+
+    // Short look-ahead along the polyline (~1 car length at pit speeds).
+    const lookWorld = 36 + Math.min(40, Math.abs(this.speed) * 0.22);
+    let walked = 0;
+    let targetIdx = nearestIdx;
+    for(let i = nearestIdx; i < destIdx; i++) {
+      const p0 = path[i], p1 = path[Math.min(i + 1, path.length - 1)];
+      walked += Math.hypot(p1.x - p0.x, p1.y - p0.y);
+      targetIdx = Math.min(i + 1, destIdx);
+      if(walked >= lookWorld) break;
+    }
+
+    const remaining = Math.hypot(this.x - destPos.x, this.y - destPos.y);
+    let aimX, aimY;
     if(remaining < (stopDist || 80)) {
       aimX = destPos.x;
       aimY = destPos.y;
     } else {
-      const i0 = Math.min(nearestIdx, path.length - 2);
-      const a = path[i0], b = path[i0 + 1];
-      const abx = b.x - a.x, aby = b.y - a.y;
-      const abLen = Math.hypot(abx, aby) || 1;
-      const t = Math.max(0, Math.min(1, ((this.x - a.x) * abx + (this.y - a.y) * aby) / (abLen * abLen)));
-      const projX = a.x + abx * t, projY = a.y + aby * t;
-      const latX = this.x - projX, latY = this.y - projY;
-      const latDist = Math.hypot(latX, latY);
-      if(latDist > 6) {
-        // Blend destination look-ahead with a strong centreline correction.
-        const pull = Math.min(1, latDist / 40);
-        aimX = aimX * (1 - pull * 0.65) + (projX - latX * 0.35) * (pull * 0.65);
-        aimY = aimY * (1 - pull * 0.65) + (projY - latY * 0.35) * (pull * 0.65);
+      // Prefer the next centreline point; if off-line, aim back onto the projection first.
+      aimX = path[targetIdx].x;
+      aimY = path[targetIdx].y;
+      if(latDist > 8) {
+        const pull = Math.min(1, (latDist - 4) / 28);
+        aimX = projX * pull + aimX * (1 - pull);
+        aimY = projY * pull + aimY * (1 - pull);
+        // Nudge further toward the opposite side of the offset so it re-centres.
+        aimX -= latX * 0.55 * pull;
+        aimY -= latY * 0.55 * pull;
       }
     }
 
@@ -3122,14 +3214,33 @@ class Kart {
     while (diff >  Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
 
-    const holdSpeed = remaining > 140 ? speedFar : (remaining > (stopDist || 80) ? (speedFar + speedNear) * 0.5 : speedNear);
-    const needsBrake = (Math.abs(diff) > 0.78 && this.speed > 70) || (remaining < (stopDist || 80) && this.speed > speedNear + 8);
+    // Slow for sharp pit kinks (heading change along upcoming segments).
+    let kink = 0;
+    if(targetIdx > nearestIdx + 1) {
+      const p0 = path[nearestIdx], p1 = path[Math.min(nearestIdx + 1, path.length - 1)];
+      const p2 = path[targetIdx];
+      const a1 = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+      const a2 = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      let da = a2 - a1;
+      while (da >  Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      kink = Math.abs(da);
+    }
+
+    let holdSpeed = remaining > 160 ? speedFar : (remaining > (stopDist || 80) ? (speedFar + speedNear) * 0.5 : speedNear);
+    if(kink > 0.55) holdSpeed = Math.min(holdSpeed, 58);
+    else if(kink > 0.30) holdSpeed = Math.min(holdSpeed, 78);
+    if(latDist > 22) holdSpeed = Math.min(holdSpeed, 64);
+
+    const needsBrake = (Math.abs(diff) > 0.55 && this.speed > 55) ||
+      (remaining < (stopDist || 80) && this.speed > speedNear + 6) ||
+      (kink > 0.45 && this.speed > holdSpeed + 8);
     return {
       up: this.speed < holdSpeed && !needsBrake && remaining > (stopDist ? stopDist * 0.35 : 28),
       down: needsBrake || (remaining < (stopDist || 80) && this.speed > speedNear),
-      left: diff < -0.04,
-      right: diff > 0.04,
-      brakeMult: needsBrake ? 1.85 : 1,
+      left: diff < -0.035,
+      right: diff > 0.035,
+      brakeMult: needsBrake ? (kink > 0.5 ? 2.0 : 1.7) : 1,
       ers:false,
       drs:false,
       pit:false
@@ -3157,7 +3268,7 @@ class Kart {
         ers:false, drs:false, pit:false
       };
     }
-    return this._followPitLanePath(pl.path, this._pitExitPos, 126, 96, 70);
+    return this._followPitLanePath(pl.path, this._pitExitPos, 110, 78, 70);
   }
 
   _getPitEntryInput(trackData) {
@@ -3172,17 +3283,19 @@ class Kart {
         this._pitEntryConfirmed = true;
       }
 
-      let diffToEntry = Math.atan2(pl.entryPt.y - this.y, pl.entryPt.x - this.x) - this.angle;
+      // Aim at the first densified path point / entry — not a chord past the kink.
+      const pathAim = pl.path[Math.min(2, pl.path.length - 1)] || pl.entryPt;
+      let diffToEntry = Math.atan2(pathAim.y - this.y, pathAim.x - this.x) - this.angle;
       while (diffToEntry >  Math.PI) diffToEntry -= Math.PI * 2;
       while (diffToEntry < -Math.PI) diffToEntry += Math.PI * 2;
 
-      const needsBrakeEntry = (Math.abs(diffToEntry) > 0.92 && this.speed > 82) || (dEntry < 110 && this.speed > 58);
-      const holdSpeedEntry = dEntry > 190 ? 118 : (dEntry > 110 ? 92 : 64);
+      const needsBrakeEntry = (Math.abs(diffToEntry) > 0.85 && this.speed > 70) || (dEntry < 130 && this.speed > 52);
+      const holdSpeedEntry = dEntry > 220 ? 108 : (dEntry > 120 ? 78 : 54);
       return {
         up: this.speed < holdSpeedEntry && !needsBrakeEntry,
         down: needsBrakeEntry,
-        left: diffToEntry < -0.045,
-        right: diffToEntry > 0.045,
+        left: diffToEntry < -0.04,
+        right: diffToEntry > 0.04,
         brakeMult: needsBrakeEntry ? 1.8 : 1,
         ers:false,
         drs:false,
@@ -3190,8 +3303,8 @@ class Kart {
       };
     }
 
-    // Stage 2: follow the pit lane polyline exactly to the garage box.
-    return this._followPitLanePath(pl.path, pl.garagePos, 118, 42, 55);
+    // Stage 2: follow the densified pit lane polyline exactly to the garage box.
+    return this._followPitLanePath(pl.path, pl.garagePos, 96, 36, 50);
   }
 
   onTrack(td) {
@@ -3425,10 +3538,12 @@ class Kart {
     this.tyreWear = 0;
     // Rebuild speed/handling from scratch using stored base upgrade values
     // Re-apply weather + tyre combo
-    const savedBase = this._upgradeBase || {maxSpeed:469, turnRate:2.55, accel:304 * GLOBAL_ACCEL_MULT};
+    const savedBase = this._upgradeBase || {maxSpeed:469, turnRate:2.05, accel:304 * GLOBAL_ACCEL_MULT, grip:0.72};
     this.maxSpeed  = savedBase.maxSpeed;
     this.turnRate  = savedBase.turnRate;
     this.accel     = savedBase.accel || (304 * GLOBAL_ACCEL_MULT);
+    this.grip      = savedBase.grip == null ? 0.72 : savedBase.grip;
+    this._baseGrip = this.grip;
     this._baseAccel = this.accel;
     applyWeatherToKart(this, w, tyreId);
     this.flashTimer = 1.2;
@@ -4527,8 +4642,8 @@ function makeAIInput(track, difficulty, aiIndex) {
   // Ultra Easy/Easy/Medium are deliberately slow and cautious
   const sfBase  = {ultraeasy: 0.46, easy: 0.58, medium: 0.72, hard: 0.84, extreme: 0.94}[difficulty] || 0.72;
   const sf      = sfBase * 1.18;
-  // Lower curvK / shorter brDist = later, lighter braking into corners (straights unchanged).
-  const curvK   = {ultraeasy: 0.15, easy: 0.118, medium: 0.078, hard: 0.014, extreme: 0.003}[difficulty] || 0.090;
+  // Lower curvK a bit (more corner braking). Shorter brDist still avoids early panic.
+  const curvK   = {ultraeasy: 0.165, easy: 0.132, medium: 0.092, hard: 0.028, extreme: 0.012}[difficulty] || 0.100;
   const brBase  = {ultraeasy: 840, easy: 700, medium: 580, hard: 480, extreme: 300}[difficulty] || 580;
   const brDist  = brBase * (track.aiBrakeLookaheadScale || 1);
   
@@ -4616,6 +4731,7 @@ function makeAIInput(track, difficulty, aiIndex) {
   let _passCommitTimer = 0;
   let _steerFilter = 0;
   let _trainTimer = 0;
+  let _targetSpeedSmooth = null;
 
   const fn = function() {
     if (!kart) return { up:false, down:false, left:false, right:false, ers:false, drs:false };
@@ -4677,9 +4793,9 @@ function makeAIInput(track, difficulty, aiIndex) {
     }
 
     // ── SPEED TARGET ───────────────────────────────────
-    // Higher corner floors so AI carries more mid-corner speed without raising straight SF.
-    const curvFloor = {ultraeasy: 0.56, easy: 0.62, medium: 0.76, hard: 0.90, extreme: 0.985}[difficulty] || 0.66;
-    const curvFactor  = Math.max(curvFloor, 1.0 - maxCurv * effectiveCurvK * 8.2);
+    // Slightly lower corner carry than before — straights still use the same SF.
+    const curvFloor = {ultraeasy: 0.48, easy: 0.54, medium: 0.64, hard: 0.78, extreme: 0.88}[difficulty] || 0.60;
+    const curvFactor  = Math.max(curvFloor, 1.0 - maxCurv * effectiveCurvK * 9.4);
     const targetSpeed = k.maxSpeed * effectiveSF * curvFactor;
 
     // ── PURE-PURSUIT TARGET POINT ──────────────────────
@@ -4875,7 +4991,7 @@ function makeAIInput(track, difficulty, aiIndex) {
     // Soft edge penalty: only kick in very near the limit, and never cut more than ~10%.
     const edgePenalty = Math.max(0.90, 1.0 - Math.max(0, edgeNorm - 0.86) * 0.38);
     let safeTargetSpeed = targetSpeed * edgePenalty;
-    const momentumFloor = k.maxSpeed * (0.30 + cornerSeverity * 0.12);
+    const momentumFloor = k.maxSpeed * (0.26 + cornerSeverity * 0.10);
     safeTargetSpeed = Math.max(safeTargetSpeed, momentumFloor);
     if(trafficAhead && nearestTrafficArc < 120 && !projectedOffTrack && edgeNorm < 0.94) {
       safeTargetSpeed *= highSpeedBend ? 1.02 : (cornerExitWindow ? (1.10 + (_personality.exitAttack - 1) * 0.05) : 1.06);
@@ -4884,6 +5000,24 @@ function makeAIInput(track, difficulty, aiIndex) {
       const followBuffer = Math.max(6, Math.min(20, blockingCarArc * (0.08 + _personality.lanePatience * 0.015)));
       safeTargetSpeed = Math.min(safeTargetSpeed, Math.max(momentumFloor, blockingCarSpeed + followBuffer));
     }
+
+    // Smooth target speed so AI cannot instantly collapse pace on mild corners.
+    if(_targetSpeedSmooth === null) _targetSpeedSmooth = Math.max(k.speed, safeTargetSpeed);
+    const dropBlend = cornerSeverity > 0.55 ? 0.22 : (cornerSeverity > 0.28 ? 0.12 : 0.07);
+    const riseBlend = 0.18;
+    if(safeTargetSpeed < _targetSpeedSmooth) {
+      _targetSpeedSmooth += (safeTargetSpeed - _targetSpeedSmooth) * dropBlend;
+      // Hard cap on how far the target can fall per frame (~60fps).
+      const maxDrop = cornerSeverity > 0.55 ? 5.5 : (cornerSeverity > 0.28 ? 3.2 : 2.0);
+      _targetSpeedSmooth = Math.max(safeTargetSpeed, _targetSpeedSmooth - maxDrop);
+      // Also never command a drop larger than ~18% of current speed in one rethink on mild corners.
+      if(cornerSeverity < 0.40) {
+        _targetSpeedSmooth = Math.max(_targetSpeedSmooth, k.speed * 0.82);
+      }
+    } else {
+      _targetSpeedSmooth += (safeTargetSpeed - _targetSpeedSmooth) * riseBlend;
+    }
+    safeTargetSpeed = _targetSpeedSmooth;
 
     let needsBrake  = k.speed > safeTargetSpeed + (12 + cornerSeverity * 7);
     if(overshootRisk > 0.86 && k.speed > safeTargetSpeed + 14) needsBrake = true;
@@ -8966,11 +9100,14 @@ function applyUpgradesToKart(kart, player) {
   kart.maxSpeed = ((469 + devBonus.speed) * setup.speedMult) * GAME_SPEED_MULT;
   kart.accel    = (304 + devBonus.accel) * GLOBAL_ACCEL_MULT;
   kart.brakeForce = 620 + devBonus.braking;
-  kart.turnRate = (2.55 + devBonus.handling) * setup.turnMult;
+  // Lower base turn-in so grip/understeer model has room to bite at speed.
+  kart.turnRate = (2.05 + devBonus.handling * 0.85) * setup.turnMult;
   kart.offTrackMaxSpd = Math.max(30, 80 + devBonus.traction + setup.tractBonus) * GAME_SPEED_MULT;
+  kart.grip = Math.max(0.55, Math.min(1.15, 0.72 + setup.tractBonus * 0.004 + (devBonus.traction || 0) * 0.0015));
+  kart._baseGrip = kart.grip;
   kart._baseAccel = kart.accel;
   // Store raw values for pit stop tyre re-application
-  kart._upgradeBase = { maxSpeed: kart.maxSpeed, turnRate: kart.turnRate, accel: kart.accel };
+  kart._upgradeBase = { maxSpeed: kart.maxSpeed, turnRate: kart.turnRate, accel: kart.accel, grip: kart.grip };
 }
 
 function applyWeatherToKart(kart, weather, tyreId) {
@@ -8992,20 +9129,26 @@ function applyWeatherToKart(kart, weather, tyreId) {
     kart.maxSpeed  = kart.maxSpeed * 0.38;
     kart.turnRate  = kart.turnRate * 0.45;
     kart.friction  = 0.987 - 0.022;
+    kart.grip = Math.min(kart.grip == null ? 0.72 : kart.grip, 0.42);
     kart.tyreWrongWeather = true;
   } else if (isWet && tyre.dryOnly) {
     // Dry tyres in rain: severe aquaplaning, very slow
     kart.maxSpeed  = kart.maxSpeed * 0.42;
     kart.turnRate  = kart.turnRate * 0.40;
     kart.friction  = 0.987 - 0.025;
+    kart.grip = Math.min(kart.grip == null ? 0.72 : kart.grip, 0.38);
     kart.tyreWrongWeather = true;
   } else {
     const grip = wx.gripMult + tyre.gripBonus;
     kart.maxSpeed  = Math.max(100, kart.maxSpeed * (1 - wx.speedPen) + tyre.speedBonus);
     kart.turnRate  = kart.turnRate * grip;
     kart.friction  = 0.987 - (1 - grip) * 0.012;
+    // Map tyre/weather grip into the understeer model (dry med ≈ 0.72 baseline).
+    const baseG = kart.grip == null ? 0.72 : kart.grip;
+    kart.grip = Math.max(0.35, Math.min(1.15, baseG * (0.82 + grip * 0.22)));
     kart.tyreWrongWeather = false;
   }
+  kart._baseGrip = kart.grip;
   kart.baseMaxSpeed = kart.maxSpeed;
   kart.baseTurnRate = kart.turnRate;
 }
