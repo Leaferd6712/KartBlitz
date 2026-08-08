@@ -421,11 +421,13 @@ body{
 .pit-ui-actions{display:flex;justify-content:center;margin-top:16px;}
 .pit-ui-actions .btn{max-width:100%;}
 /* ── DEVICE PROMPT ──────────────────────────────── */
-#device-prompt{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.93);border:2px solid #00f5ff;border-radius:12px;padding:36px 56px;z-index:200;color:#fff;font-family:'Orbitron',sans-serif;font-size:13px;text-align:center;max-width:520px;width:520px;}
+#device-prompt-scrim{display:none;position:fixed;inset:0;z-index:199;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}
+#device-prompt-scrim.show{display:flex;}
+#device-prompt{display:block;position:relative;top:auto;left:auto;transform:none;background:rgba(0,0,0,0.93);border:2px solid #00f5ff;border-radius:12px;padding:36px 56px;z-index:200;color:#fff;font-family:'Orbitron',sans-serif;font-size:13px;text-align:center;max-width:520px;width:min(520px,94vw);box-sizing:border-box;}
 #device-prompt h2{color:#00f5ff;margin:0 0 12px;font-size:16px;letter-spacing:.1em;}
 #device-prompt p{opacity:.75;margin:0 0 24px;font-size:12px;line-height:1.8;font-family:sans-serif;word-wrap:break-word;}
-#device-prompt .dp-btns{display:flex;gap:16px;justify-content:center;}
-#device-prompt .dp-btns .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.08em;white-space:nowrap;}
+#device-prompt .dp-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+#device-prompt .dp-btns .btn{clip-path:none;padding:11px 22px;font-size:12px;letter-spacing:.08em;white-space:nowrap;flex:0 1 auto;}
 /* ── CONFETTI CANVAS ────────────────────────────── */
 #confetti-canvas{display:none;position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:300;}
 /* ── AI DIFFICULTY ──────────────────────────────── */
@@ -1121,7 +1123,7 @@ body::after{
 
 #shootout-difficulty,
 #ai-difficulty,
-#device-prompt,
+#device-prompt-scrim,
 #pause-overlay,
 #pit-ui-overlay{
   backdrop-filter:blur(8px);
@@ -1588,13 +1590,15 @@ body::after{
   <div class="cd-num" id="cd0" style="font-size:140px;color:#ffd700;">GO!</div>
 </div>
 
-<!-- DEVICE PROMPT -->
-<div id="device-prompt">
-  <h2>CHOOSE YOUR CONTROLS</h2>
-  <p>Use keyboard, or enable on-screen touch controls?</p>
-  <div class="dp-btns">
-    <button class="btn btn-cyan" onclick="setDeviceMode(true)">TOUCH CONTROLS</button>
-    <button class="btn btn-orange" onclick="setDeviceMode(false)">KEYBOARD ONLY</button>
+<!-- DEVICE PROMPT — shown every time the main menu loads -->
+<div id="device-prompt-scrim" aria-hidden="true">
+  <div id="device-prompt" role="dialog" aria-modal="true" aria-labelledby="device-prompt-title">
+    <h2 id="device-prompt-title">CHOOSE YOUR CONTROLS</h2>
+    <p>Use keyboard, or enable on-screen touch controls?</p>
+    <div class="dp-btns">
+      <button class="btn btn-cyan" onclick="initAudio();playUIClick();setDeviceMode(true)">TOUCH CONTROLS</button>
+      <button class="btn btn-orange" onclick="initAudio();playUIClick();setDeviceMode(false)">KEYBOARD ONLY</button>
+    </div>
   </div>
 </div>
 
@@ -2091,6 +2095,48 @@ const CG = (() => {
 })();
 
 // ── SCREEN ──────────────────────────────────────────────
+function isDevicePromptOpen() {
+  const scrim = document.getElementById('device-prompt-scrim');
+  return !!(scrim && scrim.classList.contains('show'));
+}
+function hideDeviceModePrompt() {
+  const scrim = document.getElementById('device-prompt-scrim');
+  if(scrim) {
+    scrim.classList.remove('show');
+    scrim.setAttribute('aria-hidden', 'true');
+  }
+}
+function showDeviceModePrompt() {
+  const preferTouch = (navigator.maxTouchPoints > 0) ||
+    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  let saved = null;
+  try { saved = localStorage.getItem('kartblitz_devicemode'); } catch(e) { saved = null; }
+  // Keep last preference as a working default until they confirm again.
+  if(saved === 'touch') {
+    touchMode = true;
+    if(typeof setupTouchControls === 'function') setupTouchControls();
+  } else if(saved === 'keyboard') {
+    touchMode = false;
+  }
+  const title = document.getElementById('device-prompt-title') || document.querySelector('#device-prompt h2');
+  const body = document.querySelector('#device-prompt p');
+  if(title) title.textContent = preferTouch ? 'TOUCH CONTROLS AVAILABLE' : 'CHOOSE YOUR CONTROLS';
+  if(body) {
+    const last = saved === 'touch' ? 'Touch' : saved === 'keyboard' ? 'Keyboard' : null;
+    if(last) {
+      body.textContent = `Last used: ${last}. Pick touch or keyboard for this session — you can still change it later in Settings.`;
+    } else if(preferTouch) {
+      body.textContent = 'Enable on-screen joysticks? Versus uses face-to-face pads. You can switch anytime in Settings.';
+    } else {
+      body.textContent = 'Use keyboard, or enable on-screen joysticks? You can switch anytime in Settings.';
+    }
+  }
+  const scrim = document.getElementById('device-prompt-scrim');
+  if(scrim) {
+    scrim.classList.add('show');
+    scrim.setAttribute('aria-hidden', 'false');
+  }
+}
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   canvas.style.display = 'none';
@@ -2099,6 +2145,7 @@ function showScreen(id) {
   if(pitUi) { pitUi.style.display = 'none'; pitUi.dataset.signature = ''; clearPitUiLayoutClasses(pitUi); }
   showTouchOverlay(false);
   updateLandscapeHint(false);
+  if(id !== 'menu') hideDeviceModePrompt();
   const _adEl = document.getElementById('ai-difficulty'); if(_adEl) _adEl.style.display='none';
   const _soEl = document.getElementById('shootout-difficulty'); if(_soEl) _soEl.style.display='none';
   const el = document.getElementById('screen-' + id);
@@ -2112,6 +2159,8 @@ function showScreen(id) {
     updateCurrencyDisplays(pd);
     if(typeof window.mountMenuCarStage === 'function') window.mountMenuCarStage();
     if(typeof window.buildMenuPaintStrip === 'function') window.buildMenuPaintStrip();
+    // Always re-ask touch vs keyboard when landing on the main screen.
+    showDeviceModePrompt();
   } else if(typeof window.pauseMenuCarStage === 'function') {
     window.pauseMenuCarStage();
   }
@@ -2125,25 +2174,9 @@ function showScreen(id) {
 window.addEventListener('load', () => {
   showScreen('menu');
 });
-// Show device/input selection prompt only once — persist choice in localStorage
-(function(){
-  const saved = localStorage.getItem('kartblitz_devicemode');
-  if(saved !== null) {
-    setDeviceMode(saved === 'touch');
-  } else {
-    const preferTouch = (navigator.maxTouchPoints > 0) ||
-      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-    const title = document.querySelector('#device-prompt h2');
-    const body = document.querySelector('#device-prompt p');
-    if(title) title.textContent = preferTouch ? 'TOUCH CONTROLS AVAILABLE' : 'CHOOSE YOUR CONTROLS';
-    if(body) body.textContent = preferTouch
-      ? 'Enable on-screen joysticks? You can switch anytime in Settings.'
-      : 'Use keyboard, or enable on-screen joysticks? You can switch anytime in Settings.';
-    document.getElementById('device-prompt').style.display = 'block';
-  }
-})();
 document.addEventListener('keydown', e => {
   if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) return;
+  if (isDevicePromptOpen()) return;
   if (e.key === 'Enter' && document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
     startQuickRace();
   }
@@ -3273,6 +3306,8 @@ function finalizeTrack(tr) {
   }
   // checkpoint lines (perpendicular to spline)
   // Optional sfGateHalfWidth overrides half-length of S/F (index 0) only.
+  // Visual endpoints (x1/y1/x2/y2) stay at the authored/checkered length.
+  // S/F also stores longer dx*/dy* detection endpoints so pit-lane crossings still count.
   const sfHwAuthored = (tr.sfGateHalfWidth != null && isFinite(tr.sfGateHalfWidth) && tr.sfGateHalfWidth > 0)
     ? tr.sfGateHalfWidth : null;
   tr.cpLines = tr.cpFracs.map((frac, cpIdx) => {
@@ -3283,11 +3318,20 @@ function finalizeTrack(tr) {
     const perp = {x: -tang.y, y: tang.x};
     const hw = (cpIdx === 0 && sfHwAuthored != null) ? sfHwAuthored : (tr.trackWidth * 0.7);
     const cx = spl[idx].x, cy = spl[idx].y;
+    let detectHw = hw;
+    if(cpIdx === 0) {
+      // Reach well past the track edge into the pit lane without changing the checkered visual.
+      const pitW = (tr.pitLane && tr.pitLane.width) ? tr.pitLane.width : 60;
+      const pitReach = tr.pitLane ? Math.max(tr.trackWidth * 1.4, pitW + 180) : tr.trackWidth * 0.55;
+      detectHw = Math.max(hw * 2.6, hw + pitReach);
+    }
     return {
       idx,
       cx, cy,
       x1: cx + perp.x*hw, y1: cy + perp.y*hw,
-      x2: cx - perp.x*hw, y2: cy - perp.y*hw
+      x2: cx - perp.x*hw, y2: cy - perp.y*hw,
+      dx1: cx + perp.x*detectHw, dy1: cy + perp.y*detectHw,
+      dx2: cx - perp.x*detectHw, dy2: cy - perp.y*detectHw
     };
   });
   // Build a dedicated pit-lane start/finish gate so laps can count while in pit lane.
@@ -3312,7 +3356,12 @@ function finalizeTrack(tr) {
       const len = Math.hypot(dx, dy) || 1;
       const tx = dx / len, ty = dy / len;
       const perp = { x: -ty, y: tx };
-      const hw = sfHwAuthored != null ? sfHwAuthored : ((tr.pitLane.width || 60) * 0.78);
+      const pitW = tr.pitLane.width || 60;
+      const hw = Math.max(
+        sfHwAuthored != null ? sfHwAuthored : 0,
+        pitW * 2.2,
+        140
+      );
       tr.pitSfGate = {
         x1: best.qx + perp.x * hw, y1: best.qy + perp.y * hw,
         x2: best.qx - perp.x * hw, y2: best.qy - perp.y * hw
@@ -4409,12 +4458,21 @@ class Kart {
     const cps = td.cpLines;
     const numCps = cps.length; // index 0 = S/F, 1..n-1 = intermediates
     const pitGate = td.pitSfGate;
-    const canUsePitGate = !!pitGate && (this._onPitLane || this.inPit || this.pitPhase !== null);
+    // Allow pit S/F detection whenever near/on pit path — not only while formally "in pit".
+    // This catches lap completions when diving into pits across the extended gate.
+    const canUsePitGate = !!pitGate && (
+      this._onPitLane || this.inPit || this.pitPhase !== null || this._pitIntentActive || this._pitExiting
+    );
     const crossedPitSf = canUsePitGate && linesCross(this.prevX,this.prevY,this.x,this.y, pitGate.x1,pitGate.y1,pitGate.x2,pitGate.y2);
 
     for(let i = 0; i < numCps; i++) {
       const cp = cps[i];
-      const crossedMain = linesCross(this.prevX,this.prevY,this.x,this.y, cp.x1,cp.y1,cp.x2,cp.y2);
+      // S/F uses longer invisible detection endpoints when present; visuals stay on x1/y1/x2/y2.
+      const gx1 = (i === 0 && cp.dx1 != null) ? cp.dx1 : cp.x1;
+      const gy1 = (i === 0 && cp.dy1 != null) ? cp.dy1 : cp.y1;
+      const gx2 = (i === 0 && cp.dx2 != null) ? cp.dx2 : cp.x2;
+      const gy2 = (i === 0 && cp.dy2 != null) ? cp.dy2 : cp.y2;
+      const crossedMain = linesCross(this.prevX,this.prevY,this.x,this.y, gx1,gy1,gx2,gy2);
       if(i !== 0 && !crossedMain) continue;
       if(i === 0 && !crossedMain && !crossedPitSf) continue;
 
@@ -9025,6 +9083,7 @@ function selectTrackStart(idx) {
 
 /** One-click path for CrazyGames Full Launch (≤1 click into gameplay). */
 function startQuickRace() {
+  if(typeof isDevicePromptOpen === 'function' && isDevicePromptOpen()) return;
   initAudio();
   playUIClick();
   currentMode = 'ai';
@@ -9173,8 +9232,7 @@ function resetTouchDrive(player) {
 
 function setDeviceMode(isMobile) {
   touchMode = !!isMobile;
-  const prompt = document.getElementById('device-prompt');
-  if(prompt) prompt.style.display = 'none';
+  hideDeviceModePrompt();
   try { localStorage.setItem('kartblitz_devicemode', isMobile ? 'touch' : 'keyboard'); } catch(e){}
   if(isMobile) setupTouchControls();
   else if(touchState) {
@@ -9189,6 +9247,7 @@ function setDeviceMode(isMobile) {
   } catch(e) {
     showTouchOverlay(false);
   }
+  if(typeof refreshSettingsPane === 'function') refreshSettingsPane();
 }
 
 function updateLandscapeHint(raceVisible) {
@@ -9228,6 +9287,18 @@ function showTouchOverlay(visible) {
     scaleTouchOverlay();
   } else {
     ov.classList.remove('touch-versus-face');
+    // Clear stuck stick / button state if overlay was hidden mid-press.
+    _stickPointers.p1 = null;
+    _stickPointers.p2 = null;
+    if(touchState) {
+      resetTouchDrive('p1');
+      resetTouchDrive('p2');
+      touchState.p1.ers = touchState.p1.drs = touchState.p1.pit = false;
+      touchState.p2.ers = touchState.p2.drs = touchState.p2.pit = false;
+    }
+    try {
+      document.querySelectorAll('#touch-overlay .touch-btn.pressed').forEach(el => el.classList.remove('pressed'));
+    } catch(e) {}
   }
   try { updateLandscapeHint(show); } catch(e) {}
 }
@@ -9298,10 +9369,15 @@ function setupTouchControls() {
     const player = el.getAttribute('data-player');
     const action = el.getAttribute('data-action');
     if(!player || !action) return;
+    let activePointer = null;
     const setPressed = (on) => {
       if(action === 'pause') {
-        if(on) { el.classList.add('pressed'); pauseGame(); }
-        else el.classList.remove('pressed');
+        if(on) {
+          el.classList.add('pressed');
+          pauseGame();
+        } else {
+          el.classList.remove('pressed');
+        }
         return;
       }
       const ts = touchState[player];
@@ -9311,13 +9387,23 @@ function setupTouchControls() {
     };
     el.addEventListener('pointerdown', e => {
       e.preventDefault();
+      e.stopPropagation();
+      activePointer = e.pointerId;
       try { el.setPointerCapture(e.pointerId); } catch(err){}
       setPressed(true);
     }, {passive:false});
-    const end = e => { e.preventDefault(); setPressed(false); };
+    const end = e => {
+      if(activePointer !== null && e.pointerId !== activePointer) return;
+      e.preventDefault();
+      activePointer = null;
+      setPressed(false);
+    };
     el.addEventListener('pointerup', end, {passive:false});
     el.addEventListener('pointercancel', end, {passive:false});
-    el.addEventListener('lostpointercapture', () => setPressed(false));
+    el.addEventListener('lostpointercapture', () => {
+      activePointer = null;
+      setPressed(false);
+    });
   }
 
   bindStick('p1');
