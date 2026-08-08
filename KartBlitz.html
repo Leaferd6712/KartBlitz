@@ -371,22 +371,35 @@ body{
 /* ── TOUCH CONTROLS ─────────────────────────────── */
 #touch-overlay{display:none;position:fixed;top:0;left:0;width:1280px;height:720px;pointer-events:none;z-index:99;transform-origin:top left;}
 .touch-pad{position:absolute;inset:0;pointer-events:none;}
-.touch-stick{position:absolute;width:150px;height:150px;left:48px;bottom:36px;pointer-events:all;touch-action:none;user-select:none;-webkit-user-select:none;}
+.touch-stick{position:absolute;width:150px;height:150px;left:120px;bottom:42px;pointer-events:all;touch-action:none;user-select:none;-webkit-user-select:none;}
 .touch-stick-base{position:absolute;inset:0;border-radius:50%;background:rgba(0,245,255,0.10);border:2px solid rgba(0,245,255,0.40);box-shadow:inset 0 0 24px rgba(0,245,255,0.08);}
+.touch-stick-base::before,.touch-stick-base::after{content:'';position:absolute;background:rgba(0,245,255,0.28);}
+.touch-stick-base::before{left:18%;right:18%;top:50%;height:2px;margin-top:-1px;}
+.touch-stick-base::after{top:18%;bottom:18%;left:50%;width:2px;margin-left:-1px;opacity:.35;}
 .touch-stick-knob{position:absolute;width:64px;height:64px;left:50%;top:50%;margin-left:-32px;margin-top:-32px;border-radius:50%;background:rgba(0,245,255,0.38);border:2px solid rgba(0,245,255,0.75);box-shadow:0 0 16px rgba(0,245,255,0.25);pointer-events:none;will-change:transform;}
-.touch-actions{position:absolute;right:28px;bottom:40px;display:flex;gap:12px;align-items:center;pointer-events:none;}
-.touch-btn{width:78px;height:58px;background:rgba(0,245,255,0.15);border:2px solid rgba(0,245,255,0.45);border-radius:12px;color:#fff;font-size:13px;font-family:Orbitron,sans-serif;line-height:1.1;display:flex;align-items:center;justify-content:center;pointer-events:all;user-select:none;-webkit-user-select:none;touch-action:none;transition:background .1s;text-align:center;}
+.touch-pedals{position:absolute;right:28px;bottom:36px;display:flex;gap:14px;align-items:flex-end;pointer-events:none;}
+.touch-pedal{width:78px;height:118px;border-radius:14px 14px 18px 18px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;padding:0 6px 14px;box-sizing:border-box;pointer-events:all;user-select:none;-webkit-user-select:none;touch-action:none;transition:background .1s,border-color .1s,transform .08s;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:.06em;color:#fff;text-align:center;line-height:1.15;}
+.touch-pedal-brake{background:rgba(255,107,53,0.16);border:2px solid rgba(255,107,53,0.55);}
+.touch-pedal-brake.pressed{background:rgba(255,107,53,0.48);border-color:#ff6b35;transform:translateY(3px);}
+.touch-pedal-accel{background:rgba(0,245,255,0.16);border:2px solid rgba(0,245,255,0.55);}
+.touch-pedal-accel.pressed{background:rgba(0,245,255,0.48);border-color:#00f5ff;transform:translateY(3px);}
+.touch-pedal-icon{font-size:22px;line-height:1;opacity:.9;}
+.touch-actions{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;pointer-events:none;}
+.touch-btn{width:72px;height:48px;background:rgba(0,245,255,0.15);border:2px solid rgba(0,245,255,0.45);border-radius:12px;color:#fff;font-size:12px;font-family:Orbitron,sans-serif;line-height:1.1;display:flex;align-items:center;justify-content:center;pointer-events:all;user-select:none;-webkit-user-select:none;touch-action:none;transition:background .1s;text-align:center;}
 .touch-btn:active,.touch-btn.pressed{background:rgba(0,245,255,0.42);}
-.touch-btn-pause{width:56px;height:56px;border-radius:50%;font-size:16px;background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.5);color:#ffd700;}
+.touch-btn-pause{width:48px;height:48px;border-radius:50%;font-size:15px;background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.5);color:#ffd700;}
 .touch-btn-pause.pressed{background:rgba(255,215,0,0.35);}
 #touch-pad-p2{display:none;}
 #touch-overlay.touch-versus-face #touch-pad-p1{top:auto;bottom:0;left:0;right:0;height:50%;}
 #touch-overlay.touch-versus-face #touch-pad-p2{display:block;top:0;bottom:auto;left:0;right:0;height:50%;transform:rotate(180deg);transform-origin:center center;}
-#touch-overlay.touch-versus-face .touch-stick{width:120px;height:120px;left:36px;bottom:18px;}
-#touch-overlay.touch-versus-face .touch-stick-knob{width:52px;height:52px;margin-left:-26px;margin-top:-26px;}
-#touch-overlay.touch-versus-face .touch-actions{right:20px;bottom:18px;gap:8px;}
-#touch-overlay.touch-versus-face .touch-btn{width:68px;height:48px;font-size:11px;}
-#touch-overlay.touch-versus-face .touch-btn-pause{width:48px;height:48px;font-size:14px;}
+#touch-overlay.touch-versus-face .touch-stick{width:110px;height:110px;left:70px;bottom:16px;}
+#touch-overlay.touch-versus-face .touch-stick-knob{width:48px;height:48px;margin-left:-24px;margin-top:-24px;}
+#touch-overlay.touch-versus-face .touch-pedals{right:18px;bottom:14px;gap:10px;}
+#touch-overlay.touch-versus-face .touch-pedal{width:64px;height:92px;font-size:10px;padding-bottom:10px;border-radius:12px 12px 14px 14px;}
+#touch-overlay.touch-versus-face .touch-pedal-icon{font-size:18px;}
+#touch-overlay.touch-versus-face .touch-actions{bottom:10px;gap:8px;}
+#touch-overlay.touch-versus-face .touch-btn{width:58px;height:40px;font-size:10px;}
+#touch-overlay.touch-versus-face .touch-btn-pause{width:40px;height:40px;font-size:13px;}
 #touch-overlay.touch-versus-face #touch-btn-pause-p2{display:none;}
 #rotate-hint{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;background:rgba(0,0,0,.82);pointer-events:none;}
 #rotate-hint.show{display:flex;}
@@ -1337,7 +1350,7 @@ body::after{
       </div>
       <div class="menu-utility-card">
         <div class="menu-utility-title">Desktop Layout</div>
-        <div class="menu-utility-copy">Keyboard: P1 WASD, P2 arrows. Touch: on-screen joysticks — versus uses face-to-face seating.</div>
+        <div class="menu-utility-copy">Keyboard: P1 WASD, P2 arrows. Touch: steer stick + gas/brake pedals — versus uses face-to-face seating.</div>
       </div>
     </div>
   </div>
@@ -1609,6 +1622,10 @@ body::after{
       <div class="touch-stick-base"></div>
       <div class="touch-stick-knob" id="touch-knob-p1"></div>
     </div>
+    <div class="touch-pedals">
+      <div class="touch-pedal touch-pedal-brake" data-action="brake" data-player="p1"><span class="touch-pedal-icon">■</span>BRAKE</div>
+      <div class="touch-pedal touch-pedal-accel" data-action="throttle" data-player="p1"><span class="touch-pedal-icon">▲</span>GAS</div>
+    </div>
     <div class="touch-actions">
       <div class="touch-btn" data-action="ers" data-player="p1">⚡ERS</div>
       <div class="touch-btn" data-action="drs" data-player="p1">💨DRS</div>
@@ -1620,6 +1637,10 @@ body::after{
     <div class="touch-stick" id="touch-stick-p2" data-player="p2">
       <div class="touch-stick-base"></div>
       <div class="touch-stick-knob" id="touch-knob-p2"></div>
+    </div>
+    <div class="touch-pedals">
+      <div class="touch-pedal touch-pedal-brake" data-action="brake" data-player="p2"><span class="touch-pedal-icon">■</span>BRAKE</div>
+      <div class="touch-pedal touch-pedal-accel" data-action="throttle" data-player="p2"><span class="touch-pedal-icon">▲</span>GAS</div>
     </div>
     <div class="touch-actions">
       <div class="touch-btn" data-action="ers" data-player="p2">⚡ERS</div>
@@ -8767,7 +8788,7 @@ function showCountdown(n) {
     if (n === 3 && getRaceCount() <= 3) {
       if (touchMode) {
         document.getElementById('ftue-hint-text').innerHTML =
-          `🕹️ JOYSTICK: steer · throttle/brake &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ ERS · 💨 DRS · 🔧 PIT on the right &nbsp;&nbsp;|&nbsp;&nbsp; ❚❚ pause`;
+          `🕹️ STEER stick &nbsp;&nbsp;|&nbsp;&nbsp; ▲ GAS · ■ BRAKE pedals &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ ERS · 💨 DRS · 🔧 PIT · ❚❚ bottom`;
       } else {
         const ersKey = keyLabel(BINDINGS.p1.ers).toUpperCase();
         const drsKey = keyLabel(BINDINGS.p1.drs).toUpperCase();
@@ -9222,6 +9243,13 @@ function isVersusFaceToFace() {
   try { return !!(touchMode && race && race.mode === 'versus'); } catch(e) { return false; }
 }
 
+function resetTouchSteer(player) {
+  const ts = touchState[player];
+  if(!ts) return;
+  ts.steer = 0;
+  const knob = document.getElementById(player === 'p1' ? 'touch-knob-p1' : 'touch-knob-p2');
+  if(knob) knob.style.transform = 'translate(0px, 0px)';
+}
 function resetTouchDrive(player) {
   const ts = touchState[player];
   if(!ts) return;
@@ -9297,7 +9325,7 @@ function showTouchOverlay(visible) {
       touchState.p2.ers = touchState.p2.drs = touchState.p2.pit = false;
     }
     try {
-      document.querySelectorAll('#touch-overlay .touch-btn.pressed').forEach(el => el.classList.remove('pressed'));
+      document.querySelectorAll('#touch-overlay .touch-btn.pressed, #touch-overlay .touch-pedal.pressed').forEach(el => el.classList.remove('pressed'));
     } catch(e) {}
   }
   try { updateLandscapeHint(show); } catch(e) {}
@@ -9323,16 +9351,14 @@ function setupTouchControls() {
       dx = -dx;
       dy = -dy;
     }
-    const mag = Math.hypot(dx, dy);
-    if(mag > 1) { dx /= mag; dy /= mag; }
+    // Steer-only stick: ignore vertical for drive input; keep a little visual give on Y.
+    const magX = Math.abs(dx);
+    if(magX > 1) dx = Math.sign(dx);
+    dy = Math.max(-0.35, Math.min(0.35, dy * 0.25));
     const dead = TOUCH_DEADZONE;
     const ts = touchState[player];
-    const ax = Math.abs(dx) < dead ? 0 : (dx - Math.sign(dx) * dead) / (1 - dead);
-    const ay = Math.abs(dy) < dead ? 0 : (dy - Math.sign(dy) * dead) / (1 - dead);
+    const ax = magX < dead ? 0 : (dx - Math.sign(dx) * dead) / (1 - dead);
     ts.steer = Math.max(-1, Math.min(1, ax));
-    // Screen Y down is positive; stick up (negative dy) = throttle
-    ts.throttle = ay < 0 ? Math.min(1, -ay) : 0;
-    ts.brake = ay > 0 ? Math.min(1, ay) : 0;
     const knob = document.getElementById(player === 'p1' ? 'touch-knob-p1' : 'touch-knob-p2');
     if(knob) {
       const knobSize = knob.offsetWidth || 64;
@@ -9359,7 +9385,7 @@ function setupTouchControls() {
       if(_stickPointers[player] !== e.pointerId) return;
       e.preventDefault();
       _stickPointers[player] = null;
-      resetTouchDrive(player);
+      resetTouchSteer(player);
     };
     stickEl.addEventListener('pointerup', end, {passive:false});
     stickEl.addEventListener('pointercancel', end, {passive:false});
@@ -9378,6 +9404,13 @@ function setupTouchControls() {
         } else {
           el.classList.remove('pressed');
         }
+        return;
+      }
+      if(action === 'throttle' || action === 'brake') {
+        const ts = touchState[player];
+        if(!ts) return;
+        ts[action] = on ? 1 : 0;
+        el.classList.toggle('pressed', !!on);
         return;
       }
       const ts = touchState[player];
@@ -9408,7 +9441,7 @@ function setupTouchControls() {
 
   bindStick('p1');
   bindStick('p2');
-  overlay.querySelectorAll('.touch-btn').forEach(bindActionBtn);
+  overlay.querySelectorAll('.touch-btn, .touch-pedal').forEach(bindActionBtn);
 
   window.addEventListener('resize', () => {
     scaleTouchOverlay();
@@ -10514,7 +10547,7 @@ function buildSettingsPane(){
   pane.innerHTML = `
     <div class="howto-section" style="width:min(560px,94vw);">
       <div class="howto-heading">🎮 CONTROL MODE</div>
-      <p>Keyboard uses remappable bindings. Touch enables on-screen joysticks (face-to-face layout in 2-player).</p>
+      <p>Keyboard uses remappable bindings. Touch uses a steer stick, gas/brake pedals, and bottom action buttons (face-to-face in 2-player).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;">
         <button class="key-btn${!touchMode?' key-btn-active':''}" onclick="setDeviceMode(false);playUIClick();buildSettingsPane();">KEYBOARD</button>
         <button class="key-btn${touchMode?' key-btn-active':''}" onclick="setDeviceMode(true);playUIClick();buildSettingsPane();">TOUCH</button>
@@ -10547,7 +10580,7 @@ function buildSettingsPane(){
       <div class="howto-heading">🎮 QUICK TIPS</div>
       <div class="info-kv"><span class="info-k">QUICK RACE</span><span class="info-v">One click from the title screen into a medium AI race.</span></div>
       <div class="info-kv"><span class="info-k">PAUSE</span><span class="info-v">Press Esc, or the pause button in touch mode.</span></div>
-      <div class="info-kv"><span class="info-k">TOUCH</span><span class="info-v">Joystick steers and throttles; switch mode anytime in Settings.</span></div>
+      <div class="info-kv"><span class="info-k">TOUCH</span><span class="info-v">Steer stick + gas/brake pedals; ERS/DRS/PIT/pause sit along the bottom. Switch anytime in Settings.</span></div>
     </div>
   `;
 }
