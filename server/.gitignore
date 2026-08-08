@@ -1,0 +1,6 @@
+scores.db
+scores.db-*
+__pycache__/
+.venv/
+venv/
+*.pyc

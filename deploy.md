@@ -1,56 +1,104 @@
-# Deploying KartBlitz
+# KartBlitz — laptop leaderboard backend
 
-KartBlitz is mostly a single HTML file. The menu/garage cover car loads a Three.js GLB beside it. Three.js and fonts load from CDNs.
+Your game is already on **Netlify**. This guide is only how to run the **score API on your laptop** so the shared leaderboard works.
 
-## Required files
+Players use the Netlify URL. Scores only sync while this laptop API + tunnel are running.
 
-| File | Role |
-|------|------|
-| `KartBlitz.html` | The game |
-| `rb6.glb` | Menu/garage 3D cover car (~3.9 MB) |
+## What you need
 
-Optional for development only (not needed to play/deploy the game):
+- Python 3 on PATH (`python --version` works in Command Prompt)
+- `cloudflared` (you already have it at something like `C:\Users\663208\Downloads\Applications\cloudflared-windows-amd64.exe`)
+- This project folder, especially `server/app.py`
+- In `KartBlitz.html` on Netlify, `LB_API_BASE` must match your **current** tunnel URL (no trailing slash)
 
-- `Old Track Editor/`
-- `rb6_dribble-main/` (source demo for the GLB)
-- `LICENSE`
+Example:
 
-## Local play
-
-From the project folder, start any static server, then open the URL it prints.
-
-**Python:**
-
-```bash
-python -m http.server 8000
+```js
+const LB_API_BASE = 'https://casinos-theaters-agencies-boards.trycloudflare.com';
 ```
 
-Then open: `http://localhost:8000/KartBlitz.html`
+If the tunnel URL changes, update that line and **redeploy Netlify**.
 
-**Node (npx):**
+## Every time you want the leaderboard online
 
-```bash
-npx --yes serve .
+### 1. Start the API
+
+Open Command Prompt:
+
+```bat
+cd C:\Users\663208\Downloads\KartBlitz\server
+python app.py
 ```
 
-**VS Code / Cursor:** use the “Live Server” extension and open `KartBlitz.html` through it.
+Leave this window open. You should see something like:
 
-Opening over `http://`/`https://` is preferred so CDN modules and `rb6.glb` load reliably; some browsers restrict ES modules on `file://`.
+```text
+KartBlitz leaderboard serving on http://localhost:8787
+```
 
-## Deploy to the web
+Quick check in a browser: http://localhost:8787/api/health  
+Should show: `{"ok": true, ...}`
 
-Upload/serve `KartBlitz.html` **and** `rb6.glb` in the same directory (rename the HTML to `index.html` if the host expects that).
+### 2. Start the Cloudflare tunnel
 
-### GitHub Pages / Netlify / Cloudflare Pages
+Open a **second** Command Prompt (do not close the first):
 
-Publish the HTML as a static site. No build command needed.
+```bat
+"C:\Users\663208\Downloads\Applications\cloudflared-windows-amd64.exe" tunnel --url http://localhost:8787
+```
 
-### itch.io / CrazyGames / other portals
+Wait for the box that says **Your quick Tunnel has been created!** and copy the URL, for example:
 
-Upload `KartBlitz.html` (or zip it alone) as an HTML project and set it as the embed entry file.
+```text
+https://something-random.trycloudflare.com
+```
 
-## Checklist
+Leave this window open too.
 
-- [ ] `KartBlitz.html` is the entry page
-- [ ] You open the game over `http://` or `https://` when possible
-- [ ] Browser console shows no CDN / module load errors for Three.js
+### 3. Match Netlify to the tunnel URL
+
+1. Open `KartBlitz.html` (the copy you deploy to Netlify).
+2. Set:
+
+```js
+const LB_API_BASE = 'https://YOUR-CURRENT-TUNNEL-URL';
+```
+
+3. Redeploy that file to Netlify (keep `rb6.glb` in the same Netlify folder).
+
+Skip this step only if `LB_API_BASE` already equals today’s tunnel URL.
+
+### 4. Play / share
+
+- Share your **Netlify** site URL.
+- On the Leaderboard screen it should say **ONLINE · SHARED LEADERBOARD**.
+- If it says **OFFLINE**, the API or tunnel is down, or `LB_API_BASE` is wrong.
+
+## Keep both windows open
+
+| Window | Role |
+|--------|------|
+| `python app.py` | Stores scores in `server/scores.db` |
+| `cloudflared ...` | Lets the internet reach your laptop |
+
+Also:
+
+- Keep the laptop **plugged in and awake** (sleep kills the board).
+- Closing either window = shared leaderboard goes offline (game on Netlify still loads).
+
+## Optional: start script
+
+You can run `server/start-leaderboard.bat` to open the API. The tunnel still needs `cloudflared` on PATH, or start it manually with the full `.exe` path as above.
+
+## Useful checks
+
+| Check | URL |
+|-------|-----|
+| Local API | http://localhost:8787/api/health |
+| Public API (via tunnel) | `https://YOUR-TUNNEL-URL/api/health` |
+
+Both should return `{"ok": true, ...}`.
+
+## Stopping
+
+Press `Ctrl+C` in each Command Prompt window, or just close them.

@@ -441,6 +441,21 @@ body{
 #device-prompt p{opacity:.75;margin:0 0 24px;font-size:12px;line-height:1.8;font-family:sans-serif;word-wrap:break-word;}
 #device-prompt .dp-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
 #device-prompt .dp-btns .btn{clip-path:none;padding:11px 22px;font-size:12px;letter-spacing:.08em;white-space:nowrap;flex:0 1 auto;}
+#username-prompt-scrim{display:none;position:fixed;inset:0;z-index:220;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}
+#username-prompt-scrim.show{display:flex;}
+#username-prompt{display:block;position:relative;background:rgba(0,0,0,0.94);border:2px solid #00f5ff;border-radius:12px;padding:36px 48px;z-index:221;color:#fff;font-family:'Orbitron',sans-serif;font-size:13px;text-align:center;max-width:480px;width:min(480px,94vw);box-sizing:border-box;}
+#username-prompt h2{color:#00f5ff;margin:0 0 10px;font-size:16px;letter-spacing:.12em;}
+#username-prompt p{opacity:.75;margin:0 0 18px;font-size:12px;line-height:1.7;font-family:'Rajdhani',sans-serif;}
+#username-prompt .name-input{width:min(280px,80vw);letter-spacing:.12em;text-transform:none;font-size:18px;}
+#username-prompt .up-error{min-height:18px;margin:10px 0 14px;font-size:12px;color:#f87171;font-family:'Rajdhani',sans-serif;}
+#username-prompt .dp-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+#menu-username-chip{position:absolute;top:18px;left:18px;z-index:6;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:min(420px,70vw);}
+#menu-username-chip .menu-currency-chip{cursor:default;}
+#menu-username-chip .btn{clip-path:none;padding:7px 14px;font-size:10px;}
+.lb-status{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.12em;text-align:center;margin:8px 0 4px;opacity:.7;}
+.lb-status.online{color:#4ade80;}
+.lb-status.offline{color:#fbbf24;}
+.lb-status.loading{color:var(--cyan);}
 /* ── CONFETTI CANVAS ────────────────────────────── */
 #confetti-canvas{display:none;position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:300;}
 /* ── AI DIFFICULTY ──────────────────────────────── */
@@ -1148,6 +1163,7 @@ body::after{
 }
 
 #device-prompt,
+#username-prompt,
 .pit-ui-card{
   border-radius:26px;
   border-color:rgba(0,245,255,0.28);
@@ -1354,6 +1370,10 @@ body::after{
       </div>
     </div>
   </div>
+  <div id="menu-username-chip">
+    <div class="menu-currency-chip" id="menu-username-label">DRIVER —</div>
+    <button type="button" class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();promptUsername(true)">CHANGE NAME</button>
+  </div>
   <div id="menu-coins" class="menu-coins">
     <div class="menu-currency-chip" id="menu-coins-chip">💰 0</div>
     <div class="menu-currency-chip gems" id="menu-gems-chip">💎 0</div>
@@ -1482,7 +1502,8 @@ body::after{
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('menu')">← BACK</button>
   <div class="section-title">LEADERBOARD</div>
-  <div class="section-sub">LOCAL HISTORY · SAVED ON THIS DEVICE</div>
+  <div class="section-sub" id="lb-section-sub">SHARED ONLINE · BEST LAPS</div>
+  <div class="lb-status loading" id="lb-status">LOADING…</div>
   <div class="lb-shell">
     <div class="lb-filters">
       <div class="lb-filter-row">
@@ -1611,6 +1632,20 @@ body::after{
     <div class="dp-btns">
       <button class="btn btn-cyan" onclick="initAudio();playUIClick();setDeviceMode(true)">TOUCH CONTROLS</button>
       <button class="btn btn-orange" onclick="initAudio();playUIClick();setDeviceMode(false)">KEYBOARD ONLY</button>
+    </div>
+  </div>
+</div>
+
+<div id="username-prompt-scrim" aria-hidden="true">
+  <div id="username-prompt" role="dialog" aria-modal="true" aria-labelledby="username-prompt-title">
+    <h2 id="username-prompt-title">CHOOSE YOUR DRIVER NAME</h2>
+    <p>Pick a username for the shared online leaderboard.<br>3–16 letters, numbers, _ or -.</p>
+    <div class="name-box" style="margin-top:0;">
+      <input class="name-input" id="usernameInput" maxlength="16" placeholder="RACER01" autocomplete="username" spellcheck="false">
+    </div>
+    <div class="up-error" id="username-error"></div>
+    <div class="dp-btns">
+      <button class="btn btn-cyan" onclick="initAudio();playUIClick();confirmUsername()">LET'S RACE</button>
     </div>
   </div>
 </div>
@@ -2115,6 +2150,176 @@ const CG = (() => {
   };
 })();
 
+// ── SHARED LEADERBOARD API ──────────────────────────────
+// Empty string = same origin (Python server / Cloudflare tunnel).
+// Netlify deploy: point this at your laptop tunnel (no trailing slash).
+// Quick tunnels change URL on every restart — update + redeploy when it changes.
+const LB_API_BASE = 'https://reduces-licenses-health-linear.trycloudflare.com';
+const LB_USERNAME_KEY = 'kartblitz_username';
+const LB_LOCAL_PB_KEY = 'kartblitz_online_pb';
+
+function lbApiUrl(path) {
+  const base = (LB_API_BASE || '').replace(/\/$/, '');
+  return base + path;
+}
+
+function getUsername() {
+  try {
+    const u = (localStorage.getItem(LB_USERNAME_KEY) || '').trim();
+    return u || '';
+  } catch(e) { return ''; }
+}
+
+function setUsername(name) {
+  try { localStorage.setItem(LB_USERNAME_KEY, name); } catch(e) {}
+  refreshUsernameChip();
+}
+
+function normalizeUsernameInput(raw) {
+  const name = String(raw || '').trim();
+  if (!/^[A-Za-z0-9_\-]{3,16}$/.test(name)) return null;
+  return name;
+}
+
+function refreshUsernameChip() {
+  const el = document.getElementById('menu-username-label');
+  if (!el) return;
+  const u = getUsername();
+  el.textContent = u ? `DRIVER ${u}` : 'DRIVER —';
+}
+
+function isUsernamePromptOpen() {
+  const scrim = document.getElementById('username-prompt-scrim');
+  return !!(scrim && scrim.classList.contains('show'));
+}
+
+function hideUsernamePrompt() {
+  const scrim = document.getElementById('username-prompt-scrim');
+  if (scrim) {
+    scrim.classList.remove('show');
+    scrim.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function promptUsername(forceChange) {
+  const scrim = document.getElementById('username-prompt-scrim');
+  const input = document.getElementById('usernameInput');
+  const err = document.getElementById('username-error');
+  if (err) err.textContent = '';
+  if (input) input.value = forceChange ? (getUsername() || '') : '';
+  if (scrim) {
+    scrim.classList.add('show');
+    scrim.setAttribute('aria-hidden', 'false');
+  }
+  hideDeviceModePrompt();
+  setTimeout(() => { if (input) input.focus(); }, 50);
+}
+
+function confirmUsername() {
+  const input = document.getElementById('usernameInput');
+  const err = document.getElementById('username-error');
+  const name = normalizeUsernameInput(input ? input.value : '');
+  if (!name) {
+    if (err) err.textContent = 'Use 3–16 letters, numbers, _ or -.';
+    return;
+  }
+  setUsername(name);
+  hideUsernamePrompt();
+  // Continue into normal menu flow (device prompt, etc.)
+  if (document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
+    showDeviceModePrompt();
+  } else {
+    showScreen('menu');
+  }
+}
+
+function getLocalOnlinePBs() {
+  try { return JSON.parse(localStorage.getItem(LB_LOCAL_PB_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveLocalOnlinePBs(map) {
+  try { localStorage.setItem(LB_LOCAL_PB_KEY, JSON.stringify(map)); } catch(e) {}
+}
+
+async function submitOnlineScore({ mode, trackId, time, total, lapDistance }) {
+  const username = getUsername();
+  if (!username || !(time < Infinity) || time <= 0) return null;
+  const key = `${mode}_${trackId}`;
+  const pbs = getLocalOnlinePBs();
+  if (pbs[key] != null && time >= pbs[key]) return { skipped: true, reason: 'not_pb' };
+
+  const track = (typeof TRACKS !== 'undefined') ? TRACKS.find(t => t.id === trackId) : null;
+  const lapDist = lapDistance != null ? lapDistance : (track && track.lapDistance) || 0;
+  if (lapDist > 0 && time < lapDist / 640) return { skipped: true, reason: 'impossible' };
+
+  try {
+    const res = await fetch(lbApiUrl('/api/scores'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username,
+        mode,
+        trackId,
+        time,
+        total: total != null && total < Infinity ? total : null,
+        lapDistance: lapDist || null
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error || res.statusText };
+    if (data.improved || data.accepted) {
+      pbs[key] = time;
+      saveLocalOnlinePBs(pbs);
+    } else if (data.entry && data.entry.time != null) {
+      pbs[key] = data.entry.time;
+      saveLocalOnlinePBs(pbs);
+    }
+    return data;
+  } catch (e) {
+    return { ok: false, offline: true, error: String(e && e.message || e) };
+  }
+}
+
+function maybeUploadResult(result, track) {
+  if (!result || !getUsername()) return;
+  if (result.mode === 'trial' || result.mode === 'shootout') {
+    if (!(result.bestLap < Infinity)) return;
+    submitOnlineScore({
+      mode: 'trial',
+      trackId: result.trackId,
+      time: result.bestLap,
+      total: result.total,
+      lapDistance: track && track.lapDistance
+    });
+  } else if (result.mode === 'versus') {
+    const bestTime = Math.min(result.p1Best || Infinity, result.p2Best || Infinity);
+    if (!(bestTime < Infinity)) return;
+    submitOnlineScore({
+      mode: 'versus',
+      trackId: result.trackId,
+      time: bestTime,
+      total: null,
+      lapDistance: track && track.lapDistance
+    });
+  }
+}
+
+async function fetchOnlineLeaderboard(mode, trackId) {
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, 5000);
+  try {
+    const res = await fetch(
+      lbApiUrl(`/api/leaderboard?mode=${encodeURIComponent(mode)}&trackId=${encodeURIComponent(trackId)}&limit=50`),
+      ctrl ? { signal: ctrl.signal } : undefined
+    );
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('bad status');
+    return await res.json();
+  } catch (e) {
+    clearTimeout(timer);
+    return null;
+  }
+}
+
 // ── SCREEN ──────────────────────────────────────────────
 function isDevicePromptOpen() {
   const scrim = document.getElementById('device-prompt-scrim');
@@ -2128,6 +2333,7 @@ function hideDeviceModePrompt() {
   }
 }
 function showDeviceModePrompt() {
+  if (!getUsername() || isUsernamePromptOpen()) return;
   const preferTouch = (navigator.maxTouchPoints > 0) ||
     (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   let saved = null;
@@ -2178,10 +2384,15 @@ function showScreen(id) {
     if (!window._menuShownOnce) { window._menuShownOnce = true; CG.loadingStop(); }
     const pd = getPlayerData();
     updateCurrencyDisplays(pd);
+    refreshUsernameChip();
     if(typeof window.mountMenuCarStage === 'function') window.mountMenuCarStage();
     if(typeof window.buildMenuPaintStrip === 'function') window.buildMenuPaintStrip();
-    // Always re-ask touch vs keyboard when landing on the main screen.
-    showDeviceModePrompt();
+    if (!getUsername()) {
+      promptUsername(false);
+    } else {
+      // Always re-ask touch vs keyboard when landing on the main screen.
+      showDeviceModePrompt();
+    }
   } else if(typeof window.pauseMenuCarStage === 'function') {
     window.pauseMenuCarStage();
   }
@@ -2196,6 +2407,13 @@ window.addEventListener('load', () => {
   showScreen('menu');
 });
 document.addEventListener('keydown', e => {
+  if (isUsernamePromptOpen()) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmUsername();
+    }
+    return;
+  }
   if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) return;
   if (isDevicePromptOpen()) return;
   if (e.key === 'Enter' && document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
@@ -8611,6 +8829,7 @@ class Race {
         const minPossible = t.lapDistance ? t.lapDistance / 640 : 8;
         if (k.bestLap >= minPossible) CG.saveScore(`track_${t.id}_lap`, Math.round(k.bestLap * 1000));
       }
+      maybeUploadResult(window._lastResult, t);
       document.getElementById('coins-earned-display').innerHTML = earned>0 ? `<div class="coins-earn">💰 +${earned} COINS EARNED!</div>` : '';
 
     } else if(this.mode === 'ai') {
@@ -8671,6 +8890,7 @@ class Race {
         const minPossible = t.lapDistance ? t.lapDistance / 640 : 8;
         if (k.bestLap >= minPossible) CG.saveScore(`track_${t.id}_lap`, Math.round(k.bestLap * 1000));
       }
+      maybeUploadResult(window._lastResult, t);
       document.getElementById('coins-earned-display').innerHTML = earnedAI>0 ? `<div class="coins-earn">💰 +${earnedAI} COINS EARNED!</div>` : '';
 
     } else if(this.mode === 'shootout') {
@@ -8711,6 +8931,7 @@ class Race {
         total:pLap
       };
       const earnedS = awardCoins(window._lastResult);
+      maybeUploadResult(window._lastResult, t);
       document.getElementById('coins-earned-display').innerHTML = earnedS>0 ? `<div class="coins-earn">💰 +${earnedS} COINS EARNED!</div>` : '';
 
     } else {
@@ -8760,6 +8981,7 @@ class Race {
         winner:winner, p1Total:k1.finishTime, p2Total:k2.finishTime
       };
       const earnedV = awardCoins(window._lastResult);
+      maybeUploadResult(window._lastResult, t);
       document.getElementById('coins-earned-display').innerHTML = earnedV>0 ? `<div class="coins-earn">💰 +${earnedV} COINS EARNED!</div>` : '';
     }
 
@@ -9765,6 +9987,7 @@ function confirmSave() {
     lb[key] = lb[key].slice(0,10);
     // Also save to CrazyGames global leaderboard (score in ms, lower = better)
     CG.saveScore(`track_${r.trackId}_lap`, Math.round(r.bestLap * 1000));
+    maybeUploadResult(r, track);
   } else if(r.mode === 'versus') {
     const key = `versus_${r.trackId}`;
     if(!lb[key]) lb[key] = [];
@@ -9774,6 +9997,8 @@ function confirmSave() {
       lb[key].sort((a,b)=>a.time-b.time);
       lb[key] = lb[key].slice(0,10);
     }
+    const track = TRACKS.find(t => t.id === r.trackId);
+    maybeUploadResult(r, track);
   }
   saveLB(lb);
   showScreen('leaderboard');
@@ -9796,7 +10021,11 @@ function buildLeaderboardScreen() {
   const trackTabs = document.getElementById('lb-track-tabs');
   const content = document.getElementById('lb-content');
   const panelTitle = document.getElementById('lb-panel-title');
+  const statusEl = document.getElementById('lb-status');
+  const sectionSub = document.getElementById('lb-section-sub');
   if(!modeTabs || !trackTabs || !content) return;
+
+  const reqId = (window._lbReqId = (window._lbReqId || 0) + 1);
 
   modeTabs.innerHTML = '';
   [
@@ -9824,7 +10053,7 @@ function buildLeaderboardScreen() {
   const track = TRACKS[lbTrack] || TRACKS[0];
   const trackId = track ? track.id : lbTrack;
   const key = `${lbMode}_${trackId}`;
-  const entries = (lb[key] || []).slice().sort((a, b) => a.time - b.time).slice(0, 10);
+  const localEntries = (lb[key] || []).slice().sort((a, b) => a.time - b.time).slice(0, 10);
 
   if(panelTitle) {
     panelTitle.textContent = lbMode === 'versus'
@@ -9832,46 +10061,82 @@ function buildLeaderboardScreen() {
       : `${track.name} · BEST LAPS`;
   }
 
-  if(entries.length === 0) {
+  function renderEntries(entries, { source, foot }) {
+    if(window._lbReqId !== reqId) return;
+    if(entries.length === 0) {
+      const head = document.querySelector('#screen-leaderboard .lb-head');
+      if(head) head.style.display = 'none';
+      content.innerHTML = `
+        <div class="lb-empty">
+          <div class="lb-empty-title">NO RECORDS YET</div>
+          <div class="lb-empty-sub">Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track.<br>Better lap times upload automatically under your username.</div>
+        </div>`;
+      return;
+    }
+
     const head = document.querySelector('#screen-leaderboard .lb-head');
-    if(head) head.style.display = 'none';
-    content.innerHTML = `
-      <div class="lb-empty">
-        <div class="lb-empty-title">NO RECORDS YET</div>
-        <div class="lb-empty-sub">Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track,<br>then save your score from the results screen.</div>
-      </div>`;
-    return;
+    if(head) head.style.display = '';
+
+    const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
+    let html = entries.map((e, i) => {
+      const name = e.username || e.name || '—';
+      const meta = lbMode === 'versus'
+        ? (e.winner ? `WIN ${e.winner}` : 'BEST LAP')
+        : (e.total != null ? `RACE ${fmtTime(e.total)}` : 'BEST LAP');
+      return `
+        <div class="lb-row${i === 0 ? ' lb-top' : ''}">
+          <div class="lb-rank" style="color:${rankColors[i] || 'rgba(255,255,255,.45)'}">${i + 1}</div>
+          <div class="lb-name">${name}</div>
+          <div class="lb-time">${fmtTime(e.time)}</div>
+          <div class="lb-meta">${meta}</div>
+          <div class="lb-date">${fmtLbDate(e.date)}</div>
+        </div>`;
+    }).join('');
+
+    html += `<div class="lb-foot">${foot}</div>`;
+    content.innerHTML = html;
+
+    if(lbMode === 'trial' && typeof CG !== 'undefined' && CG.showBoard) {
+      const globalBtn = document.createElement('button');
+      globalBtn.className = 'btn btn-sm btn-cyan';
+      globalBtn.style.cssText = 'margin:14px auto 16px;display:block;';
+      globalBtn.textContent = '🌍 CRAZYGAMES GLOBAL';
+      globalBtn.onclick = () => CG.showBoard(`track_${trackId}_lap`);
+      content.appendChild(globalBtn);
+    }
   }
 
-  const head = document.querySelector('#screen-leaderboard .lb-head');
-  if(head) head.style.display = '';
-
-  const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
-  let html = entries.map((e, i) => {
-    const meta = lbMode === 'versus'
-      ? (e.winner ? `WIN ${e.winner}` : '—')
-      : (e.total != null ? `RACE ${fmtTime(e.total)}` : 'BEST LAP');
-    return `
-      <div class="lb-row${i === 0 ? ' lb-top' : ''}">
-        <div class="lb-rank" style="color:${rankColors[i] || 'rgba(255,255,255,.45)'}">${i + 1}</div>
-        <div class="lb-name">${e.name || '—'}</div>
-        <div class="lb-time">${fmtTime(e.time)}</div>
-        <div class="lb-meta">${meta}</div>
-        <div class="lb-date">${fmtLbDate(e.date)}</div>
-      </div>`;
-  }).join('');
-
-  html += `<div class="lb-foot">Showing top ${entries.length} · stored locally on this device</div>`;
-  content.innerHTML = html;
-
-  if(lbMode === 'trial' && typeof CG !== 'undefined' && CG.showBoard) {
-    const globalBtn = document.createElement('button');
-    globalBtn.className = 'btn btn-sm btn-cyan';
-    globalBtn.style.cssText = 'margin:14px auto 16px;display:block;';
-    globalBtn.textContent = '🌍 GLOBAL LEADERBOARD';
-    globalBtn.onclick = () => CG.showBoard(`track_${trackId}_lap`);
-    content.appendChild(globalBtn);
+  if(statusEl) {
+    statusEl.className = 'lb-status loading';
+    statusEl.textContent = 'LOADING SHARED BOARD…';
   }
+  if(sectionSub) sectionSub.textContent = 'SHARED ONLINE · BEST LAPS';
+  content.innerHTML = `<div class="lb-empty"><div class="lb-empty-title">LOADING…</div></div>`;
+
+  fetchOnlineLeaderboard(lbMode, trackId).then(data => {
+    if(window._lbReqId !== reqId) return;
+    if(data && Array.isArray(data.entries)) {
+      if(statusEl) {
+        statusEl.className = 'lb-status online';
+        statusEl.textContent = 'ONLINE · SHARED LEADERBOARD';
+      }
+      if(sectionSub) sectionSub.textContent = 'SHARED ONLINE · HOSTED ON THE RACE SERVER';
+      renderEntries(data.entries, {
+        source: 'online',
+        foot: `Showing top ${data.entries.length} · shared online`
+      });
+    } else {
+      if(statusEl) {
+        statusEl.className = 'lb-status offline';
+        statusEl.textContent = 'OFFLINE · SHOWING LOCAL HISTORY';
+      }
+      if(sectionSub) sectionSub.textContent = 'SERVER OFFLINE · LOCAL HISTORY ON THIS DEVICE';
+      renderEntries(localEntries, {
+        source: 'local',
+        foot: `Showing top ${localEntries.length} · stored locally (server unreachable)`
+      });
+    }
+  });
 }
 
 // ── MENU KEYBOARD NAV ───────────────────────────────────
