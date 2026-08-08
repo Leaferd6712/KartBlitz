@@ -1,0 +1,568 @@
+
+
+# ROLE
+
+You are a senior game engine programmer, gameplay systems engineer, AI programmer, UI/UX designer, and software architect.
+
+You are modifying an existing HTML racing game called **KartBlitz** consisting of approximately **9,000 lines of HTML, CSS and JavaScript** contained primarily in one file.
+
+Your goal is **NOT** to rewrite the project.
+
+Your goal is to carefully expand the existing systems while preserving the game's architecture, coding style, formatting, naming conventions and existing behaviour.
+
+You should think like an experienced developer working on a live production game.
+
+---
+
+# BEFORE WRITING ANY CODE
+
+Do **NOT** immediately begin editing.
+
+Instead:
+
+1. Read the entire project from top to bottom.
+2. Understand every major system before making changes.
+3. Identify where each requested feature belongs.
+4. Reuse existing systems whenever possible.
+5. Never duplicate logic if an existing function already performs a similar task.
+6. Only after understanding the project should implementation begin.
+
+---
+
+# PROJECT ANALYSIS
+
+Before changing anything, identify how the following systems work.
+
+* Main game loop
+* Rendering
+* Physics
+* Collision detection
+* AI driving
+* Racing line
+* Lap timing
+* Pit lane
+* Pit stop logic
+* Garage
+* Upgrade system
+* Economy
+* Save/load
+* Weather
+* Tyres
+* ERS
+* DRS
+* HUD
+* UI
+* Menus
+* Audio
+* Track generation
+* Input
+* Camera
+* Ghost system
+* One Lap Shootout
+* Any helper utilities
+
+For every requested feature identify:
+
+* functions affected
+* variables affected
+* save data affected
+* UI affected
+* gameplay systems affected
+
+before making edits.
+
+---
+
+# DEVELOPMENT RULES
+
+Do not rewrite working code.
+
+Do not replace systems simply because there is another way.
+
+Preserve:
+
+* naming conventions
+* formatting
+* architecture
+* coding style
+
+Only make the smallest changes required.
+
+Never delete functionality unless explicitly instructed.
+
+Avoid global variables.
+
+Keep everything modular.
+
+Comment new code.
+
+Avoid duplicated logic.
+
+If an existing function can be extended, extend it instead of creating another.
+
+After implementation:
+
+* check for syntax errors
+* broken references
+* duplicate declarations
+* broken event listeners
+* save compatibility
+* gameplay regressions
+
+---
+
+# FEATURE 1 — COMPLETE GARAGE & R&D REWORK
+
+Research how modern Formula 1 management games (especially **EA SPORTS F1 25 Career Mode** and recent F1 titles) structure Research & Development.
+
+Design a system inspired by them while fitting naturally into KartBlitz.
+
+Do not copy assets or copyrighted material.
+
+Instead implement similar mechanics.
+
+## Departments
+
+Split upgrades into:
+
+* Engine
+* Chassis
+* Aerodynamics
+* Tyres
+* ERS
+* Reliability
+
+Each department should contain multiple upgrade paths.
+
+Each upgrade should include:
+
+* Name
+* Description
+* Development cost
+* Research duration
+* Estimated performance gain
+* Reliability impact
+* Current status
+
+Statuses include:
+
+* Available
+* Researching
+* Completed
+* Failed
+* Redevelopment Available
+
+---
+
+## Research Success
+
+Research should not always succeed.
+
+Suggested probabilities:
+
+Minor Upgrade
+
+95%
+
+Standard
+
+85%
+
+Major
+
+70%
+
+Ultimate
+
+55%
+
+---
+
+## Failed Research
+
+When research fails:
+
+* Lose part or all of the investment.
+* Explain why it failed.
+* Unlock redevelopment.
+* Prevent immediate retry.
+
+Possible failure messages:
+
+"Prototype produced excessive vibration."
+
+"Manufacturing tolerances exceeded design limits."
+
+"Wind tunnel correlation failed."
+
+"Cooling efficiency below target."
+
+"ERS electronics overheated during testing."
+
+---
+
+## Redevelopment
+
+Failed upgrades should require redevelopment.
+
+Redevelopment should:
+
+* cost roughly 50–75% of original cost
+* require less research time
+* have improved success probability
+* keep previous progress where appropriate
+
+---
+
+## R&D Screen
+
+Create a professional motorsport management style interface.
+
+Display:
+
+Departments
+
+Research Queue
+
+Projects In Progress
+
+Remaining Time
+
+Success Chance
+
+Completed Upgrades
+
+Failed Upgrades
+
+Redevelopment Queue
+
+Performance Summary
+
+Projected Gains
+
+Research History
+
+---
+
+# FEATURE 2 — TYRE TEMPERATURE SIMULATION
+
+Introduce realistic tyre temperatures.
+
+Each tyre compound should track:
+
+Current Temperature
+
+Optimal Window
+
+Wear %
+
+Grip %
+
+Temperature State
+
+---
+
+## Heating
+
+Tyres heat from:
+
+Heavy braking
+
+Cornering
+
+Acceleration
+
+Wheelspin
+
+Hot weather
+
+Aggressive driving
+
+---
+
+## Cooling
+
+Tyres cool from:
+
+Straights
+
+Lifting and coasting
+
+Cold weather
+
+Reduced steering input
+
+Lower speeds
+
+---
+
+## Grip Effects
+
+Cold
+
+Lower grip
+
+Longer braking distance
+
+Poor traction
+
+Optimal
+
+Maximum grip
+
+Best lap time
+
+Stable handling
+
+Hot
+
+Reduced grip
+
+Slight wear increase
+
+Overheated
+
+Large grip reduction
+
+Higher degradation
+
+Harder braking
+
+---
+
+## HUD
+
+Show tyre temperatures using colours.
+
+Blue
+
+Cold
+
+Green
+
+Optimal
+
+Orange
+
+Hot
+
+Red
+
+Overheated
+
+Temperatures should influence lap time naturally.
+
+Avoid exaggerated effects.
+
+---
+
+# FEATURE 3 — ERS IMPROVEMENTS
+
+ERS should regenerate realistically.
+
+Recharge from:
+
+Lifting
+
+Coasting
+
+Braking
+
+Small passive recharge on long straights
+
+Heavy braking should generate more energy than light braking.
+
+---
+
+## ERS Deployment
+
+Currently speed instantly drops when ERS ends.
+
+Replace this with realistic behaviour.
+
+Instead:
+
+Momentum should naturally decay.
+
+Acceleration should smoothly return to normal.
+
+No abrupt speed loss.
+
+Blend back into normal engine power over time.
+
+---
+
+# FEATURE 4 — COASTING & BRAKING BALANCE
+
+Current coasting slows the kart too aggressively.
+
+Reduce engine braking.
+
+Coasting should allow smoother corner entry.
+
+Brakes should become the primary way of slowing down.
+
+Also reduce maximum braking force slightly.
+
+Allow:
+
+later braking
+
+trail braking
+
+more realistic corner entry
+
+without making braking ineffective.
+
+---
+
+# FEATURE 5 — TRACK EDITOR
+
+Investigate whether a lightweight built-in track editor can be integrated.
+
+Goals:
+
+Allow custom tracks.
+
+Allow manual coordinate entry.
+
+Allow importing coordinate lists.
+
+Visualise nodes.
+
+Preview racing line.
+
+Save tracks.
+
+Load tracks.
+
+Export tracks.
+
+The editor should integrate with the game's existing track generation system instead of replacing it.
+
+
+
+# FEATURE 7 — AI IMPROVEMENTS
+
+Improve AI cornering only.
+
+Do NOT increase straight-line acceleration.
+
+Increase:
+
+corner confidence
+
+corner speed
+
+racing line accuracy
+
+corner exits
+
+Maintain existing:
+
+top speed
+
+acceleration
+
+ERS usage
+
+DRS behaviour
+
+The AI should simply become stronger through corners.
+
+---
+
+# FEATURE 8 — PIT LANE IMPROVEMENTS
+
+Current AI teleports into the pits.
+
+Replace this with proper pit lane behaviour.
+
+AI should:
+
+Signal pit entry internally.
+
+Drive to pit entry.
+
+Follow the pit lane.
+
+Stop at pit box.
+
+Complete service.
+
+Leave pit box.
+
+Drive to pit exit.
+
+Merge safely.
+
+Never teleport unless absolutely necessary.
+
+---
+
+## Player Pit Screen
+
+When the player enters the pit strategy screen:
+
+Pause the race.
+
+Pause:
+
+AI
+
+Timers
+
+Race clock
+
+Physics
+
+Resume only after the player confirms.
+
+This prevents losing time while selecting tyres or strategy.
+
+---
+
+# IMPLEMENTATION STRATEGY
+
+For every feature:
+
+1. Identify existing code.
+2. Determine smallest modification.
+3. Integrate into existing systems.
+4. Preserve compatibility.
+5. Test interactions with all related systems.
+6. Check save compatibility.
+7. Review surrounding code for unintended side effects.
+
+Never leave placeholder code.
+
+Never leave TODO comments.
+
+Fully integrate every feature.
+
+---
+
+# FINAL REVIEW
+
+After implementation verify:
+
+* Game loads successfully.
+* No syntax errors.
+* No duplicate declarations.
+* No broken event listeners.
+* Save system still works.
+* Existing features still function.
+* New features interact correctly with weather, AI, garage, pit stops, upgrades, and race management.
+
+Finally provide a concise summary listing:
+
+* Every file modified.
+* Every section modified.
+* Every function added.
+* Every function changed.
+* Every balancing value introduced.
+* Every new variable or object.
+* Any assumptions that were necessary.
+* Any recommendations for future improvements.
+
+Think carefully before every change. Prioritise stability, compatibility, maintainability, realism, and preserving existing functionality over rewriting the project.
