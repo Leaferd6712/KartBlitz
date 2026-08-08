@@ -1478,23 +1478,10 @@ body::after{
   <div class="results-wrap" id="results-wrap"></div>
   <div id="coins-earned-display"></div>
   <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;justify-content:center;padding-bottom:20px;">
-    <button class="btn btn-gold btn-sm" id="btn-save-lb" onclick="showSaveAndLeaderboard()">💾 SAVE SCORE</button>
     <button class="btn btn-cyan btn-sm" onclick="restartRace()">↺ RACE AGAIN</button>
     <button class="btn btn-orange btn-sm" onclick="returnToMainMenu()">⌂ MAIN MENU</button>
+    <button class="btn btn-pink btn-sm" onclick="showScreen('leaderboard')">🏆 LEADERBOARD</button>
   </div>
-</div>
-
-<!-- SAVE NAME + LB -->
-<div id="screen-save" class="screen hidden">
-  <div class="scanlines"></div>
-  <button class="back-btn" onclick="showScreen('results')">← BACK</button>
-  <div class="section-title">ENTER NAME</div>
-  <div class="section-sub">YOUR INITIALS (3 CHARS)</div>
-  <div class="name-box">
-    <input class="name-input" id="nameInput" maxlength="3" placeholder="AAA" value="">
-  </div>
-  <div style="height:20px"></div>
-  <button class="btn btn-gold" onclick="confirmSave()">SAVE TO LEADERBOARD</button>
 </div>
 
 <!-- LEADERBOARD -->
@@ -1707,6 +1694,7 @@ body::after{
 <!-- PAUSE MENU -->
 <div id="pause-overlay">
   <div class="pause-title">⏸ PAUSED</div>
+  <div id="pause-trial-hint" style="display:none;margin:0 0 12px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:.1em;color:#00f5ff;opacity:.85;text-align:center;max-width:420px;line-height:1.5;">DONE LAPPING? TAP END SESSION TO FINISH AND SAVE TO THE LEADERBOARD.</div>
   <div class="pause-btns">
     <button class="btn btn-cyan" onclick="resumeGame()">▶ RESUME</button>
     <button class="btn btn-gold btn-sm" onclick="pauseRestartRace()">↺ RESTART RACE</button>
@@ -4739,6 +4727,11 @@ class Kart {
             }
             else { playLap(); }
             this.lap++;
+            // Time Trial: refill ERS to 100% at the end of every completed lap
+            if((typeof race !== 'undefined' && race && race.mode === 'trial') ||
+               (typeof currentMode !== 'undefined' && currentMode === 'trial')) {
+              this.ersCharge = 1.0;
+            }
             // Open sessions (Time Trial) never auto-finish on lap count.
             // Qualifying push-lap cars keep circulating after their target laps.
             const keepDriving = !!this._qualiKeepDriving;
@@ -5889,6 +5882,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   }
 
   // Pit zone proximity indicator — show when near pit entry OR on pit lane
+  let trialHintY = h - 28;
   if(!kart.finished && !kart.inPit && track && track.pitLane) {
     const pl = track.pitLane;
     const entryDist = Math.hypot(kart.x - pl.entryPt.x, kart.y - pl.entryPt.y);
@@ -5905,6 +5899,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
       ctx.fillText(narrow ? '🔧 PIT ENTRY — DRIVE IN' : '🔧 PIT ENTRY AHEAD — DRIVE IN', w/2, h - 40);
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
+      trialHintY = h - 78;
     } else if(kart._onPitLane && garageDist < 400) {
       const pulse2 = 0.80 + 0.20 * Math.sin(performance.now() / 180);
       const banW = Math.min(280, w - pad * 2);
@@ -5917,7 +5912,26 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
       ctx.fillText(narrow ? '🔧 DRIVE TO GARAGE' : '🔧 DRIVE TO GARAGE — AUTO STOP', w/2, h - 40);
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
+      trialHintY = h - 78;
     }
+  }
+
+  // Time Trial: open session — tell player how to finish & save
+  if(mode === 'trial' && !kart.finished && race && race.phase === 'racing') {
+    const hint = narrow
+      ? 'ESC → END SESSION TO FINISH & SAVE'
+      : 'PRESS ESC · THEN END SESSION WHEN DONE TO SAVE TO LEADERBOARD';
+    const hintW = Math.min(narrow ? 320 : 520, w - pad * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(w/2 - hintW/2, trialHintY - 14, hintW, 22);
+    ctx.strokeStyle = 'rgba(0,245,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - hintW/2, trialHintY - 14, hintW, 22);
+    ctx.fillStyle = '#00f5ff';
+    ctx.font = narrow ? 'bold 9px Orbitron,sans-serif' : 'bold 10px Orbitron,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(hint, w/2, trialHintY + 1);
+    ctx.textAlign = 'left';
   }
 
   // ── OFF-TRACK PENALTY WARNING ─────────────────────────
@@ -9064,6 +9078,10 @@ function pauseGame() {
   if(restartBtn) {
     restartBtn.textContent = race.mode === 'trial' ? '↺ RESTART SESSION' : '↺ RESTART RACE';
   }
+  const trialHint = document.getElementById('pause-trial-hint');
+  if(trialHint) {
+    trialHint.style.display = race.mode === 'trial' ? 'block' : 'none';
+  }
   const pitUi = document.getElementById('pit-ui-overlay');
   if(pitUi) { pitUi.style.display = 'none'; pitUi.dataset.signature = ''; clearPitUiLayoutClasses(pitUi); }
   showTouchOverlay(false);
@@ -9953,56 +9971,7 @@ function saveLB(lb) {
 
 let pendingSave = null;
 
-function showSaveAndLeaderboard() {
-  pendingSave = window._lastResult;
-  if(!pendingSave) return;
-  document.getElementById('screen-results').classList.add('hidden');
-  document.getElementById('nameInput').value = localStorage.getItem('kartblitz_lastname')||'';
-  document.getElementById('screen-save').classList.remove('hidden');
-}
-
-function confirmSave() {
-  const name = (document.getElementById('nameInput').value || 'AAA').toUpperCase().substring(0,3).padEnd(3,'A');
-  localStorage.setItem('kartblitz_lastname', name);
-  if(!pendingSave) { showScreen('leaderboard'); return; }
-
-  const lb = getLB();
-  const r = pendingSave;
-
-  if(r.mode === 'trial' && r.bestLap < Infinity) {
-    // ── ANTI-CHEAT: Sanity check lap time ──────────────────
-    // Maximum achievable average speed = base max (469) × max upgrade (×1.60) × ERS (×1.25) × DRS (×1.15) × 65% track efficiency ≈ 700 units/s
-    // Using divisor 640 gives a generous impossible floor.
-    const track = TRACKS.find(t => t.id === r.trackId);
-    const minPossibleLap = (track && track.lapDistance) ? track.lapDistance / 640 : 8;
-    if (r.bestLap < minPossibleLap) {
-      // Time is physically impossible — skip leaderboard save silently
-      showScreen('leaderboard');
-      return;
-    }
-    const key = `trial_${r.trackId}`;
-    if(!lb[key]) lb[key] = [];
-    lb[key].push({ name, time: r.bestLap, total: r.total, date: Date.now() });
-    lb[key].sort((a,b)=>a.time-b.time);
-    lb[key] = lb[key].slice(0,10);
-    // Also save to CrazyGames global leaderboard (score in ms, lower = better)
-    CG.saveScore(`track_${r.trackId}_lap`, Math.round(r.bestLap * 1000));
-    maybeUploadResult(r, track);
-  } else if(r.mode === 'versus') {
-    const key = `versus_${r.trackId}`;
-    if(!lb[key]) lb[key] = [];
-    const bestTime = Math.min(r.p1Best||Infinity, r.p2Best||Infinity);
-    if(bestTime < Infinity) {
-      lb[key].push({ name, time: bestTime, winner: r.winner!==null ? `P${r.winner+1}` : 'TIE', date: Date.now() });
-      lb[key].sort((a,b)=>a.time-b.time);
-      lb[key] = lb[key].slice(0,10);
-    }
-    const track = TRACKS.find(t => t.id === r.trackId);
-    maybeUploadResult(r, track);
-  }
-  saveLB(lb);
-  showScreen('leaderboard');
-}
+// Manual 3-letter local save UI removed — scores auto-upload under the username.
 
 let lbMode = 'trial', lbTrack = 0;
 
@@ -10161,24 +10130,15 @@ document.addEventListener('keydown', e => {
     return;
   }
   if(e.key==='Escape') {
-    const menus=['mode','track','results','save','leaderboard','garage','setup','controls','quali-results'];
+    const menus=['mode','track','results','leaderboard','garage','setup','controls','quali-results'];
     const active = menus.find(m=>!document.getElementById('screen-'+m).classList.contains('hidden'));
     if(active==='mode') showScreen('menu');
     else if(active==='track') showScreen('mode');
     else if(active==='results') showScreen('menu');
-    else if(active==='save') showScreen('results');
     else if(active==='leaderboard' || active==='garage' || active==='controls' || active==='quali-results') showScreen('menu');
     else if(active==='setup') showScreen('track');
     else if(canvas.style.display==='block' && race && race.phase==='finished') race.showResults();
   }
-});
-
-// Name input uppercase enforcement
-document.getElementById('nameInput').addEventListener('input', function(){
-  this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'');
-});
-document.getElementById('nameInput').addEventListener('keydown', e=>{
-  if(e.key==='Enter') confirmSave();
 });
 
 // ── UPGRADE / COIN / PAINT SYSTEM ──────────────────────
