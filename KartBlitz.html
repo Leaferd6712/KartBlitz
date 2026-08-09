@@ -4441,6 +4441,11 @@ class Kart {
               this.bestLap = lapTime; this.flashTimer = 1.5; this.rankFlash = 'BEST LAP!'; playLap(); spawnSpark(this.x,this.y);
             }
             else { playLap(); }
+            // Time Trial: every completed lap saves to the leaderboard immediately
+            if(!this.isAI && typeof race !== 'undefined' && race && race.mode === 'trial' && race.track) {
+              const totalSoFar = this.lapTimes.reduce((a,b)=>a+b, 0);
+              autoSaveLapToLeaderboard(race.track.id, lapTime, totalSoFar);
+            }
             this.lap++;
             // Open sessions (Time Trial) never auto-finish on lap count.
             // Qualifying push-lap cars keep circulating after their target laps.
@@ -9610,6 +9615,29 @@ function saveLB(lb) {
   try { localStorage.setItem('kartblitz_lb', JSON.stringify(lb)); } catch(e){}
 }
 
+/** Persist a single Time Trial lap as soon as it is completed (no need to end session). */
+function autoSaveLapToLeaderboard(trackId, lapTime, totalTime) {
+  if(!(lapTime > 0) || !Number.isFinite(lapTime)) return;
+  const track = TRACKS.find(t => t.id === trackId);
+  const minPossibleLap = (track && track.lapDistance) ? track.lapDistance / 640 : 8;
+  if(lapTime < minPossibleLap) return;
+
+  const name = (localStorage.getItem('kartblitz_lastname') || 'AAA').toUpperCase().substring(0,3).padEnd(3,'A');
+  const lb = getLB();
+  const key = `trial_${trackId}`;
+  if(!lb[key]) lb[key] = [];
+  // Avoid exact duplicate if the same lap somehow fires twice
+  const dup = lb[key].some(e => e.name === name && Math.abs(e.time - lapTime) < 0.0005);
+  if(!dup) {
+    lb[key].push({ name, time: lapTime, total: totalTime || null, date: Date.now() });
+    lb[key].sort((a,b)=>a.time-b.time);
+    lb[key] = lb[key].slice(0,10);
+    saveLB(lb);
+  }
+  // CrazyGames global leaderboard (score in ms, lower = better)
+  CG.saveScore(`track_${trackId}_lap`, Math.round(lapTime * 1000));
+}
+
 let pendingSave = null;
 
 function showSaveAndLeaderboard() {
@@ -9641,9 +9669,13 @@ function confirmSave() {
     }
     const key = `trial_${r.trackId}`;
     if(!lb[key]) lb[key] = [];
-    lb[key].push({ name, time: r.bestLap, total: r.total, date: Date.now() });
-    lb[key].sort((a,b)=>a.time-b.time);
-    lb[key] = lb[key].slice(0,10);
+    // Laps already auto-save mid-session; only add if this name/time is not already present
+    const alreadySaved = lb[key].some(e => e.name === name && Math.abs(e.time - r.bestLap) < 0.0005);
+    if(!alreadySaved) {
+      lb[key].push({ name, time: r.bestLap, total: r.total, date: Date.now() });
+      lb[key].sort((a,b)=>a.time-b.time);
+      lb[key] = lb[key].slice(0,10);
+    }
     // Also save to CrazyGames global leaderboard (score in ms, lower = better)
     CG.saveScore(`track_${r.trackId}_lap`, Math.round(r.bestLap * 1000));
   } else if(r.mode === 'versus') {
