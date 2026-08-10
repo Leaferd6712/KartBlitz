@@ -1,0 +1,16 @@
+{
+  "name": "kartblitz-online",
+  "private": true,
+  "scripts": {
+    "party:dev": "wrangler dev",
+    "party:deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "partyserver": "^0.5.10"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260424.1",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.14.0"
+  }
+}

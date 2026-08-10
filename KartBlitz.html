@@ -6,6 +6,7 @@
 <title>KART BLITZ ⚡</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<script src="online.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -54,6 +55,20 @@ body{
 .mode-card .m-name{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:var(--cyan);}
 .mode-card .m-desc{font-size:13px;opacity:.65;margin-top:8px;line-height:1.5;}
 .mode-card .m-tag{font-size:10px;opacity:.4;margin-top:12px;letter-spacing:.15em;}
+.online-shell{width:min(720px,92vw);margin-top:24px;display:flex;flex-direction:column;gap:16px;z-index:2;}
+.online-panel{border:1px solid rgba(0,245,255,.22);background:rgba(0,10,28,.72);padding:18px 20px;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));}
+.online-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;}
+.online-code{font-family:'Orbitron',sans-serif;font-size:28px;letter-spacing:.28em;color:var(--gold);text-align:center;}
+.online-input{font-family:'Orbitron',sans-serif;font-size:18px;letter-spacing:.2em;text-transform:uppercase;text-align:center;width:min(280px,80vw);padding:12px 14px;border:1px solid rgba(0,245,255,.35);background:rgba(0,0,0,.45);color:var(--text);outline:none;}
+.online-roster{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.online-player{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.28);}
+.online-player .op-name{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:.08em;}
+.online-player .op-meta{font-size:11px;opacity:.7;}
+.online-status{min-height:18px;text-align:center;font-size:13px;opacity:.75;color:#9ad4ff;}
+.online-status.err{color:#ff6b35;opacity:1;}
+.online-host-only{opacity:.95;}
+.online-select{font-family:'Rajdhani',sans-serif;font-size:14px;padding:8px 10px;border:1px solid rgba(0,245,255,.3);background:rgba(0,0,0,.4);color:var(--text);min-width:140px;}
+
 .track-grid{display:grid;grid-template-columns:repeat(4,210px);gap:14px;margin-top:16px;justify-content:center;max-height:65vh;overflow-y:auto;padding:4px;}
 .track-card{width:210px;cursor:pointer;border:2px solid rgba(255,255,255,.15);transition:all .3s;overflow:hidden;position:relative;}
 .track-card:hover{transform:scale(1.04);}
@@ -1316,7 +1331,7 @@ body::after{
       </div>
       <div class="portal-pill-row">
         <div class="portal-pill" id="portal-track-count">8 TRACKS</div>
-        <div class="portal-pill">4 MODES</div>
+        <div class="portal-pill">5 MODES</div>
         <div class="portal-pill">MULTI-PART PAINT</div>
         <div class="portal-pill">DYNAMIC WEATHER</div>
       </div>
@@ -1324,9 +1339,9 @@ body::after{
     <div class="menu-action-panel">
       <div class="menu-panel-kicker">READY TO RACE</div>
       <div class="menu-panel-title">Launch straight into the grid</div>
-      <div class="menu-panel-sub">One click starts a Quick Race. Custom Race opens modes, tracks, and full setup.</div>
+      <div class="menu-panel-sub">Time Trial jumps straight to circuit select. Custom Race opens versus, AI, online, and shootout setup.</div>
       <div class="menu-actions">
-        <button class="btn btn-cyan" onclick="startQuickRace()">▶ QUICK RACE</button>
+        <button class="btn btn-cyan" onclick="startTimeTrial()">⏱ TIME TRIAL</button>
         <button class="btn btn-gold btn-sm" onclick="initAudio();playUIClick();showScreen('mode');">⚙ CUSTOM RACE</button>
         <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()">🔧 GARAGE</button>
         <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');">🏆 LEADERBOARD</button>
@@ -1352,17 +1367,17 @@ body::after{
   <div class="section-title">SELECT MODE</div>
   <div class="section-sub">CHOOSE YOUR RACE TYPE</div>
   <div class="mode-grid">
-    <div class="mode-card" onclick="selectMode('trial')">
-      <div class="m-icon">⏱️</div>
-      <div class="m-name">TIME TRIAL</div>
-      <div class="m-desc">Set your fastest lap.<br>Drive as long as you like.</div>
-      <div class="m-tag">SOLO</div>
-    </div>
     <div class="mode-card" onclick="selectMode('versus')">
       <div class="m-icon">🏆</div>
       <div class="m-name">VERSUS RACE</div>
       <div class="m-desc">Race a friend.<br>Split-screen, same track.</div>
       <div class="m-tag">2 PLAYERS</div>
+    </div>
+    <div class="mode-card" onclick="showOnlineLobby()">
+      <div class="m-icon">🌐</div>
+      <div class="m-name">ONLINE LOBBY</div>
+      <div class="m-desc">Host or join a room.<br>Up to 6 players online.</div>
+      <div class="m-tag">FREE · PARTYKIT</div>
     </div>
     <div class="mode-card" onclick="showAIDifficultyUI()">
       <div class="m-icon">🤖</div>
@@ -1375,6 +1390,63 @@ body::after{
       <div class="m-name">ONE LAP SHOOTOUT</div>
       <div class="m-desc">One flying lap each.<br>Beat the AI’s time.</div>
       <div class="m-tag">SOLO · 1 LAP</div>
+    </div>
+  </div>
+</div>
+
+<!-- ONLINE LOBBY -->
+<div id="screen-online" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
+  <div class="scanlines"></div>
+  <button class="back-btn" onclick="leaveOnlineLobby()">← BACK</button>
+  <div class="section-title">ONLINE LOBBY</div>
+  <div class="section-sub">HOST OR JOIN · UP TO 6 PLAYERS</div>
+  <div class="online-shell">
+    <div class="online-panel" id="online-connect-panel">
+      <div class="online-row" style="margin-bottom:12px;">
+        <button class="btn btn-cyan btn-sm" onclick="hostOnlineLobby()">HOST GAME</button>
+        <button class="btn btn-gold btn-sm" onclick="showOnlineJoinList()">JOIN GAME</button>
+      </div>
+      <div id="online-join-list-wrap" style="display:none;margin-top:8px;">
+        <div class="online-row" style="justify-content:space-between;margin-bottom:8px;">
+          <div style="font:bold 11px Orbitron,sans-serif;letter-spacing:.12em;opacity:.75;">OPEN LOBBIES</div>
+          <button class="btn btn-sm" style="padding:6px 12px;font-size:11px;" onclick="refreshOnlineLobbyList()">↻ REFRESH</button>
+        </div>
+        <div class="online-roster" id="online-lobby-list"></div>
+        <div class="online-status" id="online-join-status" style="margin-top:8px;">Loading lobbies…</div>
+      </div>
+      <div class="online-status" id="online-status">Host a game for friends, or join an open lobby.</div>
+    </div>
+    <div class="online-panel" id="online-room-panel" style="display:none;">
+      <div style="text-align:center;font-size:12px;opacity:.65;letter-spacing:.12em;">YOUR LOBBY</div>
+      <div class="online-code" id="online-room-code" style="font-size:18px;letter-spacing:.12em;">WAITING</div>
+      <div class="online-status" id="online-room-status"></div>
+      <div class="online-roster" id="online-roster"></div>
+      <div class="online-host-only" id="online-host-settings" style="display:none;margin-top:14px;">
+        <div class="setup-section-label" style="text-align:center;">HOST SETTINGS</div>
+        <div class="online-row" style="margin-top:8px;">
+          <select class="online-select" id="online-track-select" onchange="syncOnlineHostSettings()"></select>
+          <select class="online-select" id="online-laps-select" onchange="syncOnlineHostSettings()">
+            <option value="2">2 LAPS</option>
+            <option value="3" selected>3 LAPS</option>
+            <option value="5">5 LAPS</option>
+            <option value="8">8 LAPS</option>
+          </select>
+          <select class="online-select" id="online-weather-select" onchange="syncOnlineHostSettings()">
+            <option value="dry">DRY</option>
+            <option value="wet">WET</option>
+            <option value="heavy">HEAVY RAIN</option>
+          </select>
+          <select class="online-select" id="online-collision-select" onchange="syncOnlineHostSettings()">
+            <option value="collision">COLLISION ON</option>
+            <option value="nocollision">GHOST CARS</option>
+          </select>
+        </div>
+      </div>
+      <div class="online-row" style="margin-top:16px;">
+        <button class="btn btn-gold btn-sm" id="online-ready-btn" onclick="toggleOnlineReady()">READY</button>
+        <button class="btn btn-cyan btn-sm" id="online-start-btn" style="display:none;" onclick="startOnlineRace()">▶ START RACE</button>
+        <button class="btn btn-orange btn-sm" onclick="leaveOnlineLobby()">LEAVE</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1393,6 +1465,7 @@ body::after{
   </div>
   <button class="btn btn-cyan" style="margin-top:10px;" onclick="confirmShootoutMode()">▶ CHOOSE TRACK</button>
 </div>
+
 
 <!-- AI DIFFICULTY OVERLAY -->
 <div id="ai-difficulty">
@@ -2145,7 +2218,7 @@ window.addEventListener('load', () => {
 document.addEventListener('keydown', e => {
   if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) return;
   if (e.key === 'Enter' && document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
-    startQuickRace();
+    startTimeTrial();
   }
 });
 
@@ -6383,12 +6456,14 @@ function drawPositionTracker(ctx, karts, W, H) {
   // Each kart row
   const rankColors = ['#ffd700','#c0c0c0','#cd7f32'];
   sorted.forEach((k, rank) => {
-    const isHuman = k === karts[0];
+    const localIdx = (race.mode === 'online') ? onlineCameraIndex() : 0;
+    const isHuman = k === karts[localIdx];
     const ry = by + 14 + (rank + 1) * rowH;
     ctx.fillStyle = isHuman ? '#00f5ff' : (rankColors[rank] || 'rgba(255,255,255,0.5)');
     ctx.font = isHuman ? 'bold 9px Orbitron,sans-serif' : '9px Orbitron,sans-serif';
     ctx.textAlign = 'left';
-    const name = isHuman ? 'YOU' : (karts.length > 2 ? `AI ${k.id}` : 'P2');
+    let name = isHuman ? 'YOU' : (karts.length > 2 ? `AI ${k.id}` : 'P2');
+    if(race.mode === 'online') name = isHuman ? 'YOU' : (k.onlineName || ('P' + (k.id + 1)));
     ctx.fillText(`P${rank+1}  ${name}`, bx + 6, ry);
     if(isHuman && rank > 0) {
       const gapDist = Math.max(0, (progOf(leaderK) - progOf(k)) * totalLen);
@@ -6803,6 +6878,40 @@ class Race {
       ctrl.set(aiKart);
       applyUpgradesToKart(aiKart, 'p1');
       this.karts.push(aiKart);
+    } else if(mode === 'online') {
+      const cfg = window._onlineRaceConfig || { order: [], players: [], localSlot: 0 };
+      const order = cfg.order || [];
+      const players = cfg.players || [];
+      const onlineColors = [
+        {body:'#00f5ff',shadow:'#005a77'},
+        {body:'#ff6b35',shadow:'#8f2f00'},
+        {body:'#39ff14',shadow:'#1a7000'},
+        {body:'#ffd700',shadow:'#7a6500'},
+        {body:'#aa44ff',shadow:'#550088'},
+        {body:'#ff3b8d',shadow:'#7a1a45'},
+      ];
+      const sess = (window.OnlineNet && window.OnlineNet.session) || null;
+      const count = Math.max(2, Math.min(6, order.length || players.length || 2));
+      this.onlineOrder = order.slice(0, count);
+      this.onlinePlayers = players.slice(0, count);
+      this.localOnlineSlot = (cfg.localSlot >= 0) ? cfg.localSlot : 0;
+      for(let i = 0; i < count; i++) {
+        const connId = order[i] || (players[i] && players[i].id) || ('slot'+i);
+        const plist = players.find(p => p.id === connId) || players[i] || {};
+        const col = onlineColors[i % onlineColors.length];
+        const body = plist.color || col.body;
+        const inputFn = sess ? sess.makeKartInputFn(connId) : (i === 0 ? getP1Input : function(){ return {up:false,down:false,left:false,right:false,ers:false,drs:false}; });
+        const kart = new Kart(i, sp.x - i*30, sp.y + i*18, ang, body, col.shadow, inputFn);
+        kart.onlineConnId = connId;
+        kart.onlineName = plist.name || ('P'+(i+1));
+        kart.isOnlineRemote = i !== this.localOnlineSlot;
+        applyUpgradesToKart(kart, 'p1');
+        this.karts.push(kart);
+      }
+      if(cfg.weather) this.weather = normalizeWeatherId(cfg.weather);
+      if(cfg.collisionMode) this.collisionMode = normalizeCollisionMode(cfg.collisionMode);
+      if(cfg.tyres) this.tyres = getLegalTyreId(cfg.tyres, this.weather);
+      if(cfg.laps) this.lapCount = cfg.laps;
     } else {
       this.karts.push(new Kart(0, sp.x-spread, sp.y+12, ang, p1pc.body, p1pc.shadow, getP1Input));
       this.karts.push(new Kart(1, sp.x+spread, sp.y+28, ang, p2pc.body, p2pc.shadow, getP2Input));
@@ -7734,6 +7843,11 @@ class Race {
     } else {
       startEngine(0);
       if(this.mode === 'versus') startEngine(1);
+      if(this.mode === 'online') {
+        for(let ei = 1; ei < this.karts.length; ei++) {
+          try { startEngine(ei); } catch(e) {}
+        }
+      }
     }
     if(!this._gameplayStarted) {
       CG.gameplayStart();
@@ -7932,7 +8046,7 @@ class Race {
     this.raceTimer += dt;
 
     // ── PIT STOP KEY DETECTION (blocked in Time Trial / Shootout) ──
-    const pitsAllowed = (this.mode !== 'trial' && this.mode !== 'shootout');
+    const pitsAllowed = (this.mode !== 'trial' && this.mode !== 'shootout' && this.mode !== 'online');
     if(this.phase === 'racing' && pitsAllowed) {
       this._processPitLaneService(dt);
     }
@@ -7942,7 +8056,7 @@ class Race {
       // DRS availability: Time Trial = always; AI = all; Shootout = active runner; Versus = within ~1s of car ahead
       if(this.mode === 'trial') {
         k.drsAvailable = true;
-      } else if(this.mode === 'ai') {
+      } else if(this.mode === 'ai' || this.mode === 'online') {
         k.drsAvailable = true;
       } else if(this.mode === 'shootout') {
         k.drsAvailable = (i === shootoutActive);
@@ -8005,13 +8119,14 @@ class Race {
       }
     }
 
-    if(this.mode === 'ai') {
-      const human = this.karts[0];
-      if(human.finished) {
-        // Give AI 30 seconds after human finishes, then auto-DNF them
+    if(this.mode === 'ai' || this.mode === 'online') {
+      const humanIdx = this.mode === 'online' ? onlineCameraIndex() : 0;
+      const human = this.karts[humanIdx];
+      if(human && human.finished) {
+        // Give others 30 seconds after local human finishes, then auto-DNF them
         const humanDone = human.finishTime || 0;
         this.karts.forEach((k, i) => {
-          if(i > 0 && !k.finished && this.raceTimer > humanDone + 30) {
+          if(i !== humanIdx && !k.finished && this.raceTimer > humanDone + 30) {
             k.finished = true;
             k.finishTime = null; // null signals DNF
           }
@@ -8080,12 +8195,12 @@ class Race {
       drawRaceDirectorPanel(ctx, this, karts[0]);
       drawDebugOverlay(ctx, karts[0], W, H);
 
-    } else if(mode === 'ai' || mode === 'shootout') {
+    } else if(mode === 'ai' || mode === 'shootout' || mode === 'online') {
       // Full screen mode with a single driving camera.
       ctx.clearRect(0,0,W,H);
       const activeIdx = mode === 'shootout'
         ? (this.shootoutStage === 'player' ? 0 : 1)
-        : 0;
+        : (mode === 'online' ? onlineCameraIndex() : 0);
       const activeKart = karts[activeIdx] || karts[0];
       const cam = this.cameras[activeIdx] || this.cameras[0];
       const quality = getQualityPreset();
@@ -8639,6 +8754,54 @@ class Race {
       const earnedS = awardCoins(window._lastResult);
       document.getElementById('coins-earned-display').innerHTML = earnedS>0 ? `<div class="coins-earn">💰 +${earnedS} COINS EARNED!</div>` : '';
 
+    } else if(this.mode === 'online') {
+      const t = this.track;
+      const localIdx = onlineCameraIndex();
+      const k = this.karts[localIdx] || this.karts[0];
+      document.getElementById('results-title').textContent = '🌐 ONLINE RACE RESULTS';
+      const progOf = (kart) => {
+        const cum = t.cum, totalLen = t.totalLen;
+        if(!cum || !totalLen) return kart.lap;
+        return kart.lap + (cum[kart._nearestSplineIdx||0]||0)/totalLen;
+      };
+      const rankings = this.karts.map((kart,i)=>({kart,i})).sort((a,b)=>{
+        const aReallyFinished = a.kart.finished && a.kart.finishTime !== null;
+        const bReallyFinished = b.kart.finished && b.kart.finishTime !== null;
+        if(aReallyFinished && !bReallyFinished) return -1;
+        if(!aReallyFinished && bReallyFinished) return 1;
+        if(aReallyFinished && bReallyFinished) return a.kart.finishTime - b.kart.finishTime;
+        return progOf(b.kart)-progOf(a.kart);
+      });
+      const humanRank = rankings.findIndex(r=>r.i===localIdx) + 1;
+      if(humanRank === 1) {
+        resultsWrap.innerHTML = `<div class="winner-banner">🏆 YOU WIN!</div>`;
+        launchConfetti();
+        CG.happytime();
+      } else {
+        resultsWrap.innerHTML = `<div class="winner-banner" style="color:#ff6b35;border-color:#ff6b35;">P${humanRank} / ${this.karts.length}</div>`;
+      }
+      let html = `<div class="results-card">
+        <div class="result-row"><span class="result-label">TRACK</span><span class="result-val cyan">${t.name}</span></div>
+        <div class="result-row"><span class="result-label">YOUR POSITION</span><span class="result-val ${humanRank===1?'green':humanRank<=2?'gold':'red'}">P${humanRank} / ${this.karts.length}</span></div>`;
+      if(k.bestLap < Infinity) html += `<div class="result-row"><span class="result-label">YOUR BEST LAP</span><span class="result-val gold">${fmtTime(k.bestLap)}</span></div>`;
+      if(k.finished && k.finishTime != null) html += `<div class="result-row"><span class="result-label">YOUR TOTAL</span><span class="result-val gold">${fmtTime(k.finishTime)}</span></div>`;
+      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1);font-family:Orbitron,sans-serif;font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.1em;">FULL LEADERBOARD</div>';
+      rankings.forEach((r, rank)=>{
+        const isYou = r.i === localIdx;
+        const name = isYou ? '▶ YOU' : (r.kart.onlineName || ('P'+(r.i+1)));
+        const col = isYou ? '#00f5ff' : (rank===0?'#ffd700':'rgba(255,255,255,.6)');
+        const timeStr = (r.kart.finished && r.kart.finishTime != null) ? fmtTime(r.kart.finishTime) : 'DNF';
+        html += `<div class="result-row"><span class="result-label" style="color:${col}">P${rank+1} ${name}</span><span class="result-val">${timeStr}</span></div>`;
+      });
+      html += '</div>';
+      resultsWrap.innerHTML += html;
+      window._lastResult = {mode:'online', trackId:t.id, trackName:t.name, bestLap:k.bestLap, total:k.finishTime||null, laps:k.lapTimes.length};
+      document.getElementById('coins-earned-display').innerHTML = '';
+      try {
+        const sess = getOnlineSession();
+        if(sess && sess.isHost()) sess.notifyRaceEnded();
+      } catch(e) {}
+
     } else {
       const [k1, k2] = this.karts;
       const t = this.track;
@@ -8753,6 +8916,7 @@ function playCountdownBeep(n) {
 let isPaused = false;
 function pauseGame() {
   if (!race || isPaused) return;
+  if (race.mode === 'online') return; // host-authoritative — pausing one client would desync
   const pausable = ['racing', 'countdown', 'qualifying', 'quali-turn', 'launch'];
   if (!pausable.includes(race.phase)) return;
   isPaused = true;
@@ -8804,9 +8968,15 @@ function pauseQuit() {
   }
   if (animId) { cancelAnimationFrame(animId); animId = null; }
   stopAllEngines(); stopAllDriftSnds();
+  const wasOnline = race && race.mode === 'online';
   race = null;
   lastTime = null;
   CG.gameplayStop();
+  if(wasOnline) {
+    const sess = getOnlineSession();
+    if(sess && sess.isHost()) sess.returnLobby();
+    if(sess && sess.isActive()) { showScreen('online'); refreshOnlineLobbyUI(); return; }
+  }
   showScreen('menu');
 }
 
@@ -8815,9 +8985,22 @@ function returnToMainMenu() {
   stopAllEngines(); stopAllDriftSnds();
   setAdMuted(false);
   isPaused = false;
+  const wasOnline = race && race.mode === 'online';
   race = null;
   lastTime = null;
   CG.gameplayStop();
+  window._onlineRaceConfig = null;
+  if(wasOnline) {
+    const sess = getOnlineSession();
+    if(sess && sess.isHost()) {
+      try { sess.notifyRaceEnded(); } catch(e) {}
+    }
+    if(sess && sess.isActive()) {
+      showScreen('online');
+      refreshOnlineLobbyUI();
+      return;
+    }
+  }
   showScreen('menu');
 }
 
@@ -8836,7 +9019,63 @@ function gameLoop(ts) {
   }
 
   if(race) {
-    race.update(dt);
+    const sess = (window.OnlineNet && window.OnlineNet.session) || null;
+    const onlineRacing = !!(sess && sess.phase === 'racing' && race.mode === 'online');
+    if(onlineRacing) {
+      sess.tickNet(dt, race);
+      if(sess.isHost()) {
+        // Clear inputs for disconnected peers so they coast
+        race.karts.forEach(function(k) {
+          if(!k.onlineConnId) return;
+          const stillHere = (sess.players || []).some(function(p) { return p.id === k.onlineConnId; });
+          if(!stillHere) {
+            k._onlineDisconnected = true;
+            sess.remoteInputs[k.onlineConnId] = window.OnlineNet.emptyInput();
+          }
+        });
+        race.update(dt);
+      } else {
+        // Clients: predict local kart lightly, interpolate everyone from host state
+        const localIdx = onlineCameraIndex();
+        const localKart = race.karts[localIdx];
+        if(localKart && (race.phase === 'racing' || race.phase === 'countdown' || race.phase === 'launch')) {
+          if(race.phase === 'racing') {
+            localKart.update(dt, race.track, race.karts);
+          } else if(race.phase === 'countdown' || race.phase === 'launch') {
+            // Keep launch RPM feel for local player
+            const inp = localKart.getInput ? localKart.getInput() : {up:false, down:false};
+            let rpm = race.launchRPM[localIdx] || 0.0;
+            if(inp.up) rpm += 1.15 * dt;
+            else rpm -= 0.55 * dt;
+            if(inp.down) rpm -= 0.75 * dt;
+            race.launchRPM[localIdx] = Math.max(0, Math.min(1, rpm));
+          }
+        }
+        sess.applyStateToRace(race, dt);
+        // Sync countdown overlay from host phase
+        if(race.phase === 'countdown') {
+          const overlay = document.getElementById('countdownOverlay');
+          if(overlay) overlay.style.display = 'flex';
+          if(race._lastOnlineCd !== race.countdownVal) {
+            race._lastOnlineCd = race.countdownVal;
+            if(race.countdownVal > 0) showCountdown(race.countdownVal);
+            else showCountdown(-1);
+          }
+        } else if(race.phase === 'racing' || race.phase === 'finished') {
+          document.getElementById('countdownOverlay').style.display = 'none';
+        }
+        race.updateCamera(localIdx, dt);
+        if(race.phase === 'finished' && !race.resultsShown) {
+          race.finishedTimer = (race.finishedTimer || 0) + dt;
+          if(race.finishedTimer > 2.2) {
+            race.resultsShown = true;
+            race.showResults();
+          }
+        }
+      }
+    } else {
+      race.update(dt);
+    }
     race.render();
     syncPitSelectionOverlay();
   }
@@ -8982,16 +9221,340 @@ let raceQualiLaps = 3;
 function selectMode(m) {
   currentMode = m;
   initAudio();
+  if(m === 'online') {
+    showOnlineLobby();
+    return;
+  }
   const labels = {
     trial:'TIME TRIAL — CHOOSE CIRCUIT',
     versus:'VERSUS RACE — CHOOSE CIRCUIT',
     ai:'AI RACE — PICK AN AI READY TRACK',
-    shootout:'ONE LAP SHOOTOUT — CHOOSE CIRCUIT'
+    shootout:'ONE LAP SHOOTOUT — CHOOSE CIRCUIT',
+    online:'ONLINE RACE — HOST PICKS CIRCUIT'
   };
   document.getElementById('track-mode-label').textContent = labels[m] || 'CHOOSE CIRCUIT';
   buildTrackGrid();
   showScreen('track');
 }
+
+// ── ONLINE LOBBY ────────────────────────────────────────
+function getOnlineSession() {
+  return (window.OnlineNet && window.OnlineNet.session) || null;
+}
+
+function getOnlinePlayerMeta() {
+  let name = 'RACER';
+  try { name = (localStorage.getItem('kartblitz_lastname') || 'RACER').toUpperCase().substring(0, 12); } catch(e) {}
+  let color = '#00f5ff';
+  try {
+    const liv = getPlayerLivery('p1');
+    const pc = getPaintColor(liv.chassis);
+    if(pc && pc.body) color = pc.body;
+  } catch(e2) {}
+  return { name, color };
+}
+
+function showOnlineLobby() {
+  initAudio();
+  playUIClick();
+  currentMode = 'online';
+  stopOnlineLobbyPoll();
+  const joinWrap = document.getElementById('online-join-list-wrap');
+  if(joinWrap) joinWrap.style.display = 'none';
+  fillOnlineTrackSelect();
+  bindOnlineSessionEvents();
+  refreshOnlineLobbyUI();
+  showScreen('online');
+}
+
+function fillOnlineTrackSelect() {
+  const sel = document.getElementById('online-track-select');
+  if(!sel || sel.options.length) return;
+  TRACKS.forEach((t, i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = t.name;
+    sel.appendChild(opt);
+  });
+}
+
+let _onlineEventsBound = false;
+let _onlineLobbyPoll = null;
+function stopOnlineLobbyPoll() {
+  if(_onlineLobbyPoll) { clearInterval(_onlineLobbyPoll); _onlineLobbyPoll = null; }
+}
+
+function bindOnlineSessionEvents() {
+  const sess = getOnlineSession();
+  if(!sess || _onlineEventsBound) return;
+  _onlineEventsBound = true;
+  sess.on('change', refreshOnlineLobbyUI);
+  sess.on('error', function(msg) {
+    const el = document.getElementById('online-status');
+    if(el) {
+      el.textContent = (msg && msg.message) || sess.lastError || 'Online error';
+      el.classList.add('err');
+    }
+  });
+  sess.on('startRace', function(msg) {
+    stopOnlineLobbyPoll();
+    beginOnlineRaceFromNet(msg);
+  });
+  sess.on('raceAborted', function() {
+    if(animId) { cancelAnimationFrame(animId); animId = null; }
+    stopAllEngines(); stopAllDriftSnds();
+    race = null;
+    lastTime = null;
+    canvas.style.display = 'none';
+    document.getElementById('countdownOverlay').style.display = 'none';
+    showTouchOverlay(false);
+    CG.gameplayStop();
+    showScreen('online');
+    const st = document.getElementById('online-room-status');
+    if(st) st.textContent = 'Host left — race aborted. Waiting in lobby…';
+  });
+  sess.on('raceEnded', function() {
+    refreshOnlineLobbyUI();
+  });
+  sess.on('disconnected', function(info) {
+    if(info && info.wasRacing) {
+      if(animId) { cancelAnimationFrame(animId); animId = null; }
+      stopAllEngines(); stopAllDriftSnds();
+      race = null;
+      canvas.style.display = 'none';
+      showTouchOverlay(false);
+      CG.gameplayStop();
+    }
+    refreshOnlineLobbyUI();
+  });
+}
+
+function hostOnlineLobby() {
+  const sess = getOnlineSession();
+  if(!sess) { alert('online.js failed to load'); return; }
+  stopOnlineLobbyPoll();
+  initAudio(); playUIClick();
+  setOnlineStatus('Creating lobby…');
+  sess.hostLobby(getOnlinePlayerMeta()).then(function() {
+    sess.setReady(false);
+    refreshOnlineLobbyUI();
+  }).catch(function(err) {
+    setOnlineStatus((err && err.message) || 'Host failed', true);
+  });
+}
+
+function showOnlineJoinList() {
+  initAudio(); playUIClick();
+  const wrap = document.getElementById('online-join-list-wrap');
+  if(wrap) wrap.style.display = 'block';
+  refreshOnlineLobbyList();
+  stopOnlineLobbyPoll();
+  _onlineLobbyPoll = setInterval(refreshOnlineLobbyList, 4000);
+}
+
+function refreshOnlineLobbyList() {
+  const list = document.getElementById('online-lobby-list');
+  const st = document.getElementById('online-join-status');
+  if(!window.OnlineNet || !window.OnlineNet.fetchLobbies) {
+    if(st) { st.textContent = 'online.js missing fetchLobbies'; st.classList.add('err'); }
+    return;
+  }
+  if(st) { st.textContent = 'Loading open lobbies…'; st.classList.remove('err'); }
+  window.OnlineNet.fetchLobbies().then(function(lobbies) {
+    if(!list) return;
+    list.innerHTML = '';
+    if(!lobbies.length) {
+      if(st) st.textContent = 'No open lobbies right now. Ask a friend to Host Game, then refresh.';
+      return;
+    }
+    if(st) st.textContent = lobbies.length + ' open ' + (lobbies.length === 1 ? 'lobby' : 'lobbies');
+    lobbies.forEach(function(lobby) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'online-player';
+      row.style.cssText = 'width:100%;cursor:pointer;text-align:left;font:inherit;color:inherit;';
+      const trackName = (TRACKS[lobby.trackId] && TRACKS[lobby.trackId].name) || ('Track ' + (lobby.trackId || 0));
+      row.innerHTML =
+        '<div class="op-name" style="color:#00f5ff">' + (lobby.hostName || 'HOST') + '</div>' +
+        '<div class="op-meta">' + (lobby.players || 1) + '/' + (lobby.max || 6) + ' · ' + trackName + ' · ' + (lobby.laps || 3) + 'L</div>';
+      row.onclick = function() { joinOnlineLobbyById(lobby.id); };
+      list.appendChild(row);
+    });
+  }).catch(function(err) {
+    if(st) {
+      st.textContent = (err && err.message) || 'Failed to load lobbies';
+      st.classList.add('err');
+    }
+  });
+}
+
+function joinOnlineLobbyById(roomId) {
+  const sess = getOnlineSession();
+  if(!sess) { alert('online.js failed to load'); return; }
+  stopOnlineLobbyPoll();
+  initAudio(); playUIClick();
+  setOnlineStatus('Joining…');
+  sess.joinLobby(roomId, getOnlinePlayerMeta()).then(function() {
+    sess.setReady(false);
+    const wrap = document.getElementById('online-join-list-wrap');
+    if(wrap) wrap.style.display = 'none';
+    refreshOnlineLobbyUI();
+  }).catch(function(err) {
+    setOnlineStatus((err && err.message) || 'Join failed', true);
+    showOnlineJoinList();
+  });
+}
+
+function leaveOnlineLobby() {
+  stopOnlineLobbyPoll();
+  const sess = getOnlineSession();
+  if(sess) sess.leave();
+  showScreen('mode');
+}
+
+function setOnlineStatus(text, isErr) {
+  const el = document.getElementById('online-status');
+  if(!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('err', !!isErr);
+}
+
+function refreshOnlineLobbyUI() {
+  const sess = getOnlineSession();
+  const connectPanel = document.getElementById('online-connect-panel');
+  const roomPanel = document.getElementById('online-room-panel');
+  if(!sess || !connectPanel || !roomPanel) return;
+
+  const inRoom = sess.isActive() && sess.roomId;
+  connectPanel.style.display = inRoom ? 'none' : 'block';
+  roomPanel.style.display = inRoom ? 'block' : 'none';
+  if(inRoom) stopOnlineLobbyPoll();
+
+  if(!inRoom) {
+    if(sess.lastError) setOnlineStatus(sess.lastError, true);
+    else setOnlineStatus('Host a game for friends, or join an open lobby.');
+    return;
+  }
+
+  const codeEl = document.getElementById('online-room-code');
+  if(codeEl) {
+    codeEl.textContent = sess.isHost() ? 'YOU ARE HOSTING' : ('JOINED ' + (sess.players.find(function(p){ return p.id === sess.hostId; }) || {}).name || 'HOST');
+  }
+  const hostSettings = document.getElementById('online-host-settings');
+  const startBtn = document.getElementById('online-start-btn');
+  const readyBtn = document.getElementById('online-ready-btn');
+  const isHost = sess.isHost();
+  if(hostSettings) hostSettings.style.display = isHost ? 'block' : 'none';
+  if(startBtn) startBtn.style.display = isHost ? 'inline-flex' : 'none';
+
+  const me = (sess.players || []).find(function(p) { return p.id === sess.you; });
+  if(readyBtn) {
+    readyBtn.textContent = me && me.ready ? 'UNREADY' : 'READY';
+    readyBtn.className = me && me.ready ? 'btn btn-orange btn-sm' : 'btn btn-gold btn-sm';
+  }
+
+  const trackSel = document.getElementById('online-track-select');
+  const lapsSel = document.getElementById('online-laps-select');
+  const wxSel = document.getElementById('online-weather-select');
+  const colSel = document.getElementById('online-collision-select');
+  if(trackSel && sess.settings) trackSel.value = String(sess.settings.trackId || 0);
+  if(lapsSel && sess.settings) lapsSel.value = String(sess.settings.laps || 3);
+  if(wxSel && sess.settings) wxSel.value = sess.settings.weather || 'dry';
+  if(colSel && sess.settings) colSel.value = sess.settings.collisionMode || 'collision';
+  [trackSel, lapsSel, wxSel, colSel].forEach(function(el) {
+    if(el) el.disabled = !isHost;
+  });
+
+  const roster = document.getElementById('online-roster');
+  if(roster) {
+    roster.innerHTML = '';
+    (sess.players || []).forEach(function(p, idx) {
+      const row = document.createElement('div');
+      row.className = 'online-player';
+      const isYou = p.id === sess.you;
+      const isRoomHost = p.id === sess.hostId;
+      row.innerHTML =
+        '<div class="op-name" style="color:' + (p.color || '#00f5ff') + '">' +
+          (isRoomHost ? '👑 ' : '') + (p.name || 'RACER') + (isYou ? ' (YOU)' : '') +
+        '</div>' +
+        '<div class="op-meta">P' + (idx + 1) + ' · ' + (p.ready ? 'READY' : 'WAITING') + '</div>';
+      roster.appendChild(row);
+    });
+  }
+
+  const readyCount = (sess.players || []).filter(function(p) { return p.ready; }).length;
+  const roomStatus = document.getElementById('online-room-status');
+  if(roomStatus) {
+    roomStatus.textContent = (sess.players || []).length + '/6 players · ' + readyCount + ' ready' +
+      (isHost ? ' · You are host' : ' · Waiting for host');
+    roomStatus.classList.remove('err');
+  }
+}
+
+function syncOnlineHostSettings() {
+  const sess = getOnlineSession();
+  if(!sess || !sess.isHost()) return;
+  sess.updateSettings({
+    trackId: parseInt(document.getElementById('online-track-select').value, 10) || 0,
+    laps: parseInt(document.getElementById('online-laps-select').value, 10) || 3,
+    weather: document.getElementById('online-weather-select').value || 'dry',
+    collisionMode: document.getElementById('online-collision-select').value || 'collision',
+    tyres: 'med'
+  });
+}
+
+function toggleOnlineReady() {
+  const sess = getOnlineSession();
+  if(!sess) return;
+  initAudio(); playUIClick();
+  const me = (sess.players || []).find(function(p) { return p.id === sess.you; });
+  sess.setReady(!(me && me.ready));
+}
+
+function startOnlineRace() {
+  const sess = getOnlineSession();
+  if(!sess || !sess.isHost()) return;
+  initAudio(); playUIClick();
+  syncOnlineHostSettings();
+  sess.startRace();
+}
+
+function beginOnlineRaceFromNet(msg) {
+  const sess = getOnlineSession();
+  if(!sess) return;
+  const settings = (msg && msg.settings) || sess.settings || {};
+  const order = (msg && msg.order) || sess.order || [];
+  const players = (msg && msg.players) || sess.players || [];
+  window._onlineRaceConfig = {
+    order: order.slice(),
+    players: players.slice(),
+    localSlot: order.indexOf(sess.you),
+    hostId: sess.hostId,
+    laps: settings.laps || 3,
+    weather: settings.weather || 'dry',
+    collisionMode: settings.collisionMode || 'collision',
+    tyres: settings.tyres || 'med'
+  };
+  try {
+    const pd = getPlayerData();
+    pd.selectedLaps = window._onlineRaceConfig.laps;
+    pd.weather = window._onlineRaceConfig.weather;
+    pd.collisionMode = window._onlineRaceConfig.collisionMode;
+    pd.tyres = window._onlineRaceConfig.tyres;
+    savePlayerData(pd);
+  } catch(e) {}
+  currentMode = 'online';
+  window._skipNextQuali = true;
+  const trackId = Math.max(0, Math.min(TRACKS.length - 1, settings.trackId | 0));
+  selectTrackStart(trackId);
+}
+
+function onlineCameraIndex() {
+  const cfg = window._onlineRaceConfig;
+  if(cfg && cfg.localSlot >= 0) return cfg.localSlot;
+  return 0;
+}
+
 
 function selectTrack(idx) {
   initAudio();
@@ -9028,25 +9591,11 @@ function selectTrackStart(idx) {
   startGameLoop();
 }
 
-/** One-click path for CrazyGames Full Launch (≤1 click into gameplay). */
-function startQuickRace() {
+/** Title-screen shortcut into Time Trial track select. */
+function startTimeTrial() {
   initAudio();
   playUIClick();
-  currentMode = 'ai';
-  window._aiDifficulty = 'medium';
-  window._aiCount = 3;
-  window._skipNextQuali = true;
-  raceQualiEnabled = false;
-  const pd = getPlayerData();
-  if (!pd.selectedLaps) {
-    pd.selectedLaps = 3;
-    savePlayerData(pd);
-  }
-  const unlocked = pd.unlockedTracks || DEFAULT_UNLOCKED_TRACKS;
-  let idx = TRACKS.findIndex(t => unlocked.includes(t.id) && t.aiFriendly && !t.locked);
-  if (idx < 0) idx = TRACKS.findIndex(t => unlocked.includes(t.id));
-  if (idx < 0) idx = 0;
-  selectTrackStart(idx);
+  selectMode('trial');
 }
 
 function getP1Input() {
@@ -9078,6 +9627,11 @@ function mergePlayerInput(kb, ts) {
 
 function restartRace() {
   if(!race) return;
+  if(race.mode === 'online') {
+    // Online: go back to lobby so the host can start a fresh race
+    returnToMainMenu();
+    return;
+  }
   const trackId = race.track.id;
   const mode = race.mode;
   document.getElementById('screen-results').classList.add('hidden');
@@ -10491,7 +11045,7 @@ function buildSettingsPane(){
     </div>
     <div class="howto-section" style="width:min(560px,94vw);border-bottom:none;">
       <div class="howto-heading">🎮 QUICK TIPS</div>
-      <div class="info-kv"><span class="info-k">QUICK RACE</span><span class="info-v">One click from the title screen into a medium AI race.</span></div>
+      <div class="info-kv"><span class="info-k">TIME TRIAL</span><span class="info-v">From the title screen, jump straight to circuit select for a solo session.</span></div>
       <div class="info-kv"><span class="info-k">PAUSE</span><span class="info-v">Press Esc, or the pause button in touch mode.</span></div>
       <div class="info-kv"><span class="info-k">TOUCH</span><span class="info-v">Joystick steers and throttles; switch mode anytime in Settings.</span></div>
     </div>
