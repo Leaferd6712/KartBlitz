@@ -6,8 +6,10 @@
   'use strict';
 
   var MAX_PLAYERS = 6;
-  var INPUT_HZ = 30;
-  var STATE_HZ = 20;
+  var INPUT_HZ = 60;
+  var STATE_HZ = 45;
+  var LOCAL_KEEP_ERR = 18;
+  var LOCAL_SNAP_ERR = 80;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
 
   /**
@@ -83,6 +85,7 @@
     this.localSlot = -1;
     this.remoteInputs = {};
     this.latestState = null;
+    this.prevState = null;
     this._inputAcc = 0;
     this._stateAcc = 0;
     this._listeners = {};
@@ -148,6 +151,7 @@
     this.lastError = '';
     this.remoteInputs = {};
     this.latestState = null;
+    this.prevState = null;
     this.localSlot = -1;
     this.order = [];
 
@@ -254,6 +258,7 @@
     this.localSlot = -1;
     this.remoteInputs = {};
     this.latestState = null;
+    this.prevState = null;
     if (!silent) this.emit('change');
   };
 
@@ -318,6 +323,7 @@
       this.localSlot = this.order.indexOf(this.you);
       this.remoteInputs = {};
       this.latestState = null;
+      this.prevState = null;
       this.emit('startRace', msg);
       this.emit('change');
       return;
@@ -329,6 +335,7 @@
     }
     if (type === 'state') {
       if (this.isHost()) return;
+      this.prevState = this.latestState;
       this.latestState = msg;
       this.emit('state', msg);
       return;
@@ -340,6 +347,7 @@
       this.order = [];
       this.localSlot = -1;
       this.latestState = null;
+      this.prevState = null;
       this.emit('raceAborted', msg);
       this.emit('change');
       return;
@@ -351,6 +359,7 @@
       this.order = [];
       this.localSlot = -1;
       this.latestState = null;
+      this.prevState = null;
       this.emit('raceEnded', msg);
       this.emit('change');
       return;
@@ -411,6 +420,7 @@
           phase: race.phase,
           countdownVal: race.countdownVal,
           raceTimer: race.raceTimer,
+          launchRPM: (race.launchRPM || []).map(function (v) { return round3(v || 0); }),
           karts: (race.karts || []).map(serializeKart)
         });
       }
@@ -447,6 +457,41 @@
     return Math.round(n * 1000) / 1000;
   }
 
+  function copyGameplayFields(k, s) {
+    k.lap = s.lap;
+    k.finished = !!s.finished;
+    k.finishTime = s.finishTime;
+    k.tyreId = s.tyreId || k.tyreId;
+    k.tyreWear = s.tyreWear;
+    k.ersCharge = s.ersCharge;
+    k.ersActive = !!s.ersActive;
+    k.drsActive = !!s.drsActive;
+    k.drsAvailable = !!s.drsAvailable;
+    k.pitPhase = s.pitPhase;
+    k.inPit = !!s.inPit;
+    k.checkpointsBit = s.checkpointsBit || 0;
+    k._nearestSplineIdx = s._nearestSplineIdx || 0;
+    if (s.bestLap != null) k.bestLap = s.bestLap;
+    k._onlineDisconnected = !!s.disconnected;
+  }
+
+  function applyPose(k, s) {
+    k.x = s.x;
+    k.y = s.y;
+    k.angle = s.angle;
+    k.speed = s.speed;
+  }
+
+  function poseError(k, s) {
+    var dx = (k.x || 0) - (s.x || 0);
+    var dy = (k.y || 0) - (s.y || 0);
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function finitePose(s) {
+    return s && isFinite(s.x) && isFinite(s.y) && isFinite(s.angle) && isFinite(s.speed);
+  }
+
   OnlineSession.prototype.applyStateToRace = function (race, dt) {
     var snap = this.latestState;
     if (!race || !snap || !snap.karts) return;
@@ -455,38 +500,47 @@
     if (typeof snap.raceTimer === 'number') race.raceTimer = snap.raceTimer;
 
     var localIdx = this.localSlot >= 0 ? this.localSlot : 0;
+    var keepLocalRpm = race.phase === 'countdown' || race.phase === 'launch';
+    if (Array.isArray(snap.launchRPM) && race.launchRPM) {
+      for (var ri = 0; ri < snap.launchRPM.length; ri++) {
+        if (keepLocalRpm && ri === localIdx) continue;
+        race.launchRPM[ri] = snap.launchRPM[ri];
+      }
+    }
+
+    var frameDt = dt || 0.016;
+    var remoteBlend = Math.min(1, 14 * frameDt);
+    var remoteAngBlend = Math.min(1, 16 * frameDt);
+    var midBlend = Math.min(1, 3.2 * frameDt);
+    var midAngBlend = Math.min(1, 4 * frameDt);
+
     for (var i = 0; i < snap.karts.length; i++) {
       var s = snap.karts[i];
       var k = race.karts[i];
-      if (!k || !s) continue;
+      if (!k || !s || !finitePose(s)) continue;
       var isLocal = i === localIdx;
       if (isLocal) {
-        // Soft reconcile local prediction toward host
-        k.x += (s.x - k.x) * Math.min(1, 8 * (dt || 0.016));
-        k.y += (s.y - k.y) * Math.min(1, 8 * (dt || 0.016));
-        k.angle = lerpAngle(k.angle, s.angle, Math.min(1, 10 * (dt || 0.016)));
-        k.speed += (s.speed - k.speed) * Math.min(1, 10 * (dt || 0.016));
+        if (!isFinite(k.x) || !isFinite(k.y) || !isFinite(k.angle) || !isFinite(k.speed)) {
+          applyPose(k, s);
+        } else {
+          var err = poseError(k, s);
+          if (err > LOCAL_SNAP_ERR) {
+            applyPose(k, s);
+          } else if (err > LOCAL_KEEP_ERR) {
+            k.x = lerp(k.x, s.x, midBlend);
+            k.y = lerp(k.y, s.y, midBlend);
+            k.angle = lerpAngle(k.angle, s.angle, midAngBlend);
+            k.speed += (s.speed - k.speed) * midAngBlend;
+          }
+        }
       } else {
-        k.x = lerp(k.x, s.x, Math.min(1, 14 * (dt || 0.016)));
-        k.y = lerp(k.y, s.y, Math.min(1, 14 * (dt || 0.016)));
-        k.angle = lerpAngle(k.angle, s.angle, Math.min(1, 16 * (dt || 0.016)));
+        k.x = lerp(k.x, s.x, remoteBlend);
+        k.y = lerp(k.y, s.y, remoteBlend);
+        k.angle = lerpAngle(k.angle, s.angle, remoteAngBlend);
         k.speed = s.speed;
+        if (!isFinite(k.x) || !isFinite(k.y)) applyPose(k, s);
       }
-      k.lap = s.lap;
-      k.finished = !!s.finished;
-      k.finishTime = s.finishTime;
-      k.tyreId = s.tyreId || k.tyreId;
-      k.tyreWear = s.tyreWear;
-      k.ersCharge = s.ersCharge;
-      k.ersActive = !!s.ersActive;
-      k.drsActive = !!s.drsActive;
-      k.drsAvailable = !!s.drsAvailable;
-      k.pitPhase = s.pitPhase;
-      k.inPit = !!s.inPit;
-      k.checkpointsBit = s.checkpointsBit || 0;
-      k._nearestSplineIdx = s._nearestSplineIdx || 0;
-      if (s.bestLap != null) k.bestLap = s.bestLap;
-      k._onlineDisconnected = !!s.disconnected;
+      copyGameplayFields(k, s);
     }
   };
 
