@@ -2,6 +2,7 @@ import { Server, type Connection, type ConnectionContext } from "partyserver";
 import type { Env } from "./env";
 
 const MAX_PLAYERS = 6;
+const HOST_STALE_MS = 4000;
 
 type Player = {
   id: string;
@@ -29,6 +30,7 @@ export class KartBlitzRoom extends Server<Env> {
   players = new Map<string, Player>();
   hostId: string | null = null;
   phase: RoomPhase = "lobby";
+  lastStateAt = 0;
   settings: LobbySettings = {
     trackId: 0,
     laps: 3,
@@ -74,33 +76,40 @@ export class KartBlitzRoom extends Server<Env> {
   }
 
   onClose(conn: Connection) {
+    if (!this.players.has(conn.id)) return;
+
     const wasHost = this.hostId === conn.id;
     this.players.delete(conn.id);
 
     if (this.players.size === 0) {
       this.hostId = null;
       this.phase = "lobby";
+      this.lastStateAt = 0;
       this.resetSettings();
       void this.syncDirectory(true);
       return;
     }
 
-    if (wasHost) {
-      this.hostId = this.roster()[0]?.id ?? null;
-      if (this.phase === "racing") {
-        this.phase = "lobby";
-        for (const p of this.players.values()) p.ready = false;
-        this.broadcast(
-          json({
-            type: "raceAborted",
-            reason: "host_left",
-            hostId: this.hostId,
-            players: this.roster(),
-          })
-        );
-        void this.syncDirectory();
+    if (this.phase === "racing") {
+      if (wasHost) {
+        this.migrateHost(conn.id);
         return;
       }
+      this.broadcast(
+        json({
+          type: "playerLeft",
+          id: conn.id,
+          hostId: this.hostId,
+          players: this.roster(),
+          phase: this.phase,
+        })
+      );
+      void this.syncDirectory();
+      return;
+    }
+
+    if (wasHost) {
+      this.hostId = this.roster()[0]?.id ?? null;
     }
 
     this.broadcast(
@@ -186,6 +195,7 @@ export class KartBlitzRoom extends Server<Env> {
           };
         }
         this.phase = "racing";
+        this.lastStateAt = Date.now();
         const order = this.roster().map((p) => p.id);
         this.broadcast(
           json({
@@ -200,21 +210,23 @@ export class KartBlitzRoom extends Server<Env> {
         break;
       }
       case "input": {
-        if (this.phase !== "racing" || !this.hostId || sender.id === this.hostId) return;
-        const host = [...this.getConnections()].find((c) => c.id === this.hostId);
-        if (!host) return;
-        host.send(
+        if (this.phase !== "racing") return;
+        this.maybeMigrateStaleHost();
+        if (this.phase !== "racing") return;
+        this.broadcast(
           json({
             type: "input",
             id: sender.id,
             input: msg.input || {},
             t: msg.t || 0,
-          })
+          }),
+          [sender.id]
         );
         break;
       }
       case "state": {
         if (this.phase !== "racing" || sender.id !== this.hostId) return;
+        this.lastStateAt = Date.now();
         this.broadcast(
           json({
             type: "state",
@@ -222,6 +234,7 @@ export class KartBlitzRoom extends Server<Env> {
             phase: msg.phase,
             countdownVal: msg.countdownVal,
             raceTimer: msg.raceTimer,
+            launchRPM: msg.launchRPM,
             karts: msg.karts,
             hostId: this.hostId,
           }),
@@ -265,6 +278,53 @@ export class KartBlitzRoom extends Server<Env> {
 
   roster(): Player[] {
     return [...this.players.values()];
+  }
+
+  maybeMigrateStaleHost() {
+    if (this.phase !== "racing" || !this.hostId) return;
+    const hostConn = [...this.getConnections()].find((c) => c.id === this.hostId);
+    const stale = !hostConn || (this.lastStateAt > 0 && Date.now() - this.lastStateAt > HOST_STALE_MS);
+    if (!stale) return;
+    const oldId = this.hostId;
+    if (this.players.has(oldId)) this.players.delete(oldId);
+    if (hostConn) {
+      try {
+        hostConn.close(4002, "stale_host");
+      } catch {
+        /* ignore */
+      }
+    }
+    this.migrateHost(oldId);
+  }
+
+  migrateHost(disconnectedId: string | null) {
+    if (this.players.size === 0) {
+      this.hostId = null;
+      this.phase = "lobby";
+      this.lastStateAt = 0;
+      this.resetSettings();
+      void this.syncDirectory(true);
+      return;
+    }
+
+    this.hostId = this.roster()[0]?.id ?? null;
+    this.lastStateAt = Date.now();
+    if (!this.hostId) {
+      this.phase = "lobby";
+      void this.syncDirectory(true);
+      return;
+    }
+
+    this.broadcast(
+      json({
+        type: "hostMigrated",
+        hostId: this.hostId,
+        players: this.roster(),
+        disconnectedId: disconnectedId || null,
+        phase: this.phase,
+      })
+    );
+    void this.syncDirectory(this.phase === "racing");
   }
 
   broadcastRoster(exceptId?: string) {

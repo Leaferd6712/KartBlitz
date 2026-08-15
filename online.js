@@ -1,15 +1,16 @@
 /**
  * KartBlitz online multiplayer client (Cloudflare PartyServer WebSocket rooms).
- * Host-authoritative: host simulates; peers send input and apply state snapshots.
+ * Shared sim: all peers run physics from broadcast inputs.
+ * Host sends 10 Hz corrections; guests apply only on new snapshots.
  */
 (function (global) {
   'use strict';
 
   var MAX_PLAYERS = 6;
   var INPUT_HZ = 60;
-  var STATE_HZ = 45;
-  var LOCAL_KEEP_ERR = 18;
-  var LOCAL_SNAP_ERR = 80;
+  var STATE_HZ = 10;
+  var LOCAL_SNAP_ERR = 180;
+  var REMOTE_SNAP_ERR = 120;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
 
   /**
@@ -86,6 +87,7 @@
     this.remoteInputs = {};
     this.latestState = null;
     this.prevState = null;
+    this._stateDirty = false;
     this._inputAcc = 0;
     this._stateAcc = 0;
     this._listeners = {};
@@ -152,6 +154,7 @@
     this.remoteInputs = {};
     this.latestState = null;
     this.prevState = null;
+    this._stateDirty = false;
     this.localSlot = -1;
     this.order = [];
 
@@ -259,6 +262,7 @@
     this.remoteInputs = {};
     this.latestState = null;
     this.prevState = null;
+    this._stateDirty = false;
     if (!silent) this.emit('change');
   };
 
@@ -314,6 +318,15 @@
       this.emit('change');
       return;
     }
+    if (type === 'hostMigrated') {
+      this.hostId = msg.hostId || this.hostId;
+      this.players = msg.players || this.players;
+      if (msg.disconnectedId) delete this.remoteInputs[msg.disconnectedId];
+      this.phase = 'racing';
+      this.emit('hostMigrated', msg);
+      this.emit('change');
+      return;
+    }
     if (type === 'startRace') {
       this.phase = 'racing';
       this.settings = msg.settings || this.settings;
@@ -324,19 +337,22 @@
       this.remoteInputs = {};
       this.latestState = null;
       this.prevState = null;
+      this._stateDirty = false;
       this.emit('startRace', msg);
       this.emit('change');
       return;
     }
     if (type === 'input') {
-      if (!this.isHost()) return;
-      this.remoteInputs[msg.id] = normalizeInput(msg.input);
+      if (msg.id && msg.id !== this.you) {
+        this.remoteInputs[msg.id] = normalizeInput(msg.input);
+      }
       return;
     }
     if (type === 'state') {
       if (this.isHost()) return;
       this.prevState = this.latestState;
       this.latestState = msg;
+      this._stateDirty = true;
       this.emit('state', msg);
       return;
     }
@@ -348,6 +364,7 @@
       this.localSlot = -1;
       this.latestState = null;
       this.prevState = null;
+      this._stateDirty = false;
       this.emit('raceAborted', msg);
       this.emit('change');
       return;
@@ -360,6 +377,7 @@
       this.localSlot = -1;
       this.latestState = null;
       this.prevState = null;
+      this._stateDirty = false;
       this.emit('raceEnded', msg);
       this.emit('change');
       return;
@@ -399,21 +417,26 @@
     return function () { return self.getInputForConn(connId); };
   };
 
-  OnlineSession.prototype.tickNet = function (dt, race) {
+  OnlineSession.prototype.tickNet = function (dt, race, forceState) {
     if (this.phase !== 'racing' || !this.connected()) return;
 
     this._inputAcc += dt;
-    if (this._inputAcc >= 1 / INPUT_HZ) {
-      this._inputAcc = 0;
-      if (!this.isHost()) {
-        this.send({ type: 'input', input: normalizeInput(typeof global.getP1Input === 'function' ? global.getP1Input() : emptyInput()), t: performance.now() });
-      }
+    var inputStep = 1 / INPUT_HZ;
+    if (this._inputAcc >= inputStep) {
+      this._inputAcc = this._inputAcc % inputStep;
+      this.send({
+        type: 'input',
+        input: normalizeInput(typeof global.getP1Input === 'function' ? global.getP1Input() : emptyInput()),
+        t: performance.now()
+      });
     }
+    if (this._inputAcc > inputStep) this._inputAcc = 0;
 
     if (this.isHost() && race) {
       this._stateAcc += dt;
-      if (this._stateAcc >= 1 / STATE_HZ) {
-        this._stateAcc = 0;
+      var stateStep = 1 / STATE_HZ;
+      if (forceState || this._stateAcc >= stateStep) {
+        this._stateAcc = forceState ? 0 : this._stateAcc % stateStep;
         this.send({
           type: 'state',
           t: performance.now(),
@@ -457,22 +480,27 @@
     return Math.round(n * 1000) / 1000;
   }
 
-  function copyGameplayFields(k, s) {
+  function copyGameplayFields(k, s, isLocal) {
     k.lap = s.lap;
     k.finished = !!s.finished;
     k.finishTime = s.finishTime;
     k.tyreId = s.tyreId || k.tyreId;
     k.tyreWear = s.tyreWear;
     k.ersCharge = s.ersCharge;
-    k.ersActive = !!s.ersActive;
-    k.drsActive = !!s.drsActive;
-    k.drsAvailable = !!s.drsAvailable;
-    k.pitPhase = s.pitPhase;
-    k.inPit = !!s.inPit;
+    if (!isLocal) {
+      k.ersActive = !!s.ersActive;
+      k.drsActive = !!s.drsActive;
+      k.drsAvailable = !!s.drsAvailable;
+      k.pitPhase = s.pitPhase;
+      k.inPit = !!s.inPit;
+    }
     k.checkpointsBit = s.checkpointsBit || 0;
     k._nearestSplineIdx = s._nearestSplineIdx || 0;
     if (s.bestLap != null) k.bestLap = s.bestLap;
     k._onlineDisconnected = !!s.disconnected;
+    if (typeof s.maxSpeed === 'number' && isFinite(s.maxSpeed) && s.maxSpeed > 1) {
+      k.maxSpeed = s.maxSpeed;
+    }
   }
 
   function applyPose(k, s) {
@@ -493,11 +521,18 @@
   }
 
   OnlineSession.prototype.applyStateToRace = function (race, dt) {
+    if (!this._stateDirty) return;
+    this._stateDirty = false;
     var snap = this.latestState;
     if (!race || !snap || !snap.karts) return;
-    if (snap.phase) race.phase = snap.phase;
-    if (typeof snap.countdownVal === 'number') race.countdownVal = snap.countdownVal;
-    if (typeof snap.raceTimer === 'number') race.raceTimer = snap.raceTimer;
+
+    if (snap.phase && snap.phase !== race.phase) {
+      race.phase = snap.phase;
+      if (typeof snap.countdownVal === 'number') race.countdownVal = snap.countdownVal;
+      if (typeof snap.raceTimer === 'number') race.raceTimer = snap.raceTimer;
+    } else if (snap.phase === 'finished' || race.phase === 'finished') {
+      if (typeof snap.raceTimer === 'number') race.raceTimer = snap.raceTimer;
+    }
 
     var localIdx = this.localSlot >= 0 ? this.localSlot : 0;
     var keepLocalRpm = race.phase === 'countdown' || race.phase === 'launch';
@@ -508,49 +543,17 @@
       }
     }
 
-    var frameDt = dt || 0.016;
-    var remoteBlend = Math.min(1, 14 * frameDt);
-    var remoteAngBlend = Math.min(1, 16 * frameDt);
-    var midBlend = Math.min(1, 3.2 * frameDt);
-    var midAngBlend = Math.min(1, 4 * frameDt);
-
     for (var i = 0; i < snap.karts.length; i++) {
       var s = snap.karts[i];
       var k = race.karts[i];
       if (!k || !s || !finitePose(s)) continue;
       var isLocal = i === localIdx;
-      if (isLocal) {
-        if (!isFinite(k.x) || !isFinite(k.y) || !isFinite(k.angle) || !isFinite(k.speed)) {
-          applyPose(k, s);
-        } else {
-          var err = poseError(k, s);
-          if (err > LOCAL_SNAP_ERR) {
-            applyPose(k, s);
-          } else if (err > LOCAL_KEEP_ERR) {
-            k.x = lerp(k.x, s.x, midBlend);
-            k.y = lerp(k.y, s.y, midBlend);
-            k.angle = lerpAngle(k.angle, s.angle, midAngBlend);
-            k.speed += (s.speed - k.speed) * midAngBlend;
-          }
-        }
-      } else {
-        k.x = lerp(k.x, s.x, remoteBlend);
-        k.y = lerp(k.y, s.y, remoteBlend);
-        k.angle = lerpAngle(k.angle, s.angle, remoteAngBlend);
-        k.speed = s.speed;
-        if (!isFinite(k.x) || !isFinite(k.y)) applyPose(k, s);
-      }
-      copyGameplayFields(k, s);
+      var err = (isFinite(k.x) && isFinite(k.y)) ? poseError(k, s) : Infinity;
+      var snapPose = err > (isLocal ? LOCAL_SNAP_ERR : REMOTE_SNAP_ERR);
+      if (snapPose) applyPose(k, s);
+      copyGameplayFields(k, s, isLocal);
     }
   };
-
-  function lerp(a, b, t) { return a + (b - a) * t; }
-  function lerpAngle(a, b, t) {
-    var d = b - a;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
-    return a + d * t;
-  }
 
   var session = new OnlineSession();
 
