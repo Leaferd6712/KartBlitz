@@ -6,6 +6,8 @@
 <title>KART BLITZ ⚡</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<script src="online-codec.js"></script>
+<script src="online-sim.js"></script>
 <script src="online.js"></script>
 <script type="importmap">
 {
@@ -1679,7 +1681,7 @@ body::after{
     <h2 id="patch-notes-title">PATCH NOTES</h2>
     <div class="patch-date">AUGUST 15</div>
     <ul>
-      <li>Online mode lag is getting fixed <strong>(BETA testing)</strong>.</li>
+      <li>Online mode uses <strong>server authority</strong> — less lag, no host-tab hitch (BETA).</li>
       <li>The leaderboard will be on in the next week.</li>
     </ul>
     <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
@@ -3939,8 +3941,7 @@ class Kart {
     if(this.ersActive) {
       this.ersCharge = Math.max(0, this.ersCharge - (1 / 5) * dt);  // 5s full drain
       if(this.ersCharge <= 0) { this.ersActive = false; this._ersToggled = false; }
-      // Fast blend-in so deployment still feels responsive
-      this._ersPower = Math.min(1, (this._ersPower || 0) + 5.0 * dt);
+      this._ersPower = 1;
       this._ersStraightTimer = 0;
     } else {
       // Smooth blend-out (~1.15s) — spdLimit eases down so speed is not hard-cut
@@ -6980,7 +6981,8 @@ class Race {
         kart.onlineConnId = connId;
         kart.onlineName = plist.name || ('P'+(i+1));
         kart.isOnlineRemote = i !== this.localOnlineSlot;
-        applyUpgradesToKart(kart, 'p1');
+        // Display shell only — shared OnlineSim owns local physics; remotes are interpolated
+        if(i === this.localOnlineSlot) applyUpgradesToKart(kart, 'p1');
         this.karts.push(kart);
       }
       if(cfg.weather) this.weather = normalizeWeatherId(cfg.weather);
@@ -9118,8 +9120,8 @@ function returnToMainMenu() {
 let _onlineBgTimer = null;
 
 function isOnlineHostSim() {
-  const sess = (window.OnlineNet && window.OnlineNet.session) || null;
-  return !!(race && race.mode === 'online' && sess && sess.isHost() && sess.isActive());
+  // Physics authority lives on the Cloudflare Durable Object — browsers never host-sim.
+  return false;
 }
 
 function stopOnlineBgSim() {
@@ -9130,23 +9132,14 @@ function stopOnlineBgSim() {
 }
 
 function startOnlineBgSim() {
-  if(_onlineBgTimer) return;
-  _onlineBgTimer = setInterval(function() {
-    if(!isOnlineHostSim() || !document.hidden) return;
-    advanceRace(performance.now(), { render: false, catchUp: true });
-  }, 200);
+  // No-op: server authority does not need a browser background physics loop.
 }
 
 function syncOnlineBgSim() {
-  if(document.hidden && isOnlineHostSim()) {
-    if(animId) { cancelAnimationFrame(animId); animId = null; }
-    startOnlineBgSim();
-  } else {
-    stopOnlineBgSim();
-    if(race && !animId && !isPaused) {
-      lastTime = performance.now();
-      animId = requestAnimationFrame(gameLoop);
-    }
+  stopOnlineBgSim();
+  if(race && !animId && !isPaused) {
+    lastTime = performance.now();
+    animId = requestAnimationFrame(gameLoop);
   }
 }
 
@@ -9172,7 +9165,6 @@ function advanceRace(now, opts) {
 
   const sess = (window.OnlineNet && window.OnlineNet.session) || null;
   const onlineRacing = !!(sess && sess.phase === 'racing' && race && race.mode === 'online');
-  const hostOnline = !!(onlineRacing && sess.isHost());
   const maxCatch = (onlineRacing && catchUp) ? 1.0 : 0.05;
   elapsed = Math.min(elapsed, maxCatch);
 
@@ -9186,37 +9178,121 @@ function advanceRace(now, opts) {
   if(!race) return;
 
   if(onlineRacing) {
-    const slice = 1 / 60;
-    let left = elapsed;
-    while(left > 0.0005) {
-      const d = Math.min(slice, left);
-      stepOnlineSim(d, sess);
-      left -= d;
+    // Inputs → interp remotes → predict local (shared sim) → reconcile
+    sess.tickNet(elapsed);
+    const localIdx = onlineCameraIndex();
+    const localKart = race.karts[localIdx];
+    const Sim = window.OnlineSim;
+    ensureOnlineLocalSim(race, localIdx);
+    sess.interpolateRemoteKarts(race, Date.now());
+
+    if(race.phase === 'racing' && localKart && !localKart.finished && race._onlineLocalSim && Sim) {
+      const fixed = Sim.FIXED_DT || (1 / 60);
+      let left = elapsed;
+      const collideOn = (race.collisionMode || 'collision') !== 'nocollision';
+      const remotes = [];
+      for(let ri = 0; ri < race.karts.length; ri++) {
+        if(ri === localIdx) continue;
+        const rk = race.karts[ri];
+        if(!rk || !isFinite(rk.x)) continue;
+        remotes.push({ id: ri, x: rk.x, y: rk.y, angle: rk.angle, speed: rk.speed, finished: !!rk.finished });
+      }
+      const inp = (typeof sess.getPredictInput === 'function')
+        ? sess.getPredictInput()
+        : ((typeof getP1Input === 'function')
+          ? { up:!!getP1Input().up, down:!!getP1Input().down, left:!!getP1Input().left, right:!!getP1Input().right,
+              ers:!!getP1Input().ers, drs:!!getP1Input().drs,
+              steer: typeof getP1Input().steer === 'number' ? getP1Input().steer : 0,
+              throttle: typeof getP1Input().throttle === 'number' ? getP1Input().throttle : (getP1Input().up ? 1 : 0),
+              brake: typeof getP1Input().brake === 'number' ? getP1Input().brake : (getP1Input().down ? 1 : 0) }
+          : { up:false, down:false, left:false, right:false, ers:false, drs:false, steer:0, throttle:0, brake:0 });
+      while(left > 0.0005) {
+        const d = Math.min(fixed, left);
+        const cars = [race._onlineLocalSim].concat(remotes);
+        Sim.stepKart(race._onlineLocalSim, inp, d, race._onlineSimTrack || race.track, cars, {
+          contact: collideOn,
+          resolveCollisions: collideOn,
+          nowMs: race._onlineLocalSim.simTimeMs + d * 1000
+        });
+        left -= d;
+      }
+      localKart.x = race._onlineLocalSim.x;
+      localKart.y = race._onlineLocalSim.y;
+      localKart.angle = race._onlineLocalSim.angle;
+      localKart.speed = race._onlineLocalSim.speed;
+      localKart.ersCharge = race._onlineLocalSim.ersCharge;
+      localKart.ersActive = race._onlineLocalSim.ersActive;
+      localKart.drsActive = race._onlineLocalSim.drsActive;
+      localKart.tyreWear = race._onlineLocalSim.tyreWear;
+      if(typeof race._onlineLocalSim.tyreTemp === 'number') localKart.tyreTemp = race._onlineLocalSim.tyreTemp;
+    } else if(race.phase === 'racing' && localKart && !localKart.finished && !Sim) {
+      // Shared sim required for online — do not fall back to HTML Kart physics
+      if(!race._onlineSimMissingWarned) {
+        race._onlineSimMissingWarned = true;
+        console.error('OnlineSim missing — online prediction disabled');
+        const el = document.getElementById('online-status');
+        if(el) { el.textContent = 'online-sim.js failed to load — hard refresh'; el.classList.add('err'); }
+      }
+    } else if((race.phase === 'countdown' || race.phase === 'launch') && localKart && race.launchRPM) {
+      const inp = (typeof getP1Input === 'function') ? getP1Input() : { up: false, down: false };
+      let rpm = race.launchRPM[localIdx] || 0;
+      if(inp.up) rpm += 1.15 * elapsed;
+      else rpm -= 0.55 * elapsed;
+      if(inp.down) rpm -= 0.75 * elapsed;
+      race.launchRPM[localIdx] = Math.max(0, Math.min(1, rpm));
     }
-    sess.tickNet(elapsed, race, catchUp && hostOnline);
-    if(!sess.isHost()) {
-      sess.applyStateToRace(race, elapsed);
-      const localIdx = onlineCameraIndex();
-      const localKart = race.karts[localIdx];
-      if(localKart && (!isFinite(localKart.x) || !isFinite(localKart.y))) {
-        const snapKart = sess.latestState && sess.latestState.karts && sess.latestState.karts[localIdx];
-        if(snapKart && isFinite(snapKart.x) && isFinite(snapKart.y)) {
-          localKart.x = snapKart.x;
-          localKart.y = snapKart.y;
-          localKart.angle = snapKart.angle;
-          localKart.speed = snapKart.speed;
-        } else if(race.track && race.track.startPos) {
-          localKart.x = race.track.startPos.x;
-          localKart.y = race.track.startPos.y;
+    sess.reconcileLocalKart(race, elapsed);
+    if(localKart && (!isFinite(localKart.x) || !isFinite(localKart.y))) {
+      const snapKart = sess.latestState && sess.latestState.karts && sess.latestState.karts[localIdx];
+      if(snapKart && isFinite(snapKart.x) && isFinite(snapKart.y)) {
+        localKart.x = snapKart.x;
+        localKart.y = snapKart.y;
+        localKart.angle = snapKart.angle;
+        localKart.speed = snapKart.speed;
+      } else if(race.track && race.track.startPos) {
+        localKart.x = race.track.startPos.x;
+        localKart.y = race.track.startPos.y;
+      }
+    }
+    if(typeof race.updateCamera === 'function') race.updateCamera(localIdx, elapsed);
+    if(race.phase === 'finished') {
+      race.finishedTimer = (race.finishedTimer || 0) + elapsed;
+      if(race.finishedTimer > 2.2 && !race.resultsShown) {
+        race.resultsShown = true;
+        race.showResults();
+      }
+    }
+    const prevPhase = race._guestShownPhase;
+    if(race.phase === 'countdown' && race.countdownVal > 0 && race._lastOnlineCd !== race.countdownVal) {
+      showCountdown(race.countdownVal);
+      race._lastOnlineCd = race.countdownVal;
+    }
+    if(race.phase === 'racing' && prevPhase !== 'racing' && prevPhase !== 'finished') {
+      showCountdown(-1);
+      if(!race._onlineGuestEngines) {
+        race._onlineGuestEngines = true;
+        try { startEngine(localIdx); } catch(e) {}
+        for(let ei = 0; ei < race.karts.length; ei++) {
+          if(ei === localIdx) continue;
+          try { startEngine(ei); } catch(e2) {}
         }
       }
     }
+    race._guestShownPhase = race.phase;
     const overlay = document.getElementById('countdownOverlay');
     if(race.phase === 'countdown' || race.phase === 'launch') {
       if(overlay && overlay.style.display !== 'flex') overlay.style.display = 'flex';
     } else if(race.phase === 'racing' || race.phase === 'finished') {
       if(overlay) overlay.style.display = 'none';
     }
+    if(sess.netDebug) drawOnlineNetDebug(sess);
+  } else if(race && race.mode === 'online') {
+    // Server already returned lobby (or session idle) but results screen may still be up —
+    // never fall through into offline race.update (would desync leftover karts).
+    if(typeof race.updateCamera === 'function') {
+      race.updateCamera(onlineCameraIndex(), elapsed);
+    }
+    if(sess && sess.netDebug) drawOnlineNetDebug(sess);
   } else {
     race.update(elapsed);
   }
@@ -9226,8 +9302,26 @@ function advanceRace(now, opts) {
   }
 }
 
+function drawOnlineNetDebug(sess) {
+  try {
+    const d = sess.getNetDebug && sess.getNetDebug();
+    if(!d) return;
+    ctx.save();
+    ctx.font = '12px monospace';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(8, 8, 220, 92);
+    ctx.fillStyle = '#7dffb3';
+    ctx.textAlign = 'left';
+    ctx.fillText('NET delay ' + d.delay + 'ms  jit ' + d.jitter + 'ms', 14, 26);
+    ctx.fillText((d.extrapolating ? 'EXTRAP ' + d.extrapMs + 'ms' : 'interp') + '  snaps ' + d.snaps, 14, 44);
+    ctx.fillText('↓' + d.bytesIn + ' B/s  ↑' + d.bytesOut + ' B/s', 14, 62);
+    ctx.fillText('corr ' + d.corrErr + '  underrun ' + d.underruns, 14, 80);
+    ctx.restore();
+  } catch(e) {}
+}
+
 function gameLoop(ts) {
-  advanceRace(ts, { render: true, catchUp: document.hidden && isOnlineHostSim() });
+  advanceRace(ts, { render: true, catchUp: false });
   if(!document.hidden) animId = requestAnimationFrame(gameLoop);
 }
 
@@ -9488,7 +9582,24 @@ function bindOnlineSessionEvents() {
     const st = document.getElementById('online-room-status');
     if(st) st.textContent = 'Host left — race aborted. Waiting in lobby…';
   });
-  sess.on('raceEnded', function() {
+  sess.on('raceEnded', function(msg) {
+    if(animId) { cancelAnimationFrame(animId); animId = null; }
+    stopAllEngines(); stopAllDriftSnds();
+    lastTime = null;
+    race = null;
+    window._onlineRaceConfig = null;
+    canvas.style.display = 'none';
+    const cd = document.getElementById('countdownOverlay');
+    if(cd) cd.style.display = 'none';
+    showTouchOverlay(false);
+    CG.gameplayStop();
+    showScreen('online');
+    const st = document.getElementById('online-room-status');
+    if(st) {
+      st.textContent = (msg && (msg.standings || msg.results))
+        ? 'Race finished — ready up for the next one.'
+        : 'Race finished. Waiting in lobby…';
+    }
     refreshOnlineLobbyUI();
   });
   sess.on('disconnected', function(info) {
@@ -9728,8 +9839,97 @@ function beginOnlineRaceFromNet(msg) {
   if(race) {
     race._lastOnlineCd = 3;
     race._onlineGuestEngines = false;
+    race._onlineLocalSim = null;
+    race._onlineSimTrack = null;
+    ensureOnlineLocalSim(race, onlineCameraIndex());
   }
 }
+
+/** Compact upgrade/setup blob for Worker + shared OnlineSim (matches applyUpgradesToKart). */
+function getOnlineUpgrades() {
+  try {
+    const pd = getPlayerData();
+    const devBonus = getTeamDevelopmentBonuses(pd);
+    const setup = resolvePlayerSetup(pd, 'p1');
+    return {
+      speed: devBonus.speed || 0,
+      accel: devBonus.accel || 0,
+      handling: devBonus.handling || 0,
+      braking: devBonus.braking || 0,
+      traction: devBonus.traction || 0,
+      speedMult: setup.speedMult || 1,
+      turnMult: setup.turnMult || 1,
+      brakeMult: setup.brakeMult != null ? setup.brakeMult : 1,
+      tractBonus: setup.tractBonus || 0
+    };
+  } catch(e) {
+    return null;
+  }
+}
+window.getOnlineUpgrades = getOnlineUpgrades;
+
+/** Local prediction Kart mirrored through OnlineSim.createKart / stepKart. */
+function ensureOnlineLocalSim(race, localIdx) {
+  const Sim = window.OnlineSim;
+  if(!race || !Sim || !Sim.createKart) return;
+  const tid = (race.track && race.track.id != null) ? (race.track.id | 0) : 0;
+  if(!race._onlineSimTrack) {
+    // Canonical Worker bake only — never fall back to live TRACKS (asymmetric physics)
+    const bake = Sim.loadTrackBake && Sim.loadTrackBake(tid);
+    if(!bake) {
+      if(!race._onlineBakeMissingWarned) {
+        race._onlineBakeMissingWarned = true;
+        console.error('Canonical track bake missing for trackId', tid);
+      }
+      return;
+    }
+    race._onlineSimTrack = bake;
+  }
+  if(race._onlineLocalSim) return;
+  const k = race.karts[localIdx];
+  if(!k) return;
+  const cfg = window._onlineRaceConfig || {};
+  race._onlineLocalSim = Sim.createKart({
+    id: localIdx,
+    x: k.x,
+    y: k.y,
+    angle: k.angle,
+    color: k.color,
+    upgrades: getOnlineUpgrades() || (Sim.defaultUpgrades && Sim.defaultUpgrades()) || undefined,
+    weather: race.weather || cfg.weather || 'dry',
+    tyreId: race.tyres || cfg.tyres || 'med',
+    totalLaps: race.lapCount || cfg.laps || 3,
+    onlineConnId: k.onlineConnId || '',
+    onlineName: k.onlineName || ''
+  });
+}
+
+/** Compact baked track payload for server-authoritative physics (admin startRace). */
+function getOnlineTrackBake(trackId) {
+  const idx = Math.max(0, Math.min(TRACKS.length - 1, trackId | 0));
+  const tr = TRACKS[idx];
+  if(!tr || !tr.spline || !tr.cpLines) return null;
+  return {
+    id: tr.id,
+    trackWidth: tr.trackWidth,
+    spline: tr.spline.map(function(p) { return { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }; }),
+    cum: (tr.cum || []).slice(),
+    totalLen: tr.totalLen,
+    startPos: { x: tr.startPos.x, y: tr.startPos.y },
+    startAngle: tr.startAngle || 0,
+    cpLines: (tr.cpLines || []).map(function(c) {
+      return { x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2 };
+    }),
+    drsZones: (tr.drsZones || []).map(function(z) {
+      return { sIdx: z.sIdx | 0, eIdx: z.eIdx | 0 };
+    }),
+    gridSlots: (tr.gridSlots || []).slice(0, 6).map(function(s) {
+      return { x: s.x, y: s.y, a: s.a };
+    }),
+    surface: tr.surface ? { offTrackMult: tr.surface.offTrackMult || 1 } : { offTrackMult: 1 }
+  };
+}
+window.getOnlineTrackBake = getOnlineTrackBake;
 
 function onlineCameraIndex() {
   const cfg = window._onlineRaceConfig;

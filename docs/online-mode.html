@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KartBlitz online mode — architecture</title>
+  <style>
+    :root {
+      --bg: #0e1116;
+      --panel: #161b22;
+      --elev: #1c232c;
+      --text: #e6edf3;
+      --muted: #8b9bb0;
+      --faint: #6e7b8c;
+      --line: #30363d;
+      --accent: #58a6ff;
+      --ok: #3fb950;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.5 system-ui, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 24px; font-weight: 650; margin: 0 0 8px; }
+    h2 { font-size: 18px; margin: 36px 0 12px; }
+    p.lead { color: var(--muted); margin: 0 0 20px; }
+    .stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 20px; }
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 14px;
+      min-width: 140px;
+    }
+    .stat b { display: block; font-size: 18px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .note {
+      border: 1px solid var(--line);
+      background: var(--elev);
+      padding: 12px 14px;
+      border-radius: 6px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--faint); font-weight: 600; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+    code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: var(--elev); padding: 1px 5px; border-radius: 3px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 800px) { .cols { grid-template-columns: 1fr; } }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+    .card h3 { margin: 0 0 8px; font-size: 14px; }
+    .card p { margin: 0; color: var(--muted); font-size: 13px; }
+    footer { margin-top: 40px; color: var(--faint); font-size: 12px; }
+    pre.flow {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font: 13px/1.45 ui-monospace, Consolas, monospace;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>KartBlitz online mode</h1>
+  <p class="lead">Server-authoritative simulation on a Cloudflare Durable Object. All browsers predict locally and interpolate remotes from a compact binary snapshot stream.</p>
+
+  <div class="stats">
+    <div class="stat"><b>60 Hz</b><span>DO physics (Alarm tick)</span></div>
+    <div class="stat"><b>30 Hz</b><span>Binary snapshots + inputs</span></div>
+    <div class="stat"><b>~60–120 ms</b><span>Adaptive remote delay</span></div>
+    <div class="stat"><b>6</b><span>Players per room</span></div>
+  </div>
+
+  <p class="note">Lobby “host” is admin only (settings / start / return). Physics no longer runs in any player’s browser, so a host tab hitch does not freeze the race. Open with <code>?netDebug=1</code> for live delay / bandwidth HUD.</p>
+
+  <h2>Data flow</h2>
+  <pre class="flow">All clients ──input 30Hz (binary)──► KartBlitzRoom (Durable Object)
+                                         │  sim 60Hz (sim/raceOnline)
+                                         │  encode delta state 30Hz
+All clients ◄──state binary─────────────┘
+  ├─ predict local kart (OnlineSim / online-sim.js)
+  ├─ adaptive interp + ≤50ms extrapolate (online.js)
+  └─ spring reconcile vs latest snap</pre>
+
+  <h2>Key files</h2>
+  <table>
+    <thead><tr><th>File</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>party/server.ts</code></td><td>Lobby + DO authority, Alarm tick, binary broadcast</td></tr>
+      <tr><td><code>sim/*</code></td><td>Pure online physics (kart, race, constants)</td></tr>
+      <tr><td><code>party/netcodec.ts</code> / <code>online-codec.js</code></td><td>Binary input + delta state codec</td></tr>
+      <tr><td><code>online.js</code></td><td>WS client, adaptive interp, reconcile, metrics</td></tr>
+      <tr><td><code>KartBlitz.html</code></td><td>Render + OnlineSim local prediction (shared with Worker)</td></tr>
+      <tr><td><code>online-sim.js</code></td><td>Browser bundle of <code>sim/</code> for prediction/replay</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Tick path</h2>
+  <table>
+    <thead><tr><th>Step</th><th>Where</th><th>What</th></tr></thead>
+    <tbody>
+      <tr><td>1. Input</td><td><code>online.js</code> tickNet</td><td>All clients send binary input @ 30 Hz</td></tr>
+      <tr><td>2. Apply</td><td>DO onMessage</td><td>Store latest input per connection</td></tr>
+      <tr><td>3. Sim</td><td>DO onAlarm</td><td>Step RaceSim @ 60 Hz</td></tr>
+      <tr><td>4. Snapshot</td><td>RaceSim.buildStatePacket</td><td>Binary delta @ 30 Hz to all clients</td></tr>
+      <tr><td>5. Present</td><td>interpolateRemoteKarts</td><td>Adaptive delay; short dead-reckon on underrun</td></tr>
+      <tr><td>6. Correct</td><td>reconcileLocalKart</td><td>Critically-damped blend / snap</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Lag reductions shipped</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>Payload</h3>
+      <p>30 Hz snapshots/inputs, quantized binary pose, cold fields on change / every 16 ticks.</p>
+    </div>
+    <div class="card">
+      <h3>Interpolation</h3>
+      <p>Delay tracks measured jitter (~60–200 ms). Extrapolate ≤50 ms instead of freezing remotes.</p>
+    </div>
+    <div class="card">
+      <h3>Authority</h3>
+      <p>Physics on the Worker room. Admin sends baked track once at startRace.</p>
+    </div>
+    <div class="card">
+      <h3>Reconcile</h3>
+      <p>Error-weighted exponential blend; hard snap only on large error or launch.</p>
+    </div>
+  </div>
+
+  <h2>Manual test matrix</h2>
+  <table>
+    <thead><tr><th>Case</th><th>Expect</th></tr></thead>
+    <tbody>
+      <tr><td>2–6 players race</td><td>Smooth remotes; countdown sync; finish → lobby</td></tr>
+      <tr><td>Admin tab backgrounded</td><td>Race continues (DO Alarm)</td></tr>
+      <tr><td>Player disconnect mid-race</td><td>Kart marked disconnected; others keep racing</td></tr>
+      <tr><td><code>?netDebug=1</code></td><td>HUD shows delay, jitter, B/s, correction error</td></tr>
+      <tr><td>Track / weather / tyres</td><td>Server uses admin trackBake + lobby settings</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    Source: KartBlitz server-authoritative online · INPUT_HZ 30 · STATE_HZ 30 · SIM_HZ 60 · INTERP ~60–200 ms · SNAP_BUF 24
+  </footer>
+</main>
+</body>
+</html>

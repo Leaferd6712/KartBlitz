@@ -1,9 +1,15 @@
 {
   "name": "kartblitz-online",
   "private": true,
+  "type": "module",
   "scripts": {
     "party:dev": "wrangler dev",
-    "party:deploy": "wrangler deploy"
+    "party:deploy": "wrangler deploy",
+    "tracks:export": "node scripts/export-track-bakes.mjs",
+    "sim:browser": "node scripts/build-online-sim.mjs",
+    "test:sim": "node sim/__tests__/parity.test.mjs",
+    "preparty:deploy": "npm run tracks:export && npm run sim:browser && npm run test:sim",
+    "deploy:online": "npm run party:deploy"
   },
   "dependencies": {
     "partyserver": "^0.5.10"
