@@ -4602,11 +4602,12 @@ class Kart {
   }
 
   draw(ctx, camX, camY, camW, camH) {
-    const sx = this.x - camX + camW/2;
-    const sy = this.y - camY + camH/2;
+    const vis = (typeof kartVisPose === 'function') ? kartVisPose(this) : { x: this.x, y: this.y, angle: this.angle };
+    const sx = vis.x - camX + camW/2;
+    const sy = vis.y - camY + camH/2;
     ctx.save();
     ctx.translate(sx, sy);
-    ctx.rotate(this.angle);
+    ctx.rotate(vis.angle);
 
     const flash = this.flashTimer > 0 && Math.floor(this.flashTimer*8)%2===0;
     const liv = this.livery || null;
@@ -6442,6 +6443,17 @@ function makeAIInput(track, difficulty, aiIndex, opts) {
 }
 
 // ── GHOST KART RENDERER ─────────────────────────────────
+function kartVisPose(k) {
+  if(typeof race !== 'undefined' && race && race.mode === 'online' && k && isFinite(k._dispX) && isFinite(k._dispY)) {
+    return {
+      x: k._dispX,
+      y: k._dispY,
+      angle: isFinite(k._dispAngle) ? k._dispAngle : k.angle
+    };
+  }
+  return { x: k.x, y: k.y, angle: k.angle };
+}
+
 function drawGhost(ctx, kart, camX, camY, W, H) {
   if(typeof race !== 'undefined' && race && race.mode === 'online') return;
   if(!kart._bestGhost || kart._bestGhost.length < 2) return;
@@ -6579,9 +6591,10 @@ function drawMinimap(ctx, track, karts, x, y, size) {
   // karts
   const kartColors = ['#00f5ff','#ff6b35'];
   karts.forEach((k,i)=>{
+    const vis = (typeof kartVisPose === 'function') ? kartVisPose(k) : { x: k.x, y: k.y };
     ctx.fillStyle = kartColors[i];
     ctx.beginPath();
-    ctx.arc(k.x*sc+ofx, k.y*sc+ofy, 4, 0, Math.PI*2);
+    ctx.arc(vis.x*sc+ofx, vis.y*sc+ofy, 4, 0, Math.PI*2);
     ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth=1; ctx.stroke();
   });
@@ -7146,9 +7159,10 @@ class Race {
       cam.y = isFinite(cam.y) ? cam.y : fallback.y;
       return;
     }
+    const vis = (typeof kartVisPose === 'function') ? kartVisPose(k) : { x: k.x, y: k.y, angle: k.angle };
     const lookAhead = Math.abs(k.speed) * 0.55;
-    let tx = k.x + Math.cos(k.angle) * lookAhead;
-    let ty = k.y + Math.sin(k.angle) * lookAhead;
+    let tx = vis.x + Math.cos(vis.angle) * lookAhead;
+    let ty = vis.y + Math.sin(vis.angle) * lookAhead;
     const cache = (typeof _trackBaseCache !== 'undefined' && _trackBaseCache && this.track && _trackBaseCache.trackId === this.track.id)
       ? _trackBaseCache : null;
     if(cache && isFinite(cache.minX) && isFinite(cache.maxX)) {
@@ -7157,17 +7171,17 @@ class Race {
       ty = Math.max(cache.minY + pad, Math.min(cache.maxY - pad, ty));
     }
     if(!isFinite(cam.x) || !isFinite(cam.y)) {
-      cam.x = k.x;
-      cam.y = k.y;
+      cam.x = vis.x;
+      cam.y = vis.y;
     }
     const lerpFactor = 1 - Math.pow(0.025, dt || 0.016);
     cam.x += (tx - cam.x) * lerpFactor;
     cam.y += (ty - cam.y) * lerpFactor;
     if(!isFinite(cam.x) || !isFinite(cam.y)) {
-      cam.x = k.x;
-      cam.y = k.y;
+      cam.x = vis.x;
+      cam.y = vis.y;
     }
-    clampCamToTrack(cam, this.track, k);
+    clampCamToTrack(cam, this.track, vis);
   }
 
   _getGridSlots(count) {
@@ -9277,6 +9291,7 @@ function advanceRace(now, opts) {
         localKart.y = race.track.startPos.y;
       }
     }
+    if(typeof sess.smoothOnlineDisplay === 'function') sess.smoothOnlineDisplay(race, elapsed);
     if(typeof race.updateCamera === 'function') race.updateCamera(localIdx, elapsed);
     if(race.phase === 'finished') {
       race.finishedTimer = (race.finishedTimer || 0) + elapsed;
@@ -9332,13 +9347,13 @@ function drawOnlineNetDebug(sess) {
     ctx.save();
     ctx.font = '12px monospace';
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(8, 8, 220, 92);
+    ctx.fillRect(8, 8, 248, 92);
     ctx.fillStyle = '#7dffb3';
     ctx.textAlign = 'left';
     ctx.fillText('NET delay ' + d.delay + 'ms  jit ' + d.jitter + 'ms', 14, 26);
     ctx.fillText((d.extrapolating ? 'EXTRAP ' + d.extrapMs + 'ms' : 'interp') + '  snaps ' + d.snaps, 14, 44);
     ctx.fillText('↓' + d.bytesIn + ' B/s  ↑' + d.bytesOut + ' B/s', 14, 62);
-    ctx.fillText('corr ' + d.corrErr + '  underrun ' + d.underruns, 14, 80);
+    ctx.fillText('corr ' + d.corrErr + '  disp ' + (d.dispErr != null ? d.dispErr : 0) + '  underrun ' + d.underruns, 14, 80);
     ctx.restore();
   } catch(e) {}
 }
@@ -9856,6 +9871,9 @@ function beginOnlineRaceFromNet(msg) {
     race._onlineGuestEngines = false;
     race._onlineLocalSim = null;
     race._onlineSimTrack = null;
+    if(window.OnlineNet && window.OnlineNet.session && typeof window.OnlineNet.session.resetDisplayPoses === 'function') {
+      window.OnlineNet.session.resetDisplayPoses(race);
+    }
     ensureOnlineLocalSim(race, onlineCameraIndex());
   }
 }

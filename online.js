@@ -18,6 +18,11 @@
   var LOCAL_SNAP_ERR = 220;
   var RECON_REPLAY_MAX = 24;
   var VIS_OFFSET_TAU = 0.04;
+  var DISP_MAX_PX_PER_SEC = 900;
+  var DISP_SPEED_MUL = 1.1;
+  var DISP_MAX_RAD_PER_SEC = 8;
+  var DISP_SNAP_ERR = 140;
+  var DISP_SMOOTH = 1;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
   var ONLINE_PROTOCOL = (global.OnlineSim && global.OnlineSim.ONLINE_PROTOCOL) || 3;
   var TRACK_BAKE_VERSION = (global.OnlineSim && global.OnlineSim.TRACK_BAKE_VERSION) || 2;
@@ -29,6 +34,20 @@
       return new URLSearchParams(location.search).get('netDebug') === '1';
     } catch (e) {
       return false;
+    }
+  }
+
+  function dispSmoothFactor() {
+    try {
+      var q = new URLSearchParams(location.search).get('netSmooth');
+      if (q == null || q === '') return DISP_SMOOTH;
+      var n = Number(q);
+      if (!isFinite(n)) return DISP_SMOOTH;
+      if (n < 0) n = 0;
+      if (n > 1) n = 1;
+      return n;
+    } catch (e) {
+      return DISP_SMOOTH;
     }
   }
 
@@ -123,6 +142,7 @@
     this._bytesOutRate = 0;
     this._underruns = 0;
     this._lastCorrErr = 0;
+    this._lastDispErr = 0;
     this._listeners = {};
     this._wantClose = false;
     this.statusText = '';
@@ -334,6 +354,7 @@
     this._extrapMs = 0;
     this._underruns = 0;
     this._lastCorrErr = 0;
+    this._lastDispErr = 0;
     this._inputHistory = [];
     this._lastProcessedLocal = 0;
     this._lastReconTick = -1;
@@ -398,6 +419,7 @@
       bytesOut: Math.round(this._bytesOutRate || 0),
       underruns: this._underruns || 0,
       corrErr: Math.round(this._lastCorrErr || 0),
+      dispErr: Math.round(this._lastDispErr || 0),
       snaps: this.snapshots.length
     };
   };
@@ -781,6 +803,75 @@
     k.x += off.x;
     k.y += off.y;
     k.angle += off.a;
+  };
+
+  OnlineSession.prototype.resetDisplayPoses = function (race) {
+    this._lastDispErr = 0;
+    if (!race || !race.karts) return;
+    var i;
+    for (i = 0; i < race.karts.length; i++) {
+      var k = race.karts[i];
+      if (!k) continue;
+      k._dispX = undefined;
+      k._dispY = undefined;
+      k._dispAngle = undefined;
+    }
+  };
+
+  OnlineSession.prototype.smoothOnlineDisplay = function (race, dt) {
+    if (!race || !race.karts) return;
+    var stepDt = dt;
+    if (!(stepDt > 0) || !isFinite(stepDt)) stepDt = 1 / 60;
+    if (stepDt > 0.08) stepDt = 0.08;
+    var blend = dispSmoothFactor();
+    var maxErr = 0;
+    var i;
+    for (i = 0; i < race.karts.length; i++) {
+      var k = race.karts[i];
+      if (!k || !isFinite(k.x) || !isFinite(k.y) || !isFinite(k.angle)) continue;
+      if (!isFinite(k._dispX) || !isFinite(k._dispY) || !isFinite(k._dispAngle)) {
+        k._dispX = k.x;
+        k._dispY = k.y;
+        k._dispAngle = k.angle;
+        continue;
+      }
+      var dx = k.x - k._dispX;
+      var dy = k.y - k._dispY;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > maxErr) maxErr = dist;
+      if (dist > DISP_SNAP_ERR) {
+        k._dispX = k.x;
+        k._dispY = k.y;
+        k._dispAngle = k.angle;
+        continue;
+      }
+      var spd = isFinite(k.speed) ? Math.abs(k.speed) : 0;
+      var maxStep = (DISP_MAX_PX_PER_SEC + spd * DISP_SPEED_MUL) * stepDt;
+      var nx;
+      var ny;
+      if (dist <= maxStep || dist < 0.001) {
+        nx = k.x;
+        ny = k.y;
+      } else {
+        nx = k._dispX + (dx / dist) * maxStep;
+        ny = k._dispY + (dy / dist) * maxStep;
+      }
+      if (blend < 1) {
+        nx = k._dispX + (nx - k._dispX) * blend;
+        ny = k._dispY + (ny - k._dispY) * blend;
+      }
+      k._dispX = nx;
+      k._dispY = ny;
+
+      var dA = k.angle - k._dispAngle;
+      while (dA > Math.PI) dA -= Math.PI * 2;
+      while (dA < -Math.PI) dA += Math.PI * 2;
+      var maxA = DISP_MAX_RAD_PER_SEC * stepDt;
+      var stepA = Math.abs(dA) <= maxA ? dA : (dA > 0 ? maxA : -maxA);
+      if (blend < 1) stepA *= blend;
+      k._dispAngle += stepA;
+    }
+    this._lastDispErr = maxErr;
   };
 
   OnlineSession.prototype.reconcileLocalKart = function (race, dt) {
