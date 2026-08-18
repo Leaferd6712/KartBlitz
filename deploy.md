@@ -2,24 +2,38 @@
 
 KartBlitz is a browser racer. The game files can live on **Netlify**. Online multiplayer uses a **Cloudflare Worker**. An optional **shared leaderboard** can run on your laptop via Python + Cloudflare Tunnel.
 
+## Online architecture (for sharing)
+
+Open [docs/online-mode.html](docs/online-mode.html) in a browser. That is the full host / guest / Worker diagram. Details: [docs/README.md](docs/README.md).
+
+---
+
 ## Required game files (Netlify)
 
 | File | Role |
 |------|------|
 | `KartBlitz.html` | The game |
-| `online.js` | Online Host/Join client |
+| `online.js` | Online lobby / netcode client |
+| `online-codec.js` | Binary snapshot/input codec |
+| `online-sim.js` | Shared physics (same as Worker `sim/`) for local prediction |
 | `rb6.glb` | Menu/garage 3D cover car |
 
-Upload all three into the **same folder** on Netlify (rename HTML to `index.html` if your site expects that).
+Upload **all five** into the **same folder** on Netlify (rename HTML to `index.html` if your site expects that).
+
+**Always ship Netlify assets and the Worker together** after online changes. Mismatched `ONLINE_PROTOCOL` (currently **3**) or `TRACK_BAKE_VERSION` (**2**) causes a hard disconnect / bake error.
+
+Online races are **server-authoritative**: the Cloudflare Durable Object runs the shared `sim/` at 60 Hz and broadcasts 30 Hz binary snapshots (including `lastProcessedInput` for client replay). Lobby “host” only controls settings / start — not simulation. Tracks are **canonical on the Worker** (`sim/tracks/bakes.json`); clients send `trackId` + protocol only.
 
 ---
 
 ## A. Netlify (static game)
 
 1. Close old terminals you do not need.
-2. Upload/replace `KartBlitz.html`, `online.js`, `rb6.glb`.
-3. Open your Netlify URL over `https://`.
-4. Online Lobby needs **no server IP** — the Worker host is baked into `online.js` as `kartblitz-online.kartblitz.workers.dev`.
+2. Rebuild browser sim if you changed `sim/`: `npm run sim:browser` (also runs via `preparty:deploy`).
+3. Upload/replace `KartBlitz.html`, `online.js`, `online-codec.js`, `online-sim.js`, `rb6.glb`.
+4. Open your Netlify URL over `https://`.
+5. Online Lobby needs **no server IP** — the Worker host is baked into `online.js` as `kartblitz-online.kartblitz.workers.dev`.
+6. After Worker / sim changes, also run `npx wrangler deploy` (section B).
 
 ---
 
@@ -32,9 +46,12 @@ Runs in Cloudflare’s cloud. **Laptop can be off** after deploy.
 ```bash
 cd path\to\KartBlitz
 npm install --legacy-peer-deps
-npx wrangler login
-npx wrangler deploy
+npm run deploy:online
 ```
+
+That runs `tracks:export` → `sim:browser` → `test:sim` → `wrangler deploy` (via `preparty:deploy`).
+
+Do **not** use bare `npx wrangler deploy` after sim/track changes — it skips bake/export and can ship a Worker that disagrees with `online-sim.js`.
 
 Confirm the URL is:
 
@@ -121,8 +138,9 @@ Quick tunnels get a **new** URL each restart — share the new one.
 
 ## Checklist
 
-- [ ] Netlify has `KartBlitz.html`, `online.js`, `rb6.glb`
+- [ ] Netlify has `KartBlitz.html`, `online.js`, `online-codec.js`, `online-sim.js`, `rb6.glb`
 - [ ] Worker deployed (`npx wrangler deploy`) → `kartblitz-online.kartblitz.workers.dev`
+- [ ] Client + Worker share `ONLINE_PROTOCOL` (hard-refresh after deploy)
 - [ ] Online Lobby: Host Game / Join Game works (no SERVER field)
 - [ ] Optional: `python app.py` + tunnel only if you want the laptop shared leaderboard
 - [ ] Old PartyKit / stale tunnel terminals closed when unused

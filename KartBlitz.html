@@ -6,6 +6,8 @@
 <title>KART BLITZ ⚡</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<script src="online-codec.js"></script>
+<script src="online-sim.js"></script>
 <script src="online.js"></script>
 <script type="importmap">
 {
@@ -441,6 +443,14 @@ body{
 #device-prompt p{opacity:.75;margin:0 0 24px;font-size:12px;line-height:1.8;font-family:sans-serif;word-wrap:break-word;}
 #device-prompt .dp-btns{display:flex;gap:16px;justify-content:center;}
 #device-prompt .dp-btns .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.08em;white-space:nowrap;}
+#patch-notes-overlay{display:none;position:fixed;inset:0;z-index:205;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);padding:20px;box-sizing:border-box;}
+#patch-notes-overlay.open{display:flex;}
+#patch-notes-card{background:linear-gradient(180deg, rgba(10,18,38,0.96), rgba(5,8,18,0.98));border:2px solid rgba(255,215,0,0.45);border-radius:18px;padding:28px 32px 24px;max-width:520px;width:100%;color:#fff;font-family:'Orbitron',sans-serif;text-align:left;box-shadow:0 18px 40px rgba(0,0,0,0.4);}
+#patch-notes-card h2{color:#ffd700;margin:0 0 6px;font-size:16px;letter-spacing:.14em;}
+#patch-notes-card .patch-date{color:#00f5ff;font-size:11px;letter-spacing:.16em;margin-bottom:16px;}
+#patch-notes-card ul{margin:0 0 22px;padding-left:18px;font-family:sans-serif;font-size:13px;line-height:1.7;opacity:.88;}
+#patch-notes-card li{margin-bottom:8px;}
+#patch-notes-card .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.08em;display:block;margin:0 auto;}
 /* ── CONFETTI CANVAS ────────────────────────────── */
 #confetti-canvas{display:none;position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:300;}
 /* ── AI DIFFICULTY ──────────────────────────────── */
@@ -541,12 +551,6 @@ body::after{
 .screen > *:not(.scanlines):not(.glow-orb){
   position:relative;
   z-index:2;
-  animation:screenLift .55s ease both;
-}
-
-@keyframes screenLift{
-  from{opacity:0;transform:translateY(14px);}
-  to{opacity:1;transform:translateY(0);}
 }
 
 .scanlines{opacity:.2;mix-blend-mode:screen;}
@@ -1671,6 +1675,19 @@ body::after{
   </div>
 </div>
 
+<!-- PATCH NOTES (once per page load) -->
+<div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
+  <div id="patch-notes-card">
+    <h2 id="patch-notes-title">PATCH NOTES</h2>
+    <div class="patch-date">AUGUST 15</div>
+    <ul>
+      <li>Online mode uses <strong>server authority</strong> — less lag, no host-tab hitch (BETA).</li>
+      <li>The leaderboard will be on in the next week.</li>
+    </ul>
+    <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
+  </div>
+</div>
+
 <!-- TOUCH OVERLAY -->
 <div id="touch-overlay">
   <div id="touch-pad-p1" class="touch-pad">
@@ -2168,6 +2185,8 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   canvas.style.display = 'none';
   document.getElementById('countdownOverlay').style.display = 'none';
+  const po = document.getElementById('pause-overlay');
+  if(po) po.style.display = 'none';
   const pitUi = document.getElementById('pit-ui-overlay');
   if(pitUi) { pitUi.style.display = 'none'; pitUi.dataset.signature = ''; clearPitUiLayoutClasses(pitUi); }
   showTouchOverlay(false);
@@ -2197,7 +2216,22 @@ function showScreen(id) {
 }
 window.addEventListener('load', () => {
   showScreen('menu');
+  showPatchNotesOnce();
 });
+
+let _patchNotesDismissed = false;
+function showPatchNotesOnce() {
+  if(_patchNotesDismissed) return;
+  const el = document.getElementById('patch-notes-overlay');
+  if(el) el.classList.add('open');
+}
+function dismissPatchNotes() {
+  _patchNotesDismissed = true;
+  const el = document.getElementById('patch-notes-overlay');
+  if(el) el.classList.remove('open');
+  try { initAudio(); playUIClick(); } catch(e) {}
+}
+
 // Show device/input selection prompt only once — persist choice in localStorage
 (function(){
   const saved = localStorage.getItem('kartblitz_devicemode');
@@ -2218,6 +2252,11 @@ window.addEventListener('load', () => {
 document.addEventListener('keydown', e => {
   if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) return;
   if (e.key === 'Enter' && document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
+    const patch = document.getElementById('patch-notes-overlay');
+    if(patch && patch.classList.contains('open')) {
+      dismissPatchNotes();
+      return;
+    }
     startTimeTrial();
   }
 });
@@ -3904,8 +3943,7 @@ class Kart {
     if(this.ersActive) {
       this.ersCharge = Math.max(0, this.ersCharge - (1 / 5) * dt);  // 5s full drain
       if(this.ersCharge <= 0) { this.ersActive = false; this._ersToggled = false; }
-      // Fast blend-in so deployment still feels responsive
-      this._ersPower = Math.min(1, (this._ersPower || 0) + 5.0 * dt);
+      this._ersPower = 1;
       this._ersStraightTimer = 0;
     } else {
       // Smooth blend-out (~1.15s) — spdLimit eases down so speed is not hard-cut
@@ -5057,6 +5095,26 @@ function ensureTrackBaseCache(td) {
     _trackBaseCache = buildTrackBaseCache(td);
   }
   return _trackBaseCache;
+}
+
+function clampCamToTrack(cam, td, kart) {
+  if(!cam) return;
+  const fx = (kart && isFinite(kart.x)) ? kart.x : ((td && td.startPos && td.startPos.x) || 0);
+  const fy = (kart && isFinite(kart.y)) ? kart.y : ((td && td.startPos && td.startPos.y) || 0);
+  if(!isFinite(cam.x) || !isFinite(cam.y)) {
+    cam.x = fx;
+    cam.y = fy;
+  }
+  const cache = td ? ensureTrackBaseCache(td) : null;
+  if(cache && isFinite(cache.minX) && isFinite(cache.maxX) && isFinite(cache.minY) && isFinite(cache.maxY)) {
+    const m = 90;
+    const minX = cache.minX + m;
+    const maxX = cache.maxX - m;
+    const minY = cache.minY + m;
+    const maxY = cache.maxY - m;
+    if(maxX > minX) cam.x = Math.max(minX, Math.min(maxX, cam.x));
+    if(maxY > minY) cam.y = Math.max(minY, Math.min(maxY, cam.y));
+  }
 }
 
 function drawTrackBaseCache(ctx, td, camX, camY, camW, camH) {
@@ -6385,6 +6443,7 @@ function makeAIInput(track, difficulty, aiIndex, opts) {
 
 // ── GHOST KART RENDERER ─────────────────────────────────
 function drawGhost(ctx, kart, camX, camY, W, H) {
+  if(typeof race !== 'undefined' && race && race.mode === 'online') return;
   if(!kart._bestGhost || kart._bestGhost.length < 2) return;
   if(kart.lapStart === null) return;
   const elapsed = (performance.now() - kart.lapStart) / 1000;
@@ -6613,6 +6672,26 @@ function drawRaceDirectorPanel(ctx, raceState, kart) {
     ctx.textAlign = 'left';
     ctx.fillText(msg.text, px + 12, y + 14);
   });
+  ctx.restore();
+}
+
+function drawOnlineHostBanner(ctx, raceState) {
+  const b = raceState && raceState._onlineHostBanner;
+  if(!b || !b.text) return;
+  if(performance.now() > (b.until || 0)) {
+    raceState._onlineHostBanner = null;
+    return;
+  }
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  ctx.fillRect(W / 2 - 260, 48, 520, 32);
+  ctx.strokeStyle = 'rgba(255,215,0,0.55)';
+  ctx.strokeRect(W / 2 - 260, 48, 520, 32);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 12px Orbitron,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(b.text, W / 2, 70);
+  ctx.textAlign = 'left';
   ctx.restore();
 }
 
@@ -6905,7 +6984,8 @@ class Race {
         kart.onlineConnId = connId;
         kart.onlineName = plist.name || ('P'+(i+1));
         kart.isOnlineRemote = i !== this.localOnlineSlot;
-        applyUpgradesToKart(kart, 'p1');
+        // Display shell only — shared OnlineSim owns local physics; remotes are interpolated
+        if(i === this.localOnlineSlot) applyUpgradesToKart(kart, 'p1');
         this.karts.push(kart);
       }
       if(cfg.weather) this.weather = normalizeWeatherId(cfg.weather);
@@ -7059,14 +7139,35 @@ class Race {
   updateCamera(idx, dt) {
     const k = this.karts[idx];
     const cam = this.cameras[idx];
-    // Speed-scaled look-ahead (larger for big tracks)
+    const fallback = (this.track && this.track.startPos) ? this.track.startPos : { x: 0, y: 0 };
+    if(!cam) return;
+    if(!k || !isFinite(k.x) || !isFinite(k.y) || !isFinite(k.angle) || !isFinite(k.speed)) {
+      cam.x = isFinite(cam.x) ? cam.x : fallback.x;
+      cam.y = isFinite(cam.y) ? cam.y : fallback.y;
+      return;
+    }
     const lookAhead = Math.abs(k.speed) * 0.55;
-    const tx = k.x + Math.cos(k.angle) * lookAhead;
-    const ty = k.y + Math.sin(k.angle) * lookAhead;
-    // Frame-rate independent exponential lerp
+    let tx = k.x + Math.cos(k.angle) * lookAhead;
+    let ty = k.y + Math.sin(k.angle) * lookAhead;
+    const cache = (typeof _trackBaseCache !== 'undefined' && _trackBaseCache && this.track && _trackBaseCache.trackId === this.track.id)
+      ? _trackBaseCache : null;
+    if(cache && isFinite(cache.minX) && isFinite(cache.maxX)) {
+      const pad = 80;
+      tx = Math.max(cache.minX + pad, Math.min(cache.maxX - pad, tx));
+      ty = Math.max(cache.minY + pad, Math.min(cache.maxY - pad, ty));
+    }
+    if(!isFinite(cam.x) || !isFinite(cam.y)) {
+      cam.x = k.x;
+      cam.y = k.y;
+    }
     const lerpFactor = 1 - Math.pow(0.025, dt || 0.016);
     cam.x += (tx - cam.x) * lerpFactor;
     cam.y += (ty - cam.y) * lerpFactor;
+    if(!isFinite(cam.x) || !isFinite(cam.y)) {
+      cam.x = k.x;
+      cam.y = k.y;
+    }
+    clampCamToTrack(cam, this.track, k);
   }
 
   _getGridSlots(count) {
@@ -8202,9 +8303,15 @@ class Race {
         ? (this.shootoutStage === 'player' ? 0 : 1)
         : (mode === 'online' ? onlineCameraIndex() : 0);
       const activeKart = karts[activeIdx] || karts[0];
-      const cam = this.cameras[activeIdx] || this.cameras[0];
+      const cam = this.cameras[activeIdx] || this.cameras[0] || { x: (this.track.startPos && this.track.startPos.x) || 0, y: (this.track.startPos && this.track.startPos.y) || 0 };
+      if(!isFinite(cam.x) || !isFinite(cam.y)) {
+        cam.x = (activeKart && isFinite(activeKart.x)) ? activeKart.x : ((this.track.startPos && this.track.startPos.x) || 0);
+        cam.y = (activeKart && isFinite(activeKart.y)) ? activeKart.y : ((this.track.startPos && this.track.startPos.y) || 0);
+      }
+      clampCamToTrack(cam, this.track, activeKart);
       const quality = getQualityPreset();
-      const _sr0 = Math.abs(activeKart.speed) / activeKart.maxSpeed;
+      const maxSpd = Math.max(1, (activeKart && (activeKart.maxSpeed || activeKart.baseMaxSpeed)) || 469);
+      const _sr0 = Math.min(1.5, Math.abs((activeKart && activeKart.speed) || 0) / maxSpd);
       const _sh0 = _sr0 > 0.8 ? (_sr0 - 0.8) * 14 * quality.screenShakeMul : 0;
       const _sx0 = (Math.random()-0.5)*_sh0, _sy0 = (Math.random()-0.5)*_sh0;
       drawTrack(ctx, track, cam.x + _sx0, cam.y + _sy0, W, H, activeKart.checkpointsBit);
@@ -8237,7 +8344,7 @@ class Race {
         if(k._shootoutStowed) return;
         k.draw(ctx, cam.x, cam.y, W, H);
       });
-      if(mode !== 'shootout' || this.shootoutStage === 'player') {
+      if(mode !== 'online' && (mode !== 'shootout' || this.shootoutStage === 'player')) {
         drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
       }
       drawHUD(ctx, activeKart, track, 0, 0, W, H, 0, 'ai');
@@ -8245,6 +8352,7 @@ class Race {
       drawMinimap(ctx, track, karts.filter(k => !k._shootoutStowed), W-140, H-140, 130);
       drawRaceDirectorPanel(ctx, this, activeKart);
       drawDebugOverlay(ctx, activeKart, W, H);
+      drawOnlineHostBanner(ctx, this);
 
       if(mode === 'shootout') {
         ctx.fillStyle = 'rgba(0,0,0,0.72)';
@@ -8443,14 +8551,18 @@ class Race {
 
     // Show launch bar during countdown AND the legacy launch phase
     if(this.phase === 'countdown' || this.phase === 'launch') {
-      const humanCount = this.mode === 'versus' ? 2 : 1;
+      const rpmSlots = this.mode === 'versus' ? [0, 1]
+        : this.mode === 'online' ? [Math.max(0, onlineCameraIndex())]
+        : [0];
+      const humanCount = rpmSlots.length;
       const barW = 320;
       const barH = 38;
       const goodL = 0.56, goodR = 0.76;
       const topY = this.phase === 'countdown' ? H - 130 : 58;
       const barPulse = 0.6 + 0.4 * Math.sin(performance.now() / 180);
-      for(let i = 0; i < humanCount; i++) {
-        const bx = humanCount === 1 ? W/2 - barW/2 : (i === 0 ? W/2 - barW - 14 : W/2 + 14);
+      for(let si = 0; si < humanCount; si++) {
+        const i = rpmSlots[si];
+        const bx = humanCount === 1 ? W/2 - barW/2 : (si === 0 ? W/2 - barW - 14 : W/2 + 14);
         const by = topY;
         const rpm = Math.max(0, Math.min(1, this.launchRPM[i] || 0));
         const inGreen = rpm >= goodL && rpm <= goodR;
@@ -8490,7 +8602,7 @@ class Race {
         ctx.textAlign = 'center';
         ctx.fillText(statusText, bx + barW/2, by + barH + 12);
         // Player label
-        ctx.fillStyle = i === 0 ? '#00f5ff' : '#ff6b35';
+        ctx.fillStyle = si === 0 ? '#00f5ff' : '#ff6b35';
         ctx.font = 'bold 9px Orbitron,sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(`P${i+1} — BUILD REVS NOW`, bx, by - 28 + 10);
@@ -8599,6 +8711,7 @@ class Race {
   showResults() {
     // Stop the RAF loop and all audio before the ad / results screen
     if (animId) { cancelAnimationFrame(animId); animId = null; lastTime = null; }
+    stopOnlineBgSim();
     stopAllEngines();
     stopAllDriftSnds();
     showTouchOverlay(false);
@@ -8955,22 +9068,40 @@ function pauseRestartRace() {
   setAdMuted(false);
   restartRace();
 }
-function pauseQuit() {
+function teardownRaceUI() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
   isPaused = false;
+  lastTime = null;
+  stopOnlineBgSim();
+  stopAllEngines();
+  stopAllDriftSnds();
+  setAdMuted(false);
   const po = document.getElementById('pause-overlay');
   if (po) po.style.display = 'none';
-  setAdMuted(false);
+  const pit = document.getElementById('pit-ui-overlay');
+  if (pit) { pit.style.display = 'none'; pit.dataset.signature = ''; }
+  const cd = document.getElementById('countdownOverlay');
+  if (cd) cd.style.display = 'none';
+  const ad = document.getElementById('ad-block-overlay');
+  if (ad) ad.style.display = 'none';
+  canvas.style.display = 'none';
+  showTouchOverlay(false);
+}
+
+function pauseQuit() {
   // Time Trial has no fixed distance — ending the session shows results.
   if(race && race.mode === 'trial' && typeof race.showResults === 'function') {
+    isPaused = false;
+    const po = document.getElementById('pause-overlay');
+    if (po) po.style.display = 'none';
+    setAdMuted(false);
     race.phase = 'finished';
     race.showResults();
     return;
   }
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
-  stopAllEngines(); stopAllDriftSnds();
   const wasOnline = race && race.mode === 'online';
+  teardownRaceUI();
   race = null;
-  lastTime = null;
   CG.gameplayStop();
   if(wasOnline) {
     const sess = getOnlineSession();
@@ -8981,13 +9112,9 @@ function pauseQuit() {
 }
 
 function returnToMainMenu() {
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
-  stopAllEngines(); stopAllDriftSnds();
-  setAdMuted(false);
-  isPaused = false;
   const wasOnline = race && race.mode === 'online';
+  teardownRaceUI();
   race = null;
-  lastTime = null;
   CG.gameplayStop();
   window._onlineRaceConfig = null;
   if(wasOnline) {
@@ -9005,88 +9132,241 @@ function returnToMainMenu() {
 }
 
 // ── GAME LOOP ───────────────────────────────────────────
-function gameLoop(ts) {
-  if(!lastTime) lastTime = ts;
-  const dt = Math.min((ts - lastTime)/1000, 0.05);
-  lastTime = ts;
+let _onlineBgTimer = null;
 
-  // FPS tracking (updates every 0.5 s)
+function isOnlineHostSim() {
+  // Physics authority lives on the Cloudflare Durable Object — browsers never host-sim.
+  return false;
+}
+
+function stopOnlineBgSim() {
+  if(_onlineBgTimer) {
+    clearInterval(_onlineBgTimer);
+    _onlineBgTimer = null;
+  }
+}
+
+function startOnlineBgSim() {
+  // No-op: server authority does not need a browser background physics loop.
+}
+
+function syncOnlineBgSim() {
+  stopOnlineBgSim();
+  if(race && !animId && !isPaused) {
+    lastTime = performance.now();
+    animId = requestAnimationFrame(gameLoop);
+  }
+}
+
+function stepOnlineSim(dt, sess) {
+  race.karts.forEach(function(k) {
+    if(!k.onlineConnId) return;
+    const stillHere = (sess.players || []).some(function(p) { return p.id === k.onlineConnId; });
+    if(!stillHere) {
+      k._onlineDisconnected = true;
+      sess.remoteInputs[k.onlineConnId] = window.OnlineNet.emptyInput();
+    }
+  });
+  race.update(dt);
+}
+
+function advanceRace(now, opts) {
+  opts = opts || {};
+  const doRender = opts.render !== false;
+  const catchUp = !!opts.catchUp;
+  if(!lastTime) lastTime = now;
+  let elapsed = Math.max(0, (now - lastTime) / 1000);
+  lastTime = now;
+
+  const sess = (window.OnlineNet && window.OnlineNet.session) || null;
+  const onlineRacing = !!(sess && sess.phase === 'racing' && race && race.mode === 'online');
+  const maxCatch = (onlineRacing && catchUp) ? 1.0 : 0.05;
+  elapsed = Math.min(elapsed, maxCatch);
+
   _fpsFrames++;
-  _fpsTimer += dt;
-  if (_fpsTimer >= 0.5) {
+  _fpsTimer += elapsed;
+  if(_fpsTimer >= 0.5) {
     _fpsDisplay = Math.round(_fpsFrames / _fpsTimer);
     _fpsFrames = 0; _fpsTimer = 0;
   }
 
-  if(race) {
-    const sess = (window.OnlineNet && window.OnlineNet.session) || null;
-    const onlineRacing = !!(sess && sess.phase === 'racing' && race.mode === 'online');
-    if(onlineRacing) {
-      sess.tickNet(dt, race);
-      if(sess.isHost()) {
-        // Clear inputs for disconnected peers so they coast
-        race.karts.forEach(function(k) {
-          if(!k.onlineConnId) return;
-          const stillHere = (sess.players || []).some(function(p) { return p.id === k.onlineConnId; });
-          if(!stillHere) {
-            k._onlineDisconnected = true;
-            sess.remoteInputs[k.onlineConnId] = window.OnlineNet.emptyInput();
-          }
+  if(!race) return;
+
+  if(onlineRacing) {
+    // Inputs → interp remotes → predict local (shared sim) → reconcile
+    sess.tickNet(elapsed);
+    const localIdx = onlineCameraIndex();
+    const localKart = race.karts[localIdx];
+    const Sim = window.OnlineSim;
+    ensureOnlineLocalSim(race, localIdx);
+    sess.interpolateRemoteKarts(race, Date.now());
+
+    if(race.phase === 'racing' && localKart && !localKart.finished && race._onlineLocalSim && Sim) {
+      const fixed = Sim.FIXED_DT || (1 / 60);
+      let left = elapsed;
+      const collideOn = (race.collisionMode || 'collision') !== 'nocollision';
+      const remotes = [];
+      for(let ri = 0; ri < race.karts.length; ri++) {
+        if(ri === localIdx) continue;
+        const rk = race.karts[ri];
+        if(!rk || !isFinite(rk.x)) continue;
+        remotes.push({ id: ri, x: rk.x, y: rk.y, angle: rk.angle, speed: rk.speed, finished: !!rk.finished });
+      }
+      const inp = (typeof sess.getPredictInput === 'function')
+        ? sess.getPredictInput()
+        : ((typeof getP1Input === 'function')
+          ? { up:!!getP1Input().up, down:!!getP1Input().down, left:!!getP1Input().left, right:!!getP1Input().right,
+              ers:!!getP1Input().ers, drs:!!getP1Input().drs,
+              steer: typeof getP1Input().steer === 'number' ? getP1Input().steer : 0,
+              throttle: typeof getP1Input().throttle === 'number' ? getP1Input().throttle : (getP1Input().up ? 1 : 0),
+              brake: typeof getP1Input().brake === 'number' ? getP1Input().brake : (getP1Input().down ? 1 : 0) }
+          : { up:false, down:false, left:false, right:false, ers:false, drs:false, steer:0, throttle:0, brake:0 });
+      let predSteps = 0;
+      while(left > 0.0005) {
+        const d = Math.min(fixed, left);
+        const cars = [race._onlineLocalSim].concat(remotes);
+        Sim.stepKart(race._onlineLocalSim, inp, d, race._onlineSimTrack || race.track, cars, {
+          contact: collideOn,
+          resolveCollisions: collideOn,
+          nowMs: race._onlineLocalSim.simTimeMs + d * 1000
         });
-        race.update(dt);
-      } else {
-        // Clients: predict local kart lightly, interpolate everyone from host state
-        const localIdx = onlineCameraIndex();
-        const localKart = race.karts[localIdx];
-        if(localKart && (race.phase === 'racing' || race.phase === 'countdown' || race.phase === 'launch')) {
-          if(race.phase === 'racing') {
-            localKart.update(dt, race.track, race.karts);
-          } else if(race.phase === 'countdown' || race.phase === 'launch') {
-            // Keep launch RPM feel for local player
-            const inp = localKart.getInput ? localKart.getInput() : {up:false, down:false};
-            let rpm = race.launchRPM[localIdx] || 0.0;
-            if(inp.up) rpm += 1.15 * dt;
-            else rpm -= 0.55 * dt;
-            if(inp.down) rpm -= 0.75 * dt;
-            race.launchRPM[localIdx] = Math.max(0, Math.min(1, rpm));
-          }
-        }
-        sess.applyStateToRace(race, dt);
-        // Sync countdown overlay from host phase
-        if(race.phase === 'countdown') {
-          const overlay = document.getElementById('countdownOverlay');
-          if(overlay) overlay.style.display = 'flex';
-          if(race._lastOnlineCd !== race.countdownVal) {
-            race._lastOnlineCd = race.countdownVal;
-            if(race.countdownVal > 0) showCountdown(race.countdownVal);
-            else showCountdown(-1);
-          }
-        } else if(race.phase === 'racing' || race.phase === 'finished') {
-          document.getElementById('countdownOverlay').style.display = 'none';
-        }
-        race.updateCamera(localIdx, dt);
-        if(race.phase === 'finished' && !race.resultsShown) {
-          race.finishedTimer = (race.finishedTimer || 0) + dt;
-          if(race.finishedTimer > 2.2) {
-            race.resultsShown = true;
-            race.showResults();
-          }
+        left -= d;
+        predSteps++;
+        if(predSteps >= 8) break;
+      }
+      localKart.x = race._onlineLocalSim.x;
+      localKart.y = race._onlineLocalSim.y;
+      localKart.angle = race._onlineLocalSim.angle;
+      localKart.speed = race._onlineLocalSim.speed;
+      localKart.ersCharge = race._onlineLocalSim.ersCharge;
+      localKart.ersActive = race._onlineLocalSim.ersActive;
+      localKart.drsActive = race._onlineLocalSim.drsActive;
+      localKart.tyreWear = race._onlineLocalSim.tyreWear;
+      if(typeof race._onlineLocalSim.tyreTemp === 'number') localKart.tyreTemp = race._onlineLocalSim.tyreTemp;
+    } else if(race.phase === 'racing' && localKart && !localKart.finished && !Sim) {
+      // Shared sim required for online — do not fall back to HTML Kart physics
+      if(!race._onlineSimMissingWarned) {
+        race._onlineSimMissingWarned = true;
+        console.error('OnlineSim missing — online prediction disabled');
+        const el = document.getElementById('online-status');
+        if(el) { el.textContent = 'online-sim.js failed to load — hard refresh'; el.classList.add('err'); }
+      }
+    } else if((race.phase === 'countdown' || race.phase === 'launch') && localKart && race.launchRPM) {
+      const inp = (typeof getP1Input === 'function') ? getP1Input() : { up: false, down: false };
+      let rpm = race.launchRPM[localIdx] || 0;
+      if(inp.up) rpm += 1.15 * elapsed;
+      else rpm -= 0.55 * elapsed;
+      if(inp.down) rpm -= 0.75 * elapsed;
+      race.launchRPM[localIdx] = Math.max(0, Math.min(1, rpm));
+    }
+    sess.reconcileLocalKart(race, elapsed);
+    if(localKart && race.phase === 'racing' && typeof sess.applyVisualOffset === 'function') {
+      sess.applyVisualOffset(localKart, elapsed);
+      localKart.prevX = localKart.x;
+      localKart.prevY = localKart.y;
+    }
+    if(localKart && (!isFinite(localKart.x) || !isFinite(localKart.y))) {
+      const snapKart = sess.latestState && sess.latestState.karts && sess.latestState.karts[localIdx];
+      if(snapKart && isFinite(snapKart.x) && isFinite(snapKart.y)) {
+        localKart.x = snapKart.x;
+        localKart.y = snapKart.y;
+        localKart.angle = snapKart.angle;
+        localKart.speed = snapKart.speed;
+      } else if(race.track && race.track.startPos) {
+        localKart.x = race.track.startPos.x;
+        localKart.y = race.track.startPos.y;
+      }
+    }
+    if(typeof race.updateCamera === 'function') race.updateCamera(localIdx, elapsed);
+    if(race.phase === 'finished') {
+      race.finishedTimer = (race.finishedTimer || 0) + elapsed;
+      if(race.finishedTimer > 2.2 && !race.resultsShown) {
+        race.resultsShown = true;
+        race.showResults();
+      }
+    }
+    const prevPhase = race._guestShownPhase;
+    if(race.phase === 'countdown' && race.countdownVal > 0 && race._lastOnlineCd !== race.countdownVal) {
+      showCountdown(race.countdownVal);
+      race._lastOnlineCd = race.countdownVal;
+    }
+    if(race.phase === 'racing' && prevPhase !== 'racing' && prevPhase !== 'finished') {
+      showCountdown(-1);
+      if(!race._onlineGuestEngines) {
+        race._onlineGuestEngines = true;
+        try { startEngine(localIdx); } catch(e) {}
+        for(let ei = 0; ei < race.karts.length; ei++) {
+          if(ei === localIdx) continue;
+          try { startEngine(ei); } catch(e2) {}
         }
       }
-    } else {
-      race.update(dt);
     }
+    race._guestShownPhase = race.phase;
+    const overlay = document.getElementById('countdownOverlay');
+    if(race.phase === 'countdown' || race.phase === 'launch') {
+      if(overlay && overlay.style.display !== 'flex') overlay.style.display = 'flex';
+    } else if(race.phase === 'racing' || race.phase === 'finished') {
+      if(overlay) overlay.style.display = 'none';
+    }
+    if(sess.netDebug) drawOnlineNetDebug(sess);
+  } else if(race && race.mode === 'online') {
+    // Server already returned lobby (or session idle) but results screen may still be up —
+    // never fall through into offline race.update (would desync leftover karts).
+    if(typeof race.updateCamera === 'function') {
+      race.updateCamera(onlineCameraIndex(), elapsed);
+    }
+    if(sess && sess.netDebug) drawOnlineNetDebug(sess);
+  } else {
+    race.update(elapsed);
+  }
+  if(doRender) {
     race.render();
     syncPitSelectionOverlay();
   }
-  animId = requestAnimationFrame(gameLoop);
+}
+
+function drawOnlineNetDebug(sess) {
+  try {
+    const d = sess.getNetDebug && sess.getNetDebug();
+    if(!d) return;
+    ctx.save();
+    ctx.font = '12px monospace';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(8, 8, 220, 92);
+    ctx.fillStyle = '#7dffb3';
+    ctx.textAlign = 'left';
+    ctx.fillText('NET delay ' + d.delay + 'ms  jit ' + d.jitter + 'ms', 14, 26);
+    ctx.fillText((d.extrapolating ? 'EXTRAP ' + d.extrapMs + 'ms' : 'interp') + '  snaps ' + d.snaps, 14, 44);
+    ctx.fillText('↓' + d.bytesIn + ' B/s  ↑' + d.bytesOut + ' B/s', 14, 62);
+    ctx.fillText('corr ' + d.corrErr + '  underrun ' + d.underruns, 14, 80);
+    ctx.restore();
+  } catch(e) {}
+}
+
+function gameLoop(ts) {
+  advanceRace(ts, { render: true, catchUp: false });
+  if(!document.hidden) animId = requestAnimationFrame(gameLoop);
+  else animId = null;
 }
 
 function startGameLoop() {
+  stopOnlineBgSim();
   if(animId) cancelAnimationFrame(animId);
   lastTime = null;
   animId = requestAnimationFrame(gameLoop);
+  syncOnlineBgSim();
 }
+
+document.addEventListener('visibilitychange', function() {
+  if(document.hidden) {
+    if(animId) { cancelAnimationFrame(animId); animId = null; }
+    return;
+  }
+  if(race && !isPaused && !animId) {
+    lastTime = null;
+    animId = requestAnimationFrame(gameLoop);
+  }
+});
 
 // ── TRACK THUMBNAILS ────────────────────────────────────
 function renderThumbnail(trackIdx) {
@@ -9300,30 +9580,54 @@ function bindOnlineSessionEvents() {
     stopOnlineLobbyPoll();
     beginOnlineRaceFromNet(msg);
   });
+  sess.on('hostMigrated', function(msg) {
+    if(!race || race.mode !== 'online') return;
+    const dropped = msg && msg.disconnectedId;
+    if(dropped && window.OnlineNet) {
+      race.karts.forEach(function(k) {
+        if(k.onlineConnId === dropped) {
+          k._onlineDisconnected = true;
+          window.OnlineNet.session.remoteInputs[dropped] = window.OnlineNet.emptyInput();
+        }
+      });
+    }
+    const hostPlayer = (msg && msg.players || []).find(function(p) { return p.id === (msg && msg.hostId); });
+    const hostName = (hostPlayer && hostPlayer.name) || 'P2';
+    race._onlineHostBanner = {
+      text: 'HOST LEFT — ' + hostName + ' IS NOW HOST',
+      until: performance.now() + 3500
+    };
+  });
   sess.on('raceAborted', function() {
-    if(animId) { cancelAnimationFrame(animId); animId = null; }
-    stopAllEngines(); stopAllDriftSnds();
+    teardownRaceUI();
     race = null;
-    lastTime = null;
-    canvas.style.display = 'none';
-    document.getElementById('countdownOverlay').style.display = 'none';
-    showTouchOverlay(false);
     CG.gameplayStop();
     showScreen('online');
     const st = document.getElementById('online-room-status');
     if(st) st.textContent = 'Host left — race aborted. Waiting in lobby…';
   });
-  sess.on('raceEnded', function() {
+  sess.on('raceEnded', function(msg) {
+    teardownRaceUI();
+    race = null;
+    window._onlineRaceConfig = null;
+    CG.gameplayStop();
+    showScreen('online');
+    const st = document.getElementById('online-room-status');
+    if(st) {
+      st.textContent = (msg && (msg.standings || msg.results))
+        ? 'Race finished — ready up for the next one.'
+        : 'Race finished. Waiting in lobby…';
+    }
     refreshOnlineLobbyUI();
   });
   sess.on('disconnected', function(info) {
     if(info && info.wasRacing) {
-      if(animId) { cancelAnimationFrame(animId); animId = null; }
-      stopAllEngines(); stopAllDriftSnds();
+      teardownRaceUI();
       race = null;
-      canvas.style.display = 'none';
-      showTouchOverlay(false);
       CG.gameplayStop();
+      showScreen('online');
+      const st = document.getElementById('online-room-status');
+      if(st) st.textContent = 'Disconnected from lobby.';
     }
     refreshOnlineLobbyUI();
   });
@@ -9547,7 +9851,100 @@ function beginOnlineRaceFromNet(msg) {
   window._skipNextQuali = true;
   const trackId = Math.max(0, Math.min(TRACKS.length - 1, settings.trackId | 0));
   selectTrackStart(trackId);
+  if(race) {
+    race._lastOnlineCd = 3;
+    race._onlineGuestEngines = false;
+    race._onlineLocalSim = null;
+    race._onlineSimTrack = null;
+    ensureOnlineLocalSim(race, onlineCameraIndex());
+  }
 }
+
+/** Compact upgrade/setup blob for Worker + shared OnlineSim (matches applyUpgradesToKart). */
+function getOnlineUpgrades() {
+  try {
+    const pd = getPlayerData();
+    const devBonus = getTeamDevelopmentBonuses(pd);
+    const setup = resolvePlayerSetup(pd, 'p1');
+    return {
+      speed: devBonus.speed || 0,
+      accel: devBonus.accel || 0,
+      handling: devBonus.handling || 0,
+      braking: devBonus.braking || 0,
+      traction: devBonus.traction || 0,
+      speedMult: setup.speedMult || 1,
+      turnMult: setup.turnMult || 1,
+      brakeMult: setup.brakeMult != null ? setup.brakeMult : 1,
+      tractBonus: setup.tractBonus || 0
+    };
+  } catch(e) {
+    return null;
+  }
+}
+window.getOnlineUpgrades = getOnlineUpgrades;
+
+/** Local prediction Kart mirrored through OnlineSim.createKart / stepKart. */
+function ensureOnlineLocalSim(race, localIdx) {
+  const Sim = window.OnlineSim;
+  if(!race || !Sim || !Sim.createKart) return;
+  const tid = (race.track && race.track.id != null) ? (race.track.id | 0) : 0;
+  if(!race._onlineSimTrack) {
+    // Canonical Worker bake only — never fall back to live TRACKS (asymmetric physics)
+    const bake = Sim.loadTrackBake && Sim.loadTrackBake(tid);
+    if(!bake) {
+      if(!race._onlineBakeMissingWarned) {
+        race._onlineBakeMissingWarned = true;
+        console.error('Canonical track bake missing for trackId', tid);
+      }
+      return;
+    }
+    race._onlineSimTrack = bake;
+  }
+  if(race._onlineLocalSim) return;
+  const k = race.karts[localIdx];
+  if(!k) return;
+  const cfg = window._onlineRaceConfig || {};
+  race._onlineLocalSim = Sim.createKart({
+    id: localIdx,
+    x: k.x,
+    y: k.y,
+    angle: k.angle,
+    color: k.color,
+    upgrades: getOnlineUpgrades() || (Sim.defaultUpgrades && Sim.defaultUpgrades()) || undefined,
+    weather: race.weather || cfg.weather || 'dry',
+    tyreId: race.tyres || cfg.tyres || 'med',
+    totalLaps: race.lapCount || cfg.laps || 3,
+    onlineConnId: k.onlineConnId || '',
+    onlineName: k.onlineName || ''
+  });
+}
+
+/** Compact baked track payload for server-authoritative physics (admin startRace). */
+function getOnlineTrackBake(trackId) {
+  const idx = Math.max(0, Math.min(TRACKS.length - 1, trackId | 0));
+  const tr = TRACKS[idx];
+  if(!tr || !tr.spline || !tr.cpLines) return null;
+  return {
+    id: tr.id,
+    trackWidth: tr.trackWidth,
+    spline: tr.spline.map(function(p) { return { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }; }),
+    cum: (tr.cum || []).slice(),
+    totalLen: tr.totalLen,
+    startPos: { x: tr.startPos.x, y: tr.startPos.y },
+    startAngle: tr.startAngle || 0,
+    cpLines: (tr.cpLines || []).map(function(c) {
+      return { x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2 };
+    }),
+    drsZones: (tr.drsZones || []).map(function(z) {
+      return { sIdx: z.sIdx | 0, eIdx: z.eIdx | 0 };
+    }),
+    gridSlots: (tr.gridSlots || []).slice(0, 6).map(function(s) {
+      return { x: s.x, y: s.y, a: s.a };
+    }),
+    surface: tr.surface ? { offTrackMult: tr.surface.offTrackMult || 1 } : { offTrackMult: 1 }
+  };
+}
+window.getOnlineTrackBake = getOnlineTrackBake;
 
 function onlineCameraIndex() {
   const cfg = window._onlineRaceConfig;
