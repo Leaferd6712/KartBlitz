@@ -9162,11 +9162,6 @@ function advanceRace(now, opts) {
       race.launchRPM[localIdx] = Math.max(0, Math.min(1, rpm));
     }
     sess.reconcileLocalKart(race, elapsed);
-    if(localKart && race.phase === 'racing' && typeof sess.applyVisualOffset === 'function') {
-      sess.applyVisualOffset(localKart, elapsed);
-      localKart.prevX = localKart.x;
-      localKart.prevY = localKart.y;
-    }
     if(localKart && (!isFinite(localKart.x) || !isFinite(localKart.y))) {
       const snapKart = sess.latestState && sess.latestState.karts && sess.latestState.karts[localIdx];
       if(snapKart && isFinite(snapKart.x) && isFinite(snapKart.y)) {

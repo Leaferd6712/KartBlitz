@@ -17,11 +17,10 @@
   var LOCAL_BLEND_MIN = 40;
   var LOCAL_SNAP_ERR = 220;
   var RECON_REPLAY_MAX = 24;
-  var VIS_OFFSET_TAU = 0.04;
-  var DISP_MAX_PX_PER_SEC = 900;
+  var DISP_MAX_PX_PER_SEC = 1200;
   var DISP_SPEED_MUL = 1.1;
   var DISP_MAX_RAD_PER_SEC = 8;
-  var DISP_SNAP_ERR = 140;
+  var DISP_SNAP_ERR = 180;
   var DISP_SMOOTH = 1;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
   var ONLINE_PROTOCOL = (global.OnlineSim && global.OnlineSim.ONLINE_PROTOCOL) || 3;
@@ -906,7 +905,7 @@
       }
       this._lastReconTick = snapTick;
 
-      var oldX = k.x, oldY = k.y, oldA = k.angle;
+      var oldX = k.x, oldY = k.y;
       Sim.applyNetPose(race._onlineLocalSim, s);
       if (typeof s.tyreTemp === 'number') race._onlineLocalSim.tyreTemp = s.tyreTemp;
       var track = race._onlineSimTrack || null;
@@ -954,21 +953,7 @@
       k.drsActive = race._onlineLocalSim.drsActive;
       k.tyreWear = race._onlineLocalSim.tyreWear;
       if (typeof race._onlineLocalSim.tyreTemp === 'number') k.tyreTemp = race._onlineLocalSim.tyreTemp;
-      k.prevX = k.x;
-      k.prevY = k.y;
-
-      if (!isFinite(oldX) || !isFinite(oldY) || corrErr > LOCAL_SNAP_ERR) {
-        this._visOff = { x: 0, y: 0, a: 0 };
-      } else {
-        var dA = oldA - race._onlineLocalSim.angle;
-        while (dA > Math.PI) dA -= Math.PI * 2;
-        while (dA < -Math.PI) dA += Math.PI * 2;
-        this._visOff = {
-          x: oldX - race._onlineLocalSim.x,
-          y: oldY - race._onlineLocalSim.y,
-          a: dA
-        };
-      }
+      this._visOff = { x: 0, y: 0, a: 0 };
       this._guestPhase = snap.phase || race.phase;
       return;
     }
@@ -981,21 +966,8 @@
 
     var err = (isFinite(k.x) && isFinite(k.y)) ? poseError(k, s) : Infinity;
     this._lastCorrErr = err;
-    if (err > LOCAL_SNAP_ERR || !isFinite(k.x) || !isFinite(k.y) || justLaunched) {
-      applyPose(k, s);
-      this._visOff = { x: 0, y: 0, a: 0 };
-    } else if (err >= LOCAL_BLEND_MIN) {
-      var oldXb = k.x, oldYb = k.y, oldAb = k.angle;
-      applyPose(k, s);
-      var dAb = oldAb - s.angle;
-      while (dAb > Math.PI) dAb -= Math.PI * 2;
-      while (dAb < -Math.PI) dAb += Math.PI * 2;
-      this._visOff = { x: oldXb - s.x, y: oldYb - s.y, a: dAb };
-    } else {
-      applyPose(k, s);
-    }
-    k.prevX = k.x;
-    k.prevY = k.y;
+    applyPose(k, s);
+    this._visOff = { x: 0, y: 0, a: 0 };
     this._guestPhase = snap.phase || race.phase;
   };
 
