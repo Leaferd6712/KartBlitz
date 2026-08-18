@@ -2185,6 +2185,8 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   canvas.style.display = 'none';
   document.getElementById('countdownOverlay').style.display = 'none';
+  const po = document.getElementById('pause-overlay');
+  if(po) po.style.display = 'none';
   const pitUi = document.getElementById('pit-ui-overlay');
   if(pitUi) { pitUi.style.display = 'none'; pitUi.dataset.signature = ''; clearPitUiLayoutClasses(pitUi); }
   showTouchOverlay(false);
@@ -6441,6 +6443,7 @@ function makeAIInput(track, difficulty, aiIndex, opts) {
 
 // ── GHOST KART RENDERER ─────────────────────────────────
 function drawGhost(ctx, kart, camX, camY, W, H) {
+  if(typeof race !== 'undefined' && race && race.mode === 'online') return;
   if(!kart._bestGhost || kart._bestGhost.length < 2) return;
   if(kart.lapStart === null) return;
   const elapsed = (performance.now() - kart.lapStart) / 1000;
@@ -8341,7 +8344,7 @@ class Race {
         if(k._shootoutStowed) return;
         k.draw(ctx, cam.x, cam.y, W, H);
       });
-      if(mode !== 'shootout' || this.shootoutStage === 'player') {
+      if(mode !== 'online' && (mode !== 'shootout' || this.shootoutStage === 'player')) {
         drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
       }
       drawHUD(ctx, activeKart, track, 0, 0, W, H, 0, 'ai');
@@ -9065,23 +9068,40 @@ function pauseRestartRace() {
   setAdMuted(false);
   restartRace();
 }
-function pauseQuit() {
+function teardownRaceUI() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
   isPaused = false;
+  lastTime = null;
+  stopOnlineBgSim();
+  stopAllEngines();
+  stopAllDriftSnds();
+  setAdMuted(false);
   const po = document.getElementById('pause-overlay');
   if (po) po.style.display = 'none';
-  setAdMuted(false);
+  const pit = document.getElementById('pit-ui-overlay');
+  if (pit) { pit.style.display = 'none'; pit.dataset.signature = ''; }
+  const cd = document.getElementById('countdownOverlay');
+  if (cd) cd.style.display = 'none';
+  const ad = document.getElementById('ad-block-overlay');
+  if (ad) ad.style.display = 'none';
+  canvas.style.display = 'none';
+  showTouchOverlay(false);
+}
+
+function pauseQuit() {
   // Time Trial has no fixed distance — ending the session shows results.
   if(race && race.mode === 'trial' && typeof race.showResults === 'function') {
+    isPaused = false;
+    const po = document.getElementById('pause-overlay');
+    if (po) po.style.display = 'none';
+    setAdMuted(false);
     race.phase = 'finished';
     race.showResults();
     return;
   }
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
-  stopOnlineBgSim();
-  stopAllEngines(); stopAllDriftSnds();
   const wasOnline = race && race.mode === 'online';
+  teardownRaceUI();
   race = null;
-  lastTime = null;
   CG.gameplayStop();
   if(wasOnline) {
     const sess = getOnlineSession();
@@ -9092,14 +9112,9 @@ function pauseQuit() {
 }
 
 function returnToMainMenu() {
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
-  stopOnlineBgSim();
-  stopAllEngines(); stopAllDriftSnds();
-  setAdMuted(false);
-  isPaused = false;
   const wasOnline = race && race.mode === 'online';
+  teardownRaceUI();
   race = null;
-  lastTime = null;
   CG.gameplayStop();
   window._onlineRaceConfig = null;
   if(wasOnline) {
@@ -9206,6 +9221,7 @@ function advanceRace(now, opts) {
               throttle: typeof getP1Input().throttle === 'number' ? getP1Input().throttle : (getP1Input().up ? 1 : 0),
               brake: typeof getP1Input().brake === 'number' ? getP1Input().brake : (getP1Input().down ? 1 : 0) }
           : { up:false, down:false, left:false, right:false, ers:false, drs:false, steer:0, throttle:0, brake:0 });
+      let predSteps = 0;
       while(left > 0.0005) {
         const d = Math.min(fixed, left);
         const cars = [race._onlineLocalSim].concat(remotes);
@@ -9215,6 +9231,8 @@ function advanceRace(now, opts) {
           nowMs: race._onlineLocalSim.simTimeMs + d * 1000
         });
         left -= d;
+        predSteps++;
+        if(predSteps >= 8) break;
       }
       localKart.x = race._onlineLocalSim.x;
       localKart.y = race._onlineLocalSim.y;
@@ -9242,6 +9260,11 @@ function advanceRace(now, opts) {
       race.launchRPM[localIdx] = Math.max(0, Math.min(1, rpm));
     }
     sess.reconcileLocalKart(race, elapsed);
+    if(localKart && race.phase === 'racing' && typeof sess.applyVisualOffset === 'function') {
+      sess.applyVisualOffset(localKart, elapsed);
+      localKart.prevX = localKart.x;
+      localKart.prevY = localKart.y;
+    }
     if(localKart && (!isFinite(localKart.x) || !isFinite(localKart.y))) {
       const snapKart = sess.latestState && sess.latestState.karts && sess.latestState.karts[localIdx];
       if(snapKart && isFinite(snapKart.x) && isFinite(snapKart.y)) {
@@ -9323,6 +9346,7 @@ function drawOnlineNetDebug(sess) {
 function gameLoop(ts) {
   advanceRace(ts, { render: true, catchUp: false });
   if(!document.hidden) animId = requestAnimationFrame(gameLoop);
+  else animId = null;
 }
 
 function startGameLoop() {
@@ -9334,9 +9358,14 @@ function startGameLoop() {
 }
 
 document.addEventListener('visibilitychange', function() {
-  if(!race) return;
-  lastTime = performance.now();
-  syncOnlineBgSim();
+  if(document.hidden) {
+    if(animId) { cancelAnimationFrame(animId); animId = null; }
+    return;
+  }
+  if(race && !isPaused && !animId) {
+    lastTime = null;
+    animId = requestAnimationFrame(gameLoop);
+  }
 });
 
 // ── TRACK THUMBNAILS ────────────────────────────────────
@@ -9570,28 +9599,17 @@ function bindOnlineSessionEvents() {
     };
   });
   sess.on('raceAborted', function() {
-    if(animId) { cancelAnimationFrame(animId); animId = null; }
-    stopAllEngines(); stopAllDriftSnds();
+    teardownRaceUI();
     race = null;
-    lastTime = null;
-    canvas.style.display = 'none';
-    document.getElementById('countdownOverlay').style.display = 'none';
-    showTouchOverlay(false);
     CG.gameplayStop();
     showScreen('online');
     const st = document.getElementById('online-room-status');
     if(st) st.textContent = 'Host left — race aborted. Waiting in lobby…';
   });
   sess.on('raceEnded', function(msg) {
-    if(animId) { cancelAnimationFrame(animId); animId = null; }
-    stopAllEngines(); stopAllDriftSnds();
-    lastTime = null;
+    teardownRaceUI();
     race = null;
     window._onlineRaceConfig = null;
-    canvas.style.display = 'none';
-    const cd = document.getElementById('countdownOverlay');
-    if(cd) cd.style.display = 'none';
-    showTouchOverlay(false);
     CG.gameplayStop();
     showScreen('online');
     const st = document.getElementById('online-room-status');
@@ -9604,11 +9622,8 @@ function bindOnlineSessionEvents() {
   });
   sess.on('disconnected', function(info) {
     if(info && info.wasRacing) {
-      if(animId) { cancelAnimationFrame(animId); animId = null; }
-      stopAllEngines(); stopAllDriftSnds();
+      teardownRaceUI();
       race = null;
-      canvas.style.display = 'none';
-      showTouchOverlay(false);
       CG.gameplayStop();
       showScreen('online');
       const st = document.getElementById('online-room-status');

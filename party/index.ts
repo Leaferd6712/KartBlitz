@@ -2,6 +2,8 @@ import { routePartykitRequest } from "partyserver";
 import { KartBlitzRoom } from "./server";
 import { LobbyDirectory } from "./directory";
 import type { Env } from "./env";
+import { ONLINE_PROTOCOL, TRACK_BAKE_VERSION } from "../sim/constants";
+import { listTrackIds } from "../sim/tracks";
 
 export { KartBlitzRoom, LobbyDirectory };
 export type { Env };
@@ -21,6 +23,18 @@ export default {
     }
 
     const url = new URL(request.url);
+    if (url.pathname === "/version" || url.pathname === "/version/") {
+      return withCors(
+        new Response(
+          JSON.stringify({
+            protocol: ONLINE_PROTOCOL,
+            trackBakeVersion: TRACK_BAKE_VERSION,
+            tracks: listTrackIds(),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+    }
     if (url.pathname === "/lobbies" || url.pathname === "/lobbies/") {
       const id = env.LobbyDirectory.idFromName("global");
       const stub = env.LobbyDirectory.get(id);
@@ -32,7 +46,7 @@ export default {
     if (party) return party;
 
     return withCors(
-      new Response("KartBlitz online — GET /lobbies or /parties/main/<roomId>", { status: 200 })
+      new Response("KartBlitz online — GET /version, /lobbies, or /parties/main/<roomId>", { status: 200 })
     );
   },
 };

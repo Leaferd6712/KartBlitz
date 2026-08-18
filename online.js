@@ -16,11 +16,13 @@
   var SNAP_BUF = 24;
   var LOCAL_BLEND_MIN = 40;
   var LOCAL_SNAP_ERR = 220;
+  var RECON_REPLAY_MAX = 24;
+  var VIS_OFFSET_TAU = 0.04;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
   var ONLINE_PROTOCOL = (global.OnlineSim && global.OnlineSim.ONLINE_PROTOCOL) || 3;
   var TRACK_BAKE_VERSION = (global.OnlineSim && global.OnlineSim.TRACK_BAKE_VERSION) || 2;
   var STEPS_PER_INPUT = (global.OnlineSim && global.OnlineSim.STEPS_PER_INPUT) || (60 / INPUT_HZ);
-  var INPUT_HISTORY_MAX = 120;
+  var INPUT_HISTORY_MAX = 48;
 
   function netDebugEnabled() {
     try {
@@ -112,6 +114,8 @@
     this._inputSeq = 0;
     this._inputHistory = [];
     this._lastProcessedLocal = 0;
+    this._lastReconTick = -1;
+    this._visOff = { x: 0, y: 0, a: 0 };
     this._bytesIn = 0;
     this._bytesOut = 0;
     this._bytesWindowStart = 0;
@@ -332,6 +336,8 @@
     this._lastCorrErr = 0;
     this._inputHistory = [];
     this._lastProcessedLocal = 0;
+    this._lastReconTick = -1;
+    this._visOff = { x: 0, y: 0, a: 0 };
   };
 
   OnlineSession.prototype.leave = function (silent) {
@@ -757,7 +763,24 @@
         applyPose(k, sB);
       }
       copyGameplayFields(k, sB, false);
+      k.prevX = k.x;
+      k.prevY = k.y;
     }
+  };
+
+  OnlineSession.prototype.applyVisualOffset = function (k, dt) {
+    var off = this._visOff;
+    if (!off || !k) return;
+    var decay = Math.exp(-(dt || 1 / 60) / VIS_OFFSET_TAU);
+    off.x *= decay;
+    off.y *= decay;
+    off.a *= decay;
+    if (Math.abs(off.x) < 0.15 && Math.abs(off.y) < 0.15 && Math.abs(off.a) < 0.002) {
+      off.x = 0; off.y = 0; off.a = 0;
+    }
+    k.x += off.x;
+    k.y += off.y;
+    k.angle += off.a;
   };
 
   OnlineSession.prototype.reconcileLocalKart = function (race, dt) {
@@ -773,7 +796,6 @@
     if (Array.isArray(snap.lastProcessedInput) && snap.lastProcessedInput[localIdx] != null) {
       lastProc = snap.lastProcessedInput[localIdx] | 0;
       this._lastProcessedLocal = lastProc;
-      // Drop acked inputs
       this._inputHistory = this._inputHistory.filter(function (h) {
         var d = (h.seq - lastProc) & 0xffff;
         return d > 0 && d < 0x8000;
@@ -783,14 +805,21 @@
     copyGameplayFields(k, s, true);
     var Sim = global.OnlineSim;
     var justLaunched = this._guestPhase !== 'racing' && snap.phase === 'racing';
+    var snapTick = snap.tick | 0;
+    var sameTick = snapTick === this._lastReconTick;
 
-    // Authoritative pose + replay unacked inputs through shared sim when available
     if (Sim && Sim.stepKart && race._onlineLocalSim && snap.phase === 'racing' && !justLaunched) {
+      if (sameTick) {
+        this._guestPhase = snap.phase || race.phase;
+        return;
+      }
+      this._lastReconTick = snapTick;
+
+      var oldX = k.x, oldY = k.y, oldA = k.angle;
       Sim.applyNetPose(race._onlineLocalSim, s);
       if (typeof s.tyreTemp === 'number') race._onlineLocalSim.tyreTemp = s.tyreTemp;
       var track = race._onlineSimTrack || null;
       var collideOn = (race.collisionMode || 'collision') !== 'nocollision';
-      var contactOn = collideOn;
       var remotes = [];
       var i;
       for (i = 0; i < race.karts.length; i++) {
@@ -808,56 +837,74 @@
       }
       var cars = [race._onlineLocalSim].concat(remotes);
       var hist = this._inputHistory;
+      var dtStep = Sim.FIXED_DT || (1 / 60);
       var stepsPer = STEPS_PER_INPUT | 0;
       if (stepsPer < 1) stepsPer = 2;
-      var dtStep = Sim.FIXED_DT || (1 / 60);
-      for (i = 0; i < hist.length; i++) {
-        for (var stepI = 0; stepI < stepsPer; stepI++) {
-          Sim.stepKart(race._onlineLocalSim, hist[i].input, dtStep, track || race.track, cars, {
-            contact: contactOn,
-            resolveCollisions: collideOn,
-            nowMs: race._onlineLocalSim.simTimeMs + dtStep * 1000
-          });
+
+      if (hist.length > RECON_REPLAY_MAX) {
+        applyPose(race._onlineLocalSim, s);
+      } else {
+        for (i = 0; i < hist.length; i++) {
+          for (var stepI = 0; stepI < stepsPer; stepI++) {
+            Sim.stepKart(race._onlineLocalSim, hist[i].input, dtStep, track || race.track, cars, {
+              contact: collideOn,
+              resolveCollisions: collideOn,
+              nowMs: race._onlineLocalSim.simTimeMs + dtStep * 1000
+            });
+          }
         }
       }
-      // Hard-apply corrected prediction to sim; soft-blend DISPLAY kart only (never write blend back into sim)
-      var corrErr = poseError(k, race._onlineLocalSim);
+
+      var corrErr = poseError({ x: oldX, y: oldY }, race._onlineLocalSim);
       this._lastCorrErr = corrErr;
-      if (corrErr > LOCAL_SNAP_ERR || !isFinite(k.x) || !isFinite(k.y)) {
-        applyPose(k, race._onlineLocalSim);
-      } else if (corrErr >= LOCAL_BLEND_MIN) {
-        var omega = 10 + Math.min(14, corrErr / 35);
-        var t = 1 - Math.exp(-omega * (dt || 1 / 60));
-        t = Math.min(1, Math.max(0.08, t));
-        k.x = lerp(k.x, race._onlineLocalSim.x, t);
-        k.y = lerp(k.y, race._onlineLocalSim.y, t);
-        k.speed = lerp(k.speed, race._onlineLocalSim.speed, t);
-        k.angle = lerpAngle(k.angle, race._onlineLocalSim.angle, t);
-      } else {
-        applyPose(k, race._onlineLocalSim);
-      }
+      applyPose(k, race._onlineLocalSim);
       k.ersCharge = race._onlineLocalSim.ersCharge;
       k.ersActive = race._onlineLocalSim.ersActive;
       k.drsActive = race._onlineLocalSim.drsActive;
       k.tyreWear = race._onlineLocalSim.tyreWear;
       if (typeof race._onlineLocalSim.tyreTemp === 'number') k.tyreTemp = race._onlineLocalSim.tyreTemp;
+      k.prevX = k.x;
+      k.prevY = k.y;
+
+      if (!isFinite(oldX) || !isFinite(oldY) || corrErr > LOCAL_SNAP_ERR) {
+        this._visOff = { x: 0, y: 0, a: 0 };
+      } else {
+        var dA = oldA - race._onlineLocalSim.angle;
+        while (dA > Math.PI) dA -= Math.PI * 2;
+        while (dA < -Math.PI) dA += Math.PI * 2;
+        this._visOff = {
+          x: oldX - race._onlineLocalSim.x,
+          y: oldY - race._onlineLocalSim.y,
+          a: dA
+        };
+      }
       this._guestPhase = snap.phase || race.phase;
       return;
     }
+
+    if (sameTick && !justLaunched) {
+      this._guestPhase = snap.phase || race.phase;
+      return;
+    }
+    this._lastReconTick = snapTick;
 
     var err = (isFinite(k.x) && isFinite(k.y)) ? poseError(k, s) : Infinity;
     this._lastCorrErr = err;
     if (err > LOCAL_SNAP_ERR || !isFinite(k.x) || !isFinite(k.y) || justLaunched) {
       applyPose(k, s);
+      this._visOff = { x: 0, y: 0, a: 0 };
     } else if (err >= LOCAL_BLEND_MIN) {
-      var omega = 8 + Math.min(12, err / 40);
-      var t = 1 - Math.exp(-omega * (dt || 1 / 60));
-      t = Math.min(1, Math.max(0.05, t));
-      k.x = lerp(k.x, s.x, t);
-      k.y = lerp(k.y, s.y, t);
-      k.speed = lerp(k.speed, s.speed, t);
-      k.angle = lerpAngle(k.angle, s.angle, t);
+      var oldXb = k.x, oldYb = k.y, oldAb = k.angle;
+      applyPose(k, s);
+      var dAb = oldAb - s.angle;
+      while (dAb > Math.PI) dAb -= Math.PI * 2;
+      while (dAb < -Math.PI) dAb += Math.PI * 2;
+      this._visOff = { x: oldXb - s.x, y: oldYb - s.y, a: dAb };
+    } else {
+      applyPose(k, s);
     }
+    k.prevX = k.x;
+    k.prevY = k.y;
     this._guestPhase = snap.phase || race.phase;
   };
 

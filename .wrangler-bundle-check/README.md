@@ -1,1 +1,0 @@
-This folder contains the built output assets for the worker "kartblitz-online" generated at 2026-08-16T23:36:55.766Z.
