@@ -1395,11 +1395,12 @@ body::after{
 <div id="screen-save" class="screen hidden">
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('results')">← BACK</button>
-  <div class="section-title">ENTER NAME</div>
-  <div class="section-sub">YOUR INITIALS (3 CHARS)</div>
+  <div class="section-title" id="save-name-title">ENTER USERNAME</div>
+  <div class="section-sub" id="save-name-sub">CHOOSE ONCE FOR THIS DEVICE</div>
   <div class="name-box">
-    <input class="name-input" id="nameInput" maxlength="3" placeholder="AAA" value="">
+    <input class="name-input" id="nameInput" maxlength="12" placeholder="RACER" value="">
   </div>
+  <div class="section-sub" id="save-name-status" style="min-height:18px;color:rgba(255,255,255,0.75)">3-12 LETTERS OR NUMBERS</div>
   <div style="height:20px"></div>
   <button class="btn btn-gold" onclick="confirmSave()">SAVE TO LEADERBOARD</button>
 </div>
@@ -1409,7 +1410,7 @@ body::after{
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('menu')">← BACK</button>
   <div class="section-title">LEADERBOARD</div>
-  <div class="section-sub">LOCAL HISTORY · SAVED ON THIS DEVICE</div>
+  <div class="section-sub">CLOUD RECORDS · USERNAME LOCKED PER DEVICE</div>
   <div class="lb-shell">
     <div class="lb-filters">
       <div class="lb-filter-row">
@@ -1544,7 +1545,7 @@ body::after{
 <div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
   <div id="patch-notes-card">
     <h2 id="patch-notes-title">PATCH NOTES</h2>
-    <div class="patch-date">AUGUST 15</div>
+    <div class="patch-date">AUGUST 18</div>
     <ul>
       <li>Online mode uses <strong>server authority</strong> — less lag, no host-tab hitch (BETA).</li>
       <li>The leaderboard will be on in the next week.</li>
@@ -9422,7 +9423,7 @@ function getOnlineSession() {
 
 function getOnlinePlayerMeta() {
   let name = 'RACER';
-  try { name = (localStorage.getItem('kartblitz_lastname') || 'RACER').toUpperCase().substring(0, 12); } catch(e) {}
+  if(_kbIdentity && _kbIdentity.registered && _kbIdentity.username) name = _kbIdentity.username;
   let color = '#00f5ff';
   try {
     const liv = getPlayerLivery('p1');
@@ -10460,88 +10461,198 @@ document.addEventListener('keyup', e => {
 });
 
 // ── LEADERBOARD ─────────────────────────────────────────
-function getLB() {
-  try { return JSON.parse(localStorage.getItem('kartblitz_lb') || '{}'); } catch(e){ return {}; }
+const LB_DEVICE_KEY = 'kartblitz_device_token';
+let _kbIdentity = { loaded:false, registered:false, username:'' };
+let _lbBuildSeq = 0;
+
+function leaderboardApiBase() {
+  let host = 'kartblitz-online.kartblitz.workers.dev';
+  try {
+    if(window.OnlineNet && typeof window.OnlineNet.defaultHost === 'function') host = window.OnlineNet.defaultHost() || host;
+  } catch(e) {}
+  host = String(host || 'kartblitz-online.kartblitz.workers.dev').replace(/^https?:\/\//,'').replace(/\/$/,'');
+  const secure = !(host.includes('localhost') || host.includes('127.0.0.1'));
+  return (secure ? 'https://' : 'http://') + host;
 }
-function saveLB(lb) {
-  try { localStorage.setItem('kartblitz_lb', JSON.stringify(lb)); } catch(e){}
+function leaderboardApiUrl(path) {
+  return leaderboardApiBase() + path;
+}
+function makeDeviceToken() {
+  try {
+    if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID().replace(/-/g,'') + Date.now().toString(36);
+  } catch(e) {}
+  return ('kb' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36)).slice(0, 48);
+}
+function getDeviceToken() {
+  try {
+    let token = localStorage.getItem(LB_DEVICE_KEY) || '';
+    if(!token) {
+      token = makeDeviceToken();
+      localStorage.setItem(LB_DEVICE_KEY, token);
+    }
+    return token;
+  } catch(e) {
+    return makeDeviceToken();
+  }
+}
+window.getKartBlitzDeviceToken = getDeviceToken;
+function sanitizeLeaderboardName(raw) {
+  return String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,12);
+}
+function validLeaderboardName(name) {
+  return /^[A-Z0-9]{3,12}$/.test(name);
+}
+function setSaveStatus(msg, isErr) {
+  const el = document.getElementById('save-name-status');
+  if(!el) return;
+  el.textContent = msg || '';
+  el.style.color = isErr ? '#ff8f8f' : 'rgba(255,255,255,0.75)';
+}
+function updateSaveIdentityUi(identity) {
+  const input = document.getElementById('nameInput');
+  const title = document.getElementById('save-name-title');
+  const sub = document.getElementById('save-name-sub');
+  if(!input) return;
+  if(identity && identity.registered) {
+    if(title) title.textContent = 'USERNAME LOCKED';
+    if(sub) sub.textContent = 'THIS DEVICE IS REGISTERED';
+    input.value = identity.username || '';
+    input.disabled = true;
+    setSaveStatus('THIS SCORE WILL SAVE UNDER YOUR LOCKED USERNAME', false);
+  } else {
+    if(title) title.textContent = 'ENTER USERNAME';
+    if(sub) sub.textContent = 'CHOOSE ONCE FOR THIS DEVICE';
+    input.disabled = false;
+    input.value = sanitizeLeaderboardName(input.value || '');
+    setSaveStatus('3-12 LETTERS OR NUMBERS', false);
+  }
+}
+async function leaderboardFetchJson(path, options) {
+  const opts = Object.assign({ headers: { 'Content-Type': 'application/json' } }, options || {});
+  const res = await fetch(leaderboardApiUrl(path), opts);
+  let data = null;
+  try { data = await res.json(); } catch(e) {}
+  if(!res.ok) {
+    const err = (data && (data.error || data.message)) || ('HTTP ' + res.status);
+    throw new Error(err);
+  }
+  return data || {};
+}
+async function fetchDeviceIdentity(force) {
+  if(_kbIdentity.loaded && !force) return _kbIdentity;
+  try {
+    const data = await leaderboardFetchJson('/api/device-status?deviceToken=' + encodeURIComponent(getDeviceToken()));
+    _kbIdentity = {
+      loaded: true,
+      registered: !!data.registered,
+      username: data.registered ? sanitizeLeaderboardName(data.username || '') : ''
+    };
+  } catch(e) {
+    _kbIdentity = { loaded:false, registered:false, username:'' };
+  }
+  return _kbIdentity;
+}
+async function ensureRegisteredIdentity(nameRaw) {
+  const current = await fetchDeviceIdentity();
+  if(current.registered) return current;
+  const username = sanitizeLeaderboardName(nameRaw);
+  if(!validLeaderboardName(username)) throw new Error('Username must be 3-12 letters or numbers.');
+  const data = await leaderboardFetchJson('/api/register-device', {
+    method: 'POST',
+    body: JSON.stringify({ deviceToken: getDeviceToken(), username })
+  });
+  _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username || username) };
+  return _kbIdentity;
+}
+async function submitCloudScore(payload) {
+  const data = await leaderboardFetchJson('/api/scores', {
+    method: 'POST',
+    body: JSON.stringify(Object.assign({ deviceToken: getDeviceToken() }, payload || {}))
+  });
+  if(data && data.username) _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username) };
+  return data;
 }
 
 /** Persist a single Time Trial lap as soon as it is completed (no need to end session). */
-function autoSaveLapToLeaderboard(trackId, lapTime, totalTime) {
+async function autoSaveLapToLeaderboard(trackId, lapTime, totalTime) {
   if(!(lapTime > 0) || !Number.isFinite(lapTime)) return;
   const track = TRACKS.find(t => t.id === trackId);
   const minPossibleLap = (track && track.lapDistance) ? track.lapDistance / 640 : 8;
   if(lapTime < minPossibleLap) return;
-
-  const name = (localStorage.getItem('kartblitz_lastname') || 'AAA').toUpperCase().substring(0,3).padEnd(3,'A');
-  const lb = getLB();
-  const key = `trial_${trackId}`;
-  if(!lb[key]) lb[key] = [];
-  // Avoid exact duplicate if the same lap somehow fires twice
-  const dup = lb[key].some(e => e.name === name && Math.abs(e.time - lapTime) < 0.0005);
-  if(!dup) {
-    lb[key].push({ name, time: lapTime, total: totalTime || null, date: Date.now() });
-    lb[key].sort((a,b)=>a.time-b.time);
-    lb[key] = lb[key].slice(0,10);
-    saveLB(lb);
-  }
-  // CrazyGames global leaderboard (score in ms, lower = better)
   CG.saveScore(`track_${trackId}_lap`, Math.round(lapTime * 1000));
+  try {
+    const identity = await fetchDeviceIdentity();
+    if(!identity.registered) return;
+    await submitCloudScore({
+      mode: 'trial',
+      trackId,
+      trackName: track ? track.name : '',
+      bestLap: lapTime,
+      total: totalTime || null
+    });
+  } catch(e) {}
 }
 
 let pendingSave = null;
 
-function showSaveAndLeaderboard() {
+async function showSaveAndLeaderboard() {
   pendingSave = window._lastResult;
   if(!pendingSave) return;
   document.getElementById('screen-results').classList.add('hidden');
-  document.getElementById('nameInput').value = localStorage.getItem('kartblitz_lastname')||'';
   document.getElementById('screen-save').classList.remove('hidden');
+  const input = document.getElementById('nameInput');
+  if(input) {
+    input.disabled = true;
+    input.value = '';
+  }
+  setSaveStatus('CHECKING DEVICE REGISTRATION...', false);
+  updateSaveIdentityUi(await fetchDeviceIdentity());
 }
 
-function confirmSave() {
-  const name = (document.getElementById('nameInput').value || 'AAA').toUpperCase().substring(0,3).padEnd(3,'A');
-  localStorage.setItem('kartblitz_lastname', name);
+async function confirmSave() {
   if(!pendingSave) { showScreen('leaderboard'); return; }
-
-  const lb = getLB();
   const r = pendingSave;
+  const track = TRACKS.find(t => t.id === r.trackId);
 
   if(r.mode === 'trial' && r.bestLap < Infinity) {
-    // ── ANTI-CHEAT: Sanity check lap time ──────────────────
-    // Maximum achievable average speed = base max (469) × max upgrade (×1.60) × ERS (×1.25) × DRS (×1.15) × 65% track efficiency ≈ 700 units/s
-    // Using divisor 640 gives a generous impossible floor.
-    const track = TRACKS.find(t => t.id === r.trackId);
     const minPossibleLap = (track && track.lapDistance) ? track.lapDistance / 640 : 8;
     if (r.bestLap < minPossibleLap) {
-      // Time is physically impossible — skip leaderboard save silently
       showScreen('leaderboard');
       return;
     }
-    const key = `trial_${r.trackId}`;
-    if(!lb[key]) lb[key] = [];
-    // Laps already auto-save mid-session; only add if this name/time is not already present
-    const alreadySaved = lb[key].some(e => e.name === name && Math.abs(e.time - r.bestLap) < 0.0005);
-    if(!alreadySaved) {
-      lb[key].push({ name, time: r.bestLap, total: r.total, date: Date.now() });
-      lb[key].sort((a,b)=>a.time-b.time);
-      lb[key] = lb[key].slice(0,10);
-    }
-    // Also save to CrazyGames global leaderboard (score in ms, lower = better)
-    CG.saveScore(`track_${r.trackId}_lap`, Math.round(r.bestLap * 1000));
-  } else if(r.mode === 'versus') {
-    const key = `versus_${r.trackId}`;
-    if(!lb[key]) lb[key] = [];
-    const bestTime = Math.min(r.p1Best||Infinity, r.p2Best||Infinity);
-    if(bestTime < Infinity) {
-      lb[key].push({ name, time: bestTime, winner: r.winner!==null ? `P${r.winner+1}` : 'TIE', date: Date.now() });
-      lb[key].sort((a,b)=>a.time-b.time);
-      lb[key] = lb[key].slice(0,10);
-    }
   }
-  saveLB(lb);
-  showScreen('leaderboard');
+
+  try {
+    setSaveStatus('SAVING TO CLOUD...', false);
+    const identity = await ensureRegisteredIdentity((document.getElementById('nameInput').value || ''));
+    updateSaveIdentityUi(identity);
+    if(r.mode === 'trial' && r.bestLap < Infinity) {
+      await submitCloudScore({
+        mode: 'trial',
+        trackId: r.trackId,
+        trackName: track ? track.name : r.trackName,
+        bestLap: r.bestLap,
+        total: r.total
+      });
+      CG.saveScore(`track_${r.trackId}_lap`, Math.round(r.bestLap * 1000));
+    } else if(r.mode === 'versus') {
+      const bestTime = Math.min(r.p1Best||Infinity, r.p2Best||Infinity);
+      if(bestTime < Infinity) {
+        await submitCloudScore({
+          mode: 'versus',
+          trackId: r.trackId,
+          trackName: track ? track.name : r.trackName,
+          bestLap: bestTime,
+          total: r.total,
+          winner: r.winner!==null ? `P${r.winner+1}` : 'TIE'
+        });
+      }
+    }
+    setSaveStatus('SAVED TO CLOUD', false);
+    showScreen('leaderboard');
+  } catch(e) {
+    setSaveStatus((e && e.message) ? String(e.message).toUpperCase() : 'SAVE FAILED', true);
+  }
 }
 
 let lbMode = 'trial', lbTrack = 0;
@@ -10555,8 +10666,8 @@ function fmtLbDate(ts) {
   } catch(e) { return '—'; }
 }
 
-function buildLeaderboardScreen() {
-  const lb = getLB();
+async function buildLeaderboardScreen() {
+  const seq = ++_lbBuildSeq;
   const modeTabs = document.getElementById('lb-mode-tabs');
   const trackTabs = document.getElementById('lb-track-tabs');
   const content = document.getElementById('lb-content');
@@ -10588,28 +10699,45 @@ function buildLeaderboardScreen() {
 
   const track = TRACKS[lbTrack] || TRACKS[0];
   const trackId = track ? track.id : lbTrack;
-  const key = `${lbMode}_${trackId}`;
-  const entries = (lb[key] || []).slice().sort((a, b) => a.time - b.time).slice(0, 10);
-
   if(panelTitle) {
     panelTitle.textContent = lbMode === 'versus'
       ? `${track.name} · BEST VERSUS LAPS`
       : `${track.name} · BEST LAPS`;
   }
 
-  if(entries.length === 0) {
-    const head = document.querySelector('#screen-leaderboard .lb-head');
+  const head = document.querySelector('#screen-leaderboard .lb-head');
+  if(head) head.style.display = '';
+  content.innerHTML = `
+    <div class="lb-empty">
+      <div class="lb-empty-title">LOADING RECORDS...</div>
+      <div class="lb-empty-sub">Fetching the cloud leaderboard for this track.</div>
+    </div>`;
+
+  let entries = [];
+  try {
+    const data = await leaderboardFetchJson(`/api/leaderboard?mode=${encodeURIComponent(lbMode)}&trackId=${encodeURIComponent(trackId)}`);
+    if(seq !== _lbBuildSeq) return;
+    entries = ((data && data.scores) || []).slice().sort((a, b) => a.bestLap - b.bestLap).slice(0, 50);
+  } catch(e) {
+    if(seq !== _lbBuildSeq) return;
     if(head) head.style.display = 'none';
     content.innerHTML = `
       <div class="lb-empty">
-        <div class="lb-empty-title">NO RECORDS YET</div>
-        <div class="lb-empty-sub">Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track,<br>then save your score from the results screen.</div>
+        <div class="lb-empty-title">LEADERBOARD OFFLINE</div>
+        <div class="lb-empty-sub">${(e && e.message) ? String(e.message).replace(/_/g,' ') : 'Could not reach the cloud leaderboard.'}</div>
       </div>`;
     return;
   }
 
-  const head = document.querySelector('#screen-leaderboard .lb-head');
-  if(head) head.style.display = '';
+  if(entries.length === 0) {
+    if(head) head.style.display = 'none';
+    content.innerHTML = `
+      <div class="lb-empty">
+        <div class="lb-empty-title">NO RECORDS YET</div>
+        <div class="lb-empty-sub">Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track,<br>then save your score to the cloud.</div>
+      </div>`;
+    return;
+  }
 
   const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
   let html = entries.map((e, i) => {
@@ -10619,14 +10747,14 @@ function buildLeaderboardScreen() {
     return `
       <div class="lb-row${i === 0 ? ' lb-top' : ''}">
         <div class="lb-rank" style="color:${rankColors[i] || 'rgba(255,255,255,.45)'}">${i + 1}</div>
-        <div class="lb-name">${e.name || '—'}</div>
-        <div class="lb-time">${fmtTime(e.time)}</div>
+        <div class="lb-name">${e.username || '—'}</div>
+        <div class="lb-time">${fmtTime(e.bestLap)}</div>
         <div class="lb-meta">${meta}</div>
-        <div class="lb-date">${fmtLbDate(e.date)}</div>
+        <div class="lb-date">${fmtLbDate(e.createdAt)}</div>
       </div>`;
   }).join('');
 
-  html += `<div class="lb-foot">Showing top ${entries.length} · stored locally on this device</div>`;
+  html += `<div class="lb-foot">Showing top ${entries.length} · cloud leaderboard</div>`;
   content.innerHTML = html;
 
   if(lbMode === 'trial' && typeof CG !== 'undefined' && CG.showBoard) {
@@ -10675,11 +10803,12 @@ document.addEventListener('keydown', e => {
 
 // Name input uppercase enforcement
 document.getElementById('nameInput').addEventListener('input', function(){
-  this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'');
+  this.value = sanitizeLeaderboardName(this.value);
 });
 document.getElementById('nameInput').addEventListener('keydown', e=>{
   if(e.key==='Enter') confirmSave();
 });
+void fetchDeviceIdentity();
 
 // ── UPGRADE / COIN / PAINT SYSTEM ──────────────────────
 const PAINT_COLORS = [

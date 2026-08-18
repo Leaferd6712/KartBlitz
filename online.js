@@ -272,6 +272,7 @@
           type: 'hello',
           name: (meta && meta.name) || 'RACER',
           color: (meta && meta.color) || '#00f5ff',
+          deviceToken: typeof global.getKartBlitzDeviceToken === 'function' ? global.getKartBlitzDeviceToken() : null,
           protocol: ONLINE_PROTOCOL,
           upgrades: upgrades
         });

@@ -1,5 +1,6 @@
 import { Server, type Connection, type ConnectionContext } from "partyserver";
 import type { Env } from "./env";
+import { getDeviceByToken } from "./leaderboard";
 import { decodeInput, MSG_INPUT, NET_MAGIC, NET_VERSION } from "./netcodec";
 import {
   FIXED_DT,
@@ -189,15 +190,6 @@ export class KartBlitzRoom extends Server<Env> {
     switch (type) {
       case "hello": {
         if (!player) return;
-        const name =
-          String(msg.name || "RACER")
-            .toUpperCase()
-            .replace(/[^A-Z0-9]/g, "")
-            .slice(0, 12) || "RACER";
-        const color = String(msg.color || "#00f5ff").slice(0, 16);
-        player.name = name;
-        player.color = color;
-        if (msg.upgrades) player.upgrades = sanitizeUpgrades(msg.upgrades);
         if (msg.protocol != null && Number(msg.protocol) !== ONLINE_PROTOCOL) {
           sender.send(
             json({
@@ -214,8 +206,7 @@ export class KartBlitzRoom extends Server<Env> {
           }
           return;
         }
-        this.broadcastRoster();
-        void this.syncDirectory();
+        void this.applyHelloProfile(sender, player, msg);
         break;
       }
       case "ready": {
@@ -508,6 +499,39 @@ export class KartBlitzRoom extends Server<Env> {
     } catch (e) {
       console.error("syncDirectory failed", e);
     }
+  }
+
+  private async applyHelloProfile(sender: Connection, player: Player, msg: Record<string, unknown>) {
+    const color = String(msg.color || "#00f5ff").slice(0, 16);
+    let name =
+      String(msg.name || "RACER")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 12) || "RACER";
+
+    try {
+      const env = doEnv(this);
+      const deviceToken = String(msg.deviceToken || "");
+      if (env.LEADERBOARD_DB && deviceToken) {
+        const device = await getDeviceByToken(env.LEADERBOARD_DB, deviceToken);
+        if (device?.username) {
+          name =
+            String(device.username)
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, "")
+              .slice(0, 12) || name;
+        }
+      }
+    } catch (e) {
+      console.error("applyHelloProfile device lookup failed", e);
+    }
+
+    player.name = name;
+    player.color = color;
+    if (msg.upgrades) player.upgrades = sanitizeUpgrades(msg.upgrades);
+    sender.send(json({ type: "identity", name: player.name }));
+    this.broadcastRoster();
+    void this.syncDirectory();
   }
 }
 

@@ -1,27 +1,38 @@
 {
-  "name": "kartblitz-online",
-  "main": "party/index.ts",
-  "compatibility_date": "2024-09-01",
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "Main",
-        "class_name": "KartBlitzRoom"
-      },
-      {
-        "name": "LobbyDirectory",
-        "class_name": "LobbyDirectory"
-      }
-    ]
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["KartBlitzRoom"]
-    },
-    {
-      "tag": "v2",
-      "new_sqlite_classes": ["LobbyDirectory"]
-    }
-  ]
+	"name": "kartblitz-online",
+	"main": "party/index.ts",
+	"compatibility_date": "2024-09-01",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "Main",
+				"class_name": "KartBlitzRoom"
+			},
+			{
+				"name": "LobbyDirectory",
+				"class_name": "LobbyDirectory"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"KartBlitzRoom"
+			]
+		},
+		{
+			"tag": "v2",
+			"new_sqlite_classes": [
+				"LobbyDirectory"
+			]
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "LEADERBOARD_DB",
+			"database_name": "kartblitz-leaderboard",
+			"database_id": "cbececcd-c647-45fc-bc18-d8346acd4d6c"
+		}
+	]
 }

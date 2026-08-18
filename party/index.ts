@@ -2,6 +2,7 @@ import { routePartykitRequest } from "partyserver";
 import { KartBlitzRoom } from "./server";
 import { LobbyDirectory } from "./directory";
 import type { Env } from "./env";
+import { getDeviceStatus, getLeaderboard, registerDevice, submitScore } from "./leaderboard";
 import { ONLINE_PROTOCOL, TRACK_BAKE_VERSION } from "../sim/constants";
 import { listTrackIds } from "../sim/tracks";
 
@@ -23,6 +24,62 @@ export default {
     }
 
     const url = new URL(request.url);
+    if (url.pathname === "/api/device-status") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(
+          Response.json({ error: "leaderboard_unconfigured" }, { status: 503 })
+        );
+      }
+      const res = await getDeviceStatus(env.LEADERBOARD_DB, url.searchParams.get("deviceToken"));
+      if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
+      return withCors(Response.json(res));
+    }
+    if (url.pathname === "/api/register-device") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(
+          Response.json({ error: "leaderboard_unconfigured" }, { status: 503 })
+        );
+      }
+      let body: Record<string, unknown>;
+      try {
+        body = (await request.json()) as Record<string, unknown>;
+      } catch {
+        return withCors(Response.json({ error: "invalid_json" }, { status: 400 }));
+      }
+      const res = await registerDevice(env.LEADERBOARD_DB, body);
+      if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
+      return withCors(Response.json(res));
+    }
+    if (url.pathname === "/api/leaderboard") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(
+          Response.json({ error: "leaderboard_unconfigured" }, { status: 503 })
+        );
+      }
+      const res = await getLeaderboard(
+        env.LEADERBOARD_DB,
+        url.searchParams.get("mode"),
+        url.searchParams.get("trackId") ?? url.searchParams.get("track_id")
+      );
+      if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
+      return withCors(Response.json(res));
+    }
+    if (url.pathname === "/api/scores" || url.pathname === "/api/submit") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(
+          Response.json({ error: "leaderboard_unconfigured" }, { status: 503 })
+        );
+      }
+      let body: Record<string, unknown>;
+      try {
+        body = (await request.json()) as Record<string, unknown>;
+      } catch {
+        return withCors(Response.json({ error: "invalid_json" }, { status: 400 }));
+      }
+      const res = await submitScore(env.LEADERBOARD_DB, body);
+      if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
+      return withCors(Response.json(res));
+    }
     if (url.pathname === "/version" || url.pathname === "/version/") {
       return withCors(
         new Response(

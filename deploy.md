@@ -41,6 +41,34 @@ Online races are **server-authoritative**: the Cloudflare Durable Object runs th
 
 Runs in Cloudflare’s cloud. **Laptop can be off** after deploy.
 
+### One-time D1 setup for cloud leaderboard
+
+Create a D1 database and bind it to the Worker as `LEADERBOARD_DB`.
+
+```bash
+npx wrangler d1 create kartblitz-leaderboard
+```
+
+Then copy the returned `database_id` into `wrangler.jsonc` under:
+
+```jsonc
+"d1_databases": [
+  {
+    "binding": "LEADERBOARD_DB",
+    "database_name": "kartblitz-leaderboard",
+    "database_id": "PASTE_DATABASE_ID_HERE"
+  }
+]
+```
+
+Optional manual schema bootstrap:
+
+```bash
+npx wrangler d1 execute kartblitz-leaderboard --remote --file d1/leaderboard-schema.sql
+```
+
+The Worker also creates the tables lazily on first leaderboard request, so the SQL file is mainly for explicit setup / inspection.
+
 ### Deploy / redeploy
 
 ```bash
@@ -75,9 +103,9 @@ Do **not** run the Python leaderboard on `:8787` at the same time as `wrangler d
 
 ---
 
-## C. Shared leaderboard (optional laptop stack)
+## C. Legacy local leaderboard (optional laptop stack)
 
-This is **separate** from online racing. Use it when you want a SQLite board on your machine exposed to the internet.
+The preferred leaderboard is now the **cloud leaderboard** served by the Worker + D1. The Python server below is legacy/local-only and only needed if you explicitly want the old laptop-hosted SQLite stack.
 
 ### Start the API
 
@@ -111,7 +139,7 @@ If `cloudflared` is not on PATH, use the full exe path, for example:
 Copy the printed URL, e.g. `https://random-words.trycloudflare.com`.
 
 - Share: `https://YOUR-TUNNEL/KartBlitz.html`  
-- Or keep the game on Netlify and point the game’s `LB_API_BASE` (if configured in HTML) at the tunnel origin with **no** trailing slash.
+- Or keep the game on static hosting and point custom leaderboard code at the tunnel origin with **no** trailing slash.
 
 **Leave open while people use the shared board:**
 
@@ -129,8 +157,8 @@ Quick tunnels get a **new** URL each restart — share the new one.
 | Play local static game | `python -m http.server 8000` → `http://localhost:8000/KartBlitz.html` | Yes, that server |
 | Test online multiplayer locally | `npm run party:dev` + static game on localhost | Yes, wrangler |
 | Production online races | `npx wrangler deploy` once; play on Netlify | No |
-| Shared leaderboard | `python server/app.py` + `cloudflared tunnel --url http://localhost:8787` | Yes, both |
-| Netlify game + Worker online + no LB | Netlify upload + Worker already deployed | No laptop needed |
+| Legacy local leaderboard | `python server/app.py` + `cloudflared tunnel --url http://localhost:8787` | Yes, both |
+| Production online + cloud leaderboard | Worker deployed with D1 bound + static site uploaded | No laptop needed |
 
 **Port 8787:** used by both `python app.py` and `wrangler dev`. Never both at once.
 
@@ -142,5 +170,6 @@ Quick tunnels get a **new** URL each restart — share the new one.
 - [ ] Worker deployed (`npx wrangler deploy`) → `kartblitz-online.kartblitz.workers.dev`
 - [ ] Client + Worker share `ONLINE_PROTOCOL` (hard-refresh after deploy)
 - [ ] Online Lobby: Host Game / Join Game works (no SERVER field)
-- [ ] Optional: `python app.py` + tunnel only if you want the laptop shared leaderboard
+- [ ] D1 database bound as `LEADERBOARD_DB` for the cloud leaderboard
+- [ ] Optional: `python app.py` + tunnel only if you want the legacy laptop leaderboard
 - [ ] Old PartyKit / stale tunnel terminals closed when unused

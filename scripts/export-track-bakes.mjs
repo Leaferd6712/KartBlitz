@@ -1,5 +1,5 @@
 /**
- * Extract TRACKS waypoints from KartBlitz.html and bake splines/checkpoints
+ * Extract TRACKS waypoints from index.html (or KartBlitz.html) and bake splines/checkpoints
  * into sim/tracks/bakes.json for Durable Object authority.
  *
  * Usage: node scripts/export-track-bakes.mjs
@@ -10,7 +10,11 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
-const htmlPath = path.join(root, "KartBlitz.html");
+const htmlCandidates = ["index.html", "KartBlitz.html"].map((name) => path.join(root, name));
+const htmlPath = htmlCandidates.find((p) => fs.existsSync(p));
+if (!htmlPath) {
+  throw new Error("Could not find index.html or KartBlitz.html in " + root);
+}
 const outPath = path.join(root, "sim", "tracks", "bakes.json");
 
 function catmullRom(p0, p1, p2, p3, t) {
