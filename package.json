@@ -9,7 +9,8 @@
     "sim:browser": "node scripts/build-online-sim.mjs",
     "test:sim": "node sim/__tests__/parity.test.mjs",
     "preparty:deploy": "npm run tracks:export && npm run sim:browser && npm run test:sim",
-    "deploy:online": "npm run party:deploy"
+    "deploy:online": "npm run party:deploy",
+    "backup:leaderboard": "node scripts/backup-leaderboard.mjs"
   },
   "dependencies": {
     "partyserver": "^0.5.10"

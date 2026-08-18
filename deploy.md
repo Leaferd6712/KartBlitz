@@ -71,6 +71,8 @@ The Worker also creates the tables lazily on first leaderboard request, so the S
 
 On first Time Trial lap, the game prompts once for a username per device. After that, every completed lap auto-saves to the cloud leaderboard.
 
+Cloud scores are also snapshotted to [`backups/leaderboard.txt`](backups/leaderboard.txt) automatically every 6 hours (GitHub Action). Download a live dump from `/api/leaderboard-backup.txt`, or run `npm run backup:leaderboard` locally. For a full D1 restore file (includes device tokens, keep private): `npx wrangler d1 export kartblitz-leaderboard --remote --output backups/leaderboard-full.sql`.
+
 ### Deploy / redeploy
 
 ```bash

@@ -267,3 +267,190 @@ export async function getLeaderboard(
     })),
   };
 }
+
+type BackupDeviceRow = {
+  username: string;
+  created_at: number;
+  last_seen_at: number;
+};
+
+type BackupScoreRow = {
+  username_snapshot: string;
+  mode: string;
+  track_id: number;
+  track_name: string | null;
+  best_lap: number;
+  total: number | null;
+  winner: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type LeaderboardBackupPayload = {
+  version: 1;
+  generatedAt: string;
+  deviceCount: number;
+  scoreCount: number;
+  devices: Array<{ username: string; registeredAt: string; lastSeenAt: string }>;
+  scores: Array<{
+    mode: string;
+    trackId: number;
+    trackName: string | null;
+    username: string;
+    bestLap: number;
+    bestLapText: string;
+    total: number | null;
+    totalText: string | null;
+    winner: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+};
+
+function isoFromEpoch(value: number): string {
+  const ms = Number(value) || 0;
+  if (!ms) return "";
+  try {
+    return new Date(ms).toISOString();
+  } catch {
+    return "";
+  }
+}
+
+function formatLapTime(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec) || !(sec >= 0)) return "-";
+  const m = Math.floor(sec / 60);
+  const s = (sec - m * 60).toFixed(3).padStart(6, "0");
+  return m + ":" + s;
+}
+
+function pad(value: unknown, width: number): string {
+  return String(value ?? "").padEnd(width, " ");
+}
+
+export function formatLeaderboardBackupText(payload: LeaderboardBackupPayload): string {
+  const lines: string[] = [
+    "KartBlitz Leaderboard Backup",
+    "Generated (UTC): " + payload.generatedAt,
+    "Registered devices: " + payload.deviceCount,
+    "Saved scores: " + payload.scoreCount,
+    "",
+    "This file is a full snapshot of cloud leaderboard records (usernames and times).",
+    "Device tokens are omitted so the file is safe to keep in git.",
+    "Use this if D1 data is lost and you need to refer back to previous records.",
+    "",
+    "------------------------------------------------------------------------------",
+    "REGISTERED USERNAMES",
+    "------------------------------------------------------------------------------",
+  ];
+
+  if (!payload.devices.length) {
+    lines.push("No registered devices yet.");
+  } else {
+    lines.push(pad("USERNAME", 16) + pad("REGISTERED (UTC)", 26) + "LAST SEEN (UTC)");
+    for (const device of payload.devices) {
+      lines.push(pad(device.username, 16) + pad(device.registeredAt, 26) + device.lastSeenAt);
+    }
+  }
+
+  lines.push(
+    "",
+    "------------------------------------------------------------------------------",
+    "SCORES (best lap first within each mode/track)",
+    "------------------------------------------------------------------------------"
+  );
+
+  if (!payload.scores.length) {
+    lines.push("No scores saved yet.");
+  } else {
+    lines.push(
+      pad("MODE", 10) +
+        pad("TRACK", 8) +
+        pad("TRACK NAME", 24) +
+        pad("USERNAME", 14) +
+        pad("BEST LAP", 12) +
+        pad("TOTAL", 12) +
+        pad("WINNER", 10) +
+        "CREATED (UTC)"
+    );
+    for (const score of payload.scores) {
+      lines.push(
+        pad(score.mode, 10) +
+          pad(score.trackId, 8) +
+          pad(score.trackName || "-", 24) +
+          pad(score.username, 14) +
+          pad(score.bestLapText, 12) +
+          pad(score.totalText || "-", 12) +
+          pad(score.winner || "-", 10) +
+          score.createdAt
+      );
+    }
+  }
+
+  lines.push(
+    "",
+    "------------------------------------------------------------------------------",
+    "MACHINE-READABLE JSON (for restore / import)",
+    "------------------------------------------------------------------------------",
+    JSON.stringify(payload, null, 2),
+    ""
+  );
+
+  return lines.join("\n");
+}
+
+export async function exportLeaderboardBackup(db: D1Database): Promise<{
+  ok: true;
+  text: string;
+  payload: LeaderboardBackupPayload;
+}> {
+  await ensureLeaderboardSchema(db);
+  const deviceRows = await db
+    .prepare(
+      `SELECT username, created_at, last_seen_at
+       FROM devices
+       ORDER BY created_at ASC`
+    )
+    .all<BackupDeviceRow>();
+  const scoreRows = await db
+    .prepare(
+      `SELECT username_snapshot, mode, track_id, track_name, best_lap, total, winner, created_at, updated_at
+       FROM scores
+       ORDER BY mode ASC, track_id ASC, best_lap ASC`
+    )
+    .all<BackupScoreRow>();
+
+  const devices = (deviceRows.results || []).map((row) => ({
+    username: String(row.username || ""),
+    registeredAt: isoFromEpoch(Number(row.created_at) || 0),
+    lastSeenAt: isoFromEpoch(Number(row.last_seen_at) || 0),
+  }));
+  const scores = (scoreRows.results || []).map((row) => {
+    const bestLap = Number(row.best_lap) || 0;
+    const total = row.total == null ? null : Number(row.total);
+    return {
+      mode: String(row.mode || ""),
+      trackId: Number(row.track_id) || 0,
+      trackName: row.track_name || null,
+      username: String(row.username_snapshot || ""),
+      bestLap,
+      bestLapText: formatLapTime(bestLap),
+      total: total != null && Number.isFinite(total) ? total : null,
+      totalText: total != null && Number.isFinite(total) ? formatLapTime(total) : null,
+      winner: row.winner || null,
+      createdAt: isoFromEpoch(Number(row.created_at) || 0),
+      updatedAt: isoFromEpoch(Number(row.updated_at) || 0),
+    };
+  });
+
+  const payload: LeaderboardBackupPayload = {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    deviceCount: devices.length,
+    scoreCount: scores.length,
+    devices,
+    scores,
+  };
+
+  return { ok: true, text: formatLeaderboardBackupText(payload), payload };
+}

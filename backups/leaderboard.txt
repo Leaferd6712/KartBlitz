@@ -1,0 +1,52 @@
+KartBlitz Leaderboard Backup
+Generated (UTC): 2026-08-18T10:29:17.998Z
+Registered devices: 1
+Saved scores: 1
+
+This file is a full snapshot of cloud leaderboard records (usernames and times).
+Device tokens are omitted so the file is safe to keep in git.
+Use this if D1 data is lost and you need to refer back to previous records.
+
+------------------------------------------------------------------------------
+REGISTERED USERNAMES
+------------------------------------------------------------------------------
+USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
+LEAFERD         2026-08-18T10:21:09.992Z  2026-08-18T10:21:10.193Z
+
+------------------------------------------------------------------------------
+SCORES (best lap first within each mode/track)
+------------------------------------------------------------------------------
+MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
+trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.816    0:24.816    -         2026-08-18T10:21:10.193Z
+
+------------------------------------------------------------------------------
+MACHINE-READABLE JSON (for restore / import)
+------------------------------------------------------------------------------
+{
+  "version": 1,
+  "generatedAt": "2026-08-18T10:29:17.998Z",
+  "deviceCount": 1,
+  "scoreCount": 1,
+  "devices": [
+    {
+      "username": "LEAFERD",
+      "registeredAt": "2026-08-18T10:21:09.992Z",
+      "lastSeenAt": "2026-08-18T10:21:10.193Z"
+    }
+  ],
+  "scores": [
+    {
+      "mode": "trial",
+      "trackId": 0,
+      "trackName": "SUNSET SPEEDWAY",
+      "username": "LEAFERD",
+      "bestLap": 24.81559999999404,
+      "bestLapText": "0:24.816",
+      "total": 24.81559999999404,
+      "totalText": "0:24.816",
+      "winner": null,
+      "createdAt": "2026-08-18T10:21:10.193Z",
+      "updatedAt": "2026-08-18T10:21:10.193Z"
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { routePartykitRequest } from "partyserver";
 import { KartBlitzRoom } from "./server";
 import { LobbyDirectory } from "./directory";
 import type { Env } from "./env";
-import { getDeviceStatus, getLeaderboard, registerDevice, submitScore } from "./leaderboard";
+import { exportLeaderboardBackup, getDeviceStatus, getLeaderboard, registerDevice, submitScore } from "./leaderboard";
 import { ONLINE_PROTOCOL, TRACK_BAKE_VERSION } from "../sim/constants";
 import { listTrackIds } from "../sim/tracks";
 
@@ -63,6 +63,24 @@ export default {
       );
       if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
       return withCors(Response.json(res));
+    }
+    if (url.pathname === "/api/leaderboard-backup.txt" || url.pathname === "/api/leaderboard-backup") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(
+          Response.json({ error: "leaderboard_unconfigured" }, { status: 503 })
+        );
+      }
+      const backup = await exportLeaderboardBackup(env.LEADERBOARD_DB);
+      return withCors(
+        new Response(backup.text, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Disposition": 'attachment; filename="kartblitz-leaderboard.txt"',
+            "Cache-Control": "no-store",
+          },
+        })
+      );
     }
     if (url.pathname === "/api/scores" || url.pathname === "/api/submit") {
       if (!env.LEADERBOARD_DB) {
