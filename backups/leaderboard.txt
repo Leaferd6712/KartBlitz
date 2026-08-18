@@ -1,5 +1,5 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-18T10:38:31.959Z
+Generated (UTC): 2026-08-18T11:36:24.984Z
 Registered devices: 1
 Saved scores: 1
 
@@ -11,27 +11,27 @@ Use this if D1 data is lost and you need to refer back to previous records.
 REGISTERED USERNAMES
 ------------------------------------------------------------------------------
 USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
-LEAFERD         2026-08-18T10:21:09.992Z  2026-08-18T10:21:10.193Z
+LEAFERD         2026-08-18T10:21:09.992Z  2026-08-18T11:35:48.184Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
 ------------------------------------------------------------------------------
 MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
-trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.816    0:24.816    -         2026-08-18T10:21:10.193Z
+trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.432    0:24.432    -         2026-08-18T10:21:10.193Z
 
 ------------------------------------------------------------------------------
 MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-18T10:38:31.959Z",
+  "generatedAt": "2026-08-18T11:36:24.984Z",
   "deviceCount": 1,
   "scoreCount": 1,
   "devices": [
     {
       "username": "LEAFERD",
       "registeredAt": "2026-08-18T10:21:09.992Z",
-      "lastSeenAt": "2026-08-18T10:21:10.193Z"
+      "lastSeenAt": "2026-08-18T11:35:48.184Z"
     }
   ],
   "scores": [
@@ -40,13 +40,13 @@ MACHINE-READABLE JSON (for restore / import)
       "trackId": 0,
       "trackName": "SUNSET SPEEDWAY",
       "username": "LEAFERD",
-      "bestLap": 24.81559999999404,
-      "bestLapText": "0:24.816",
-      "total": 24.81559999999404,
-      "totalText": "0:24.816",
+      "bestLap": 24.432,
+      "bestLapText": "0:24.432",
+      "total": 24.432,
+      "totalText": "0:24.432",
       "winner": null,
       "createdAt": "2026-08-18T10:21:10.193Z",
-      "updatedAt": "2026-08-18T10:21:10.193Z"
+      "updatedAt": "2026-08-18T11:35:48.184Z"
     }
   ]
 }
