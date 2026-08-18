@@ -69,6 +69,8 @@ npx wrangler d1 execute kartblitz-leaderboard --remote --file d1/leaderboard-sch
 
 The Worker also creates the tables lazily on first leaderboard request, so the SQL file is mainly for explicit setup / inspection.
 
+On first Time Trial lap, the game prompts once for a username per device. After that, every completed lap auto-saves to the cloud leaderboard.
+
 ### Deploy / redeploy
 
 ```bash

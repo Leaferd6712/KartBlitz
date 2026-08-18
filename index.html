@@ -422,6 +422,15 @@ body{
 #device-prompt .dp-btns .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.04em;white-space:nowrap;}
 #patch-notes-overlay{display:none;position:fixed;inset:0;z-index:205;align-items:center;justify-content:center;background:rgba(60,50,110,0.7);padding:20px;box-sizing:border-box;backdrop-filter:blur(6px);}
 #patch-notes-overlay.open{display:flex;}
+#lb-auto-register-overlay{display:none;position:fixed;inset:0;z-index:210;align-items:center;justify-content:center;background:rgba(20,16,40,0.82);padding:20px;box-sizing:border-box;backdrop-filter:blur(8px);}
+#lb-auto-register-overlay.open{display:flex;}
+#lb-auto-register-card{background:linear-gradient(160deg,rgba(50,40,90,0.95),rgba(30,24,60,0.98));border:2px solid rgba(255,255,255,0.25);border-radius:18px;padding:24px 28px;max-width:420px;width:100%;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,0.45);}
+#lb-auto-register-card h3{font-family:'Nunito',sans-serif;font-size:22px;color:#fff;margin:0 0 8px;}
+#lb-auto-register-card p{font-size:13px;opacity:.8;margin:0 0 16px;line-height:1.45;}
+#lb-auto-register-status{min-height:18px;font-size:12px;opacity:.85;margin-top:10px;}
+#lb-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:220;background:rgba(20,16,40,0.92);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:12px;padding:10px 18px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;pointer-events:none;opacity:0;transition:opacity .2s ease;}
+#lb-toast.show{opacity:1;}
+#lb-toast.err{border-color:rgba(255,120,120,0.55);color:#ffb0b0;}
 #patch-notes-card{background:rgba(40,35,70,0.96);border:3px solid rgba(245,197,24,0.5);border-radius:22px;padding:28px 32px 24px;max-width:520px;width:100%;color:#fff;font-family:'Nunito',sans-serif;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3);}
 #patch-notes-card h2{color:#f5c518;margin:0 0 6px;font-size:18px;letter-spacing:.06em;font-weight:900;}
 #patch-notes-card .patch-date{color:rgba(255,255,255,0.7);font-size:12px;letter-spacing:.06em;margin-bottom:16px;font-weight:700;}
@@ -1548,11 +1557,25 @@ body::after{
     <div class="patch-date">AUGUST 18</div>
     <ul>
       <li>Online mode uses <strong>server authority</strong> — less lag, no host-tab hitch (BETA).</li>
-      <li>The leaderboard will be on in the next week.</li>
+      <li>Cloud leaderboard saves Time Trial laps automatically after you choose a username once.</li>
     </ul>
     <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
   </div>
 </div>
+
+<div id="lb-auto-register-overlay" role="dialog" aria-labelledby="lb-auto-register-title">
+  <div id="lb-auto-register-card">
+    <h3 id="lb-auto-register-title">SAVE TO LEADERBOARD</h3>
+    <p>Choose a username once for this device. Every lap you finish will auto-save to the cloud leaderboard.</p>
+    <input class="name-input" id="lbAutoNameInput" maxlength="12" placeholder="RACER" value="">
+    <div id="lb-auto-register-status">3-12 LETTERS OR NUMBERS</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+      <button class="btn btn-gold btn-sm" type="button" onclick="confirmAutoRegister()">LOCK USERNAME</button>
+      <button class="btn btn-sm" type="button" onclick="dismissAutoRegister()">NOT NOW</button>
+    </div>
+  </div>
+</div>
+<div id="lb-toast" aria-live="polite"></div>
 
 <!-- TOUCH OVERLAY -->
 <div id="touch-overlay">
@@ -10462,15 +10485,26 @@ document.addEventListener('keyup', e => {
 
 // ── LEADERBOARD ─────────────────────────────────────────
 const LB_DEVICE_KEY = 'kartblitz_device_token';
-let _kbIdentity = { loaded:false, registered:false, username:'' };
+const LB_PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
+let _deviceTokenMem = '';
+let _kbIdentity = { loaded:false, registered:false, username:'', error:'' };
+let _kbLastError = '';
 let _lbBuildSeq = 0;
+let _lbRegisterPromise = null;
+let _lbRegisterResolve = null;
+let _lbToastTimer = null;
 
+function formatLbError(err) {
+  const msg = (err && err.message) ? String(err.message) : String(err || 'Unknown error');
+  return msg.replace(/_/g, ' ');
+}
 function leaderboardApiBase() {
-  let host = 'kartblitz-online.kartblitz.workers.dev';
+  let host = LB_PRODUCTION_HOST;
   try {
-    if(window.OnlineNet && typeof window.OnlineNet.defaultHost === 'function') host = window.OnlineNet.defaultHost() || host;
+    const q = new URLSearchParams(location.search).get('lbHost');
+    if(q) host = String(q).replace(/^https?:\/\//,'').replace(/\/$/,'');
   } catch(e) {}
-  host = String(host || 'kartblitz-online.kartblitz.workers.dev').replace(/^https?:\/\//,'').replace(/\/$/,'');
+  host = String(host || LB_PRODUCTION_HOST).replace(/^https?:\/\//,'').replace(/\/$/,'');
   const secure = !(host.includes('localhost') || host.includes('127.0.0.1'));
   return (secure ? 'https://' : 'http://') + host;
 }
@@ -10484,15 +10518,18 @@ function makeDeviceToken() {
   return ('kb' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36)).slice(0, 48);
 }
 function getDeviceToken() {
+  if(_deviceTokenMem) return _deviceTokenMem;
   try {
     let token = localStorage.getItem(LB_DEVICE_KEY) || '';
     if(!token) {
       token = makeDeviceToken();
       localStorage.setItem(LB_DEVICE_KEY, token);
     }
+    _deviceTokenMem = token;
     return token;
   } catch(e) {
-    return makeDeviceToken();
+    if(!_deviceTokenMem) _deviceTokenMem = makeDeviceToken();
+    return _deviceTokenMem;
   }
 }
 window.getKartBlitzDeviceToken = getDeviceToken;
@@ -10507,6 +10544,21 @@ function setSaveStatus(msg, isErr) {
   if(!el) return;
   el.textContent = msg || '';
   el.style.color = isErr ? '#ff8f8f' : 'rgba(255,255,255,0.75)';
+}
+function setAutoRegisterStatus(msg, isErr) {
+  const el = document.getElementById('lb-auto-register-status');
+  if(!el) return;
+  el.textContent = msg || '';
+  el.style.color = isErr ? '#ff8f8f' : 'rgba(255,255,255,0.75)';
+}
+function showLbToast(msg, isErr) {
+  const el = document.getElementById('lb-toast');
+  if(!el || !msg) return;
+  el.textContent = msg;
+  el.classList.toggle('err', !!isErr);
+  el.classList.add('show');
+  if(_lbToastTimer) clearTimeout(_lbToastTimer);
+  _lbToastTimer = setTimeout(function(){ el.classList.remove('show'); }, isErr ? 4200 : 2600);
 }
 function updateSaveIdentityUi(identity) {
   const input = document.getElementById('nameInput');
@@ -10524,7 +10576,7 @@ function updateSaveIdentityUi(identity) {
     if(sub) sub.textContent = 'CHOOSE ONCE FOR THIS DEVICE';
     input.disabled = false;
     input.value = sanitizeLeaderboardName(input.value || '');
-    setSaveStatus('3-12 LETTERS OR NUMBERS', false);
+    setSaveStatus(_kbLastError || '3-12 LETTERS OR NUMBERS', !!_kbLastError);
   }
 }
 async function leaderboardFetchJson(path, options) {
@@ -10542,18 +10594,21 @@ async function fetchDeviceIdentity(force) {
   if(_kbIdentity.loaded && !force) return _kbIdentity;
   try {
     const data = await leaderboardFetchJson('/api/device-status?deviceToken=' + encodeURIComponent(getDeviceToken()));
+    _kbLastError = '';
     _kbIdentity = {
       loaded: true,
       registered: !!data.registered,
-      username: data.registered ? sanitizeLeaderboardName(data.username || '') : ''
+      username: data.registered ? sanitizeLeaderboardName(data.username || '') : '',
+      error: ''
     };
   } catch(e) {
-    _kbIdentity = { loaded:false, registered:false, username:'' };
+    _kbLastError = formatLbError(e);
+    _kbIdentity = { loaded:false, registered:false, username:'', error:_kbLastError };
   }
   return _kbIdentity;
 }
 async function ensureRegisteredIdentity(nameRaw) {
-  const current = await fetchDeviceIdentity();
+  const current = await fetchDeviceIdentity(true);
   if(current.registered) return current;
   const username = sanitizeLeaderboardName(nameRaw);
   if(!validLeaderboardName(username)) throw new Error('Username must be 3-12 letters or numbers.');
@@ -10561,15 +10616,74 @@ async function ensureRegisteredIdentity(nameRaw) {
     method: 'POST',
     body: JSON.stringify({ deviceToken: getDeviceToken(), username })
   });
-  _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username || username) };
+  _kbLastError = '';
+  _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username || username), error:'' };
   return _kbIdentity;
+}
+function openAutoRegisterPrompt() {
+  const overlay = document.getElementById('lb-auto-register-overlay');
+  const input = document.getElementById('lbAutoNameInput');
+  if(!overlay) return;
+  overlay.classList.add('open');
+  setAutoRegisterStatus('3-12 LETTERS OR NUMBERS', false);
+  if(input) {
+    input.disabled = false;
+    input.value = sanitizeLeaderboardName(input.value || '');
+    setTimeout(function(){ try { input.focus(); } catch(e) {} }, 0);
+  }
+}
+function closeAutoRegisterPrompt() {
+  const overlay = document.getElementById('lb-auto-register-overlay');
+  if(overlay) overlay.classList.remove('open');
+}
+function finishAutoRegisterPromise(identity) {
+  const resolve = _lbRegisterResolve;
+  _lbRegisterResolve = null;
+  _lbRegisterPromise = null;
+  closeAutoRegisterPrompt();
+  if(resolve) resolve(identity || { loaded:true, registered:false, username:'', error:'' });
+}
+function dismissAutoRegister() {
+  finishAutoRegisterPromise({ loaded:true, registered:false, username:'', error:'' });
+}
+async function confirmAutoRegister() {
+  const input = document.getElementById('lbAutoNameInput');
+  const usernameRaw = input ? input.value : '';
+  try {
+    setAutoRegisterStatus('LOCKING USERNAME...', false);
+    const identity = await ensureRegisteredIdentity(usernameRaw);
+    if(input) {
+      input.value = identity.username || '';
+      input.disabled = true;
+    }
+    setAutoRegisterStatus('USERNAME LOCKED FOR THIS DEVICE', false);
+    finishAutoRegisterPromise(identity);
+  } catch(e) {
+    setAutoRegisterStatus(formatLbError(e).toUpperCase(), true);
+  }
+}
+function promptRegisterUsername() {
+  if(_lbRegisterPromise) return _lbRegisterPromise;
+  _lbRegisterPromise = new Promise(function(resolve) {
+    _lbRegisterResolve = resolve;
+    openAutoRegisterPrompt();
+  });
+  return _lbRegisterPromise;
+}
+async function ensureRegisteredForAutoSave() {
+  const current = await fetchDeviceIdentity(true);
+  if(current.registered) return current;
+  return promptRegisterUsername();
 }
 async function submitCloudScore(payload) {
   const data = await leaderboardFetchJson('/api/scores', {
     method: 'POST',
     body: JSON.stringify(Object.assign({ deviceToken: getDeviceToken() }, payload || {}))
   });
-  if(data && data.username) _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username) };
+  if(data && data.username) {
+    _kbLastError = '';
+    _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username), error:'' };
+  }
   return data;
 }
 
@@ -10581,16 +10695,20 @@ async function autoSaveLapToLeaderboard(trackId, lapTime, totalTime) {
   if(lapTime < minPossibleLap) return;
   CG.saveScore(`track_${trackId}_lap`, Math.round(lapTime * 1000));
   try {
-    const identity = await fetchDeviceIdentity();
+    const identity = await ensureRegisteredForAutoSave();
     if(!identity.registered) return;
-    await submitCloudScore({
+    const result = await submitCloudScore({
       mode: 'trial',
       trackId,
       trackName: track ? track.name : '',
       bestLap: lapTime,
       total: totalTime || null
     });
-  } catch(e) {}
+    if(result && result.saved) showLbToast('LAP SAVED TO LEADERBOARD');
+    else if(result && result.reason === 'not_better') showLbToast('LAP RECORDED');
+  } catch(e) {
+    showLbToast(formatLbError(e).toUpperCase(), true);
+  }
 }
 
 let pendingSave = null;
@@ -10734,7 +10852,7 @@ async function buildLeaderboardScreen() {
     content.innerHTML = `
       <div class="lb-empty">
         <div class="lb-empty-title">NO RECORDS YET</div>
-        <div class="lb-empty-sub">Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track,<br>then save your score to the cloud.</div>
+        <div class="lb-empty-sub">Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track.<br>Your first completed lap will ask for a username once, then auto-save every lap.</div>
       </div>`;
     return;
   }
@@ -10808,6 +10926,15 @@ document.getElementById('nameInput').addEventListener('input', function(){
 document.getElementById('nameInput').addEventListener('keydown', e=>{
   if(e.key==='Enter') confirmSave();
 });
+const lbAutoNameInput = document.getElementById('lbAutoNameInput');
+if(lbAutoNameInput) {
+  lbAutoNameInput.addEventListener('input', function(){
+    this.value = sanitizeLeaderboardName(this.value);
+  });
+  lbAutoNameInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter') confirmAutoRegister();
+  });
+}
 void fetchDeviceIdentity();
 
 // ── UPGRADE / COIN / PAINT SYSTEM ──────────────────────
