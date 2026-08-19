@@ -8897,6 +8897,7 @@ class Race {
         resultsWrap.innerHTML = `<div class="winner-banner"> YOU WIN!</div>`;
         launchConfetti();
         CG.happytime();
+        try { showLbToast('WIN RECORDED'); } catch(e) {}
       } else {
         resultsWrap.innerHTML = `<div class="winner-banner" style="color:#ff6b35;border-color:#ff6b35;">P${humanRank} / ${this.karts.length}</div>`;
       }
@@ -10886,6 +10887,60 @@ function fmtLbDate(ts) {
   } catch(e) { return '—'; }
 }
 
+function parseOnlineWinsSeed(text) {
+  const out = [];
+  const lines = String(text || '').split(/\r?\n/);
+  for(const line of lines) {
+    const trimmed = String(line || '').trim();
+    if(!trimmed || trimmed.startsWith('#')) continue;
+    const parts = trimmed.split(/\s+/);
+    if(parts.length < 2) continue;
+    const username = sanitizeLeaderboardName(parts[0]);
+    if(!validLeaderboardName(username)) continue;
+    const wins = Math.floor(Number(parts[1]));
+    if(!Number.isFinite(wins) || wins < 0) continue;
+    out.push({ username, wins });
+  }
+  return out;
+}
+
+async function fetchOnlineWinsSeed() {
+  try {
+    const url = `/leaderboard/online-wins.txt?v=${Date.now()}`;
+    const res = await fetch(url);
+    if(!res.ok) return [];
+    return parseOnlineWinsSeed(await res.text());
+  } catch(e) {
+    return [];
+  }
+}
+
+function mergeOnlineWinsEntries(cloudEntries, seedEntries) {
+  // Keep only top-wins per username.
+  const map = new Map(); // username -> { wins, createdAt }
+
+  for(const s of (seedEntries || [])) {
+    if(!s || !s.username) continue;
+    map.set(s.username, { wins: Number(s.wins) || 0, createdAt: 0 });
+  }
+
+  for(const c of (cloudEntries || [])) {
+    const username = c && c.username;
+    if(!username) continue;
+    const wins = Number(c.wins != null ? c.wins : c.bestLap != null ? c.bestLap : 0) || 0;
+    const createdAt = Number(c.createdAt) || 0;
+    const cur = map.get(username);
+    if(!cur || wins > cur.wins) {
+      map.set(username, { wins, createdAt });
+    }
+  }
+
+  return [...map.entries()]
+    .map(([username, meta]) => ({ username, wins: meta.wins, createdAt: meta.createdAt }))
+    .sort((a, b) => (b.wins || 0) - (a.wins || 0))
+    .slice(0, 50);
+}
+
 async function buildLeaderboardScreen() {
   const seq = ++_lbBuildSeq;
   const modeTabs = document.getElementById('lb-mode-tabs');
@@ -10897,7 +10952,8 @@ async function buildLeaderboardScreen() {
   modeTabs.innerHTML = '';
   [
     { id:'trial', label:'TIME TRIAL' },
-    { id:'versus', label:'VERSUS' }
+    { id:'versus', label:'VERSUS' },
+    { id:'online', label:'ONLINE WINS' }
   ].forEach(m => {
     const btn = document.createElement('button');
     btn.className = 'lb-tab' + (lbMode === m.id ? ' active' : '');
@@ -10906,23 +10962,31 @@ async function buildLeaderboardScreen() {
     modeTabs.appendChild(btn);
   });
 
-  if(!TRACKS[lbTrack]) lbTrack = 0;
-  trackTabs.innerHTML = '';
-  TRACKS.forEach((t, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'lb-tab' + (lbTrack === i ? ' active' : '');
-    btn.textContent = t.name;
-    btn.style.borderColor = (t.borderColor || '#00f5ff') + '66';
-    btn.onclick = () => { lbTrack = i; buildLeaderboardScreen(); };
-    trackTabs.appendChild(btn);
-  });
+  const isOnlineWins = lbMode === 'online';
+  let trackId = 0;
+  if(!isOnlineWins) {
+    trackTabs.style.display = '';
+    if(!TRACKS[lbTrack]) lbTrack = 0;
+    trackTabs.innerHTML = '';
+    TRACKS.forEach((t, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'lb-tab' + (lbTrack === i ? ' active' : '');
+      btn.textContent = t.name;
+      btn.style.borderColor = (t.borderColor || '#00f5ff') + '66';
+      btn.onclick = () => { lbTrack = i; buildLeaderboardScreen(); };
+      trackTabs.appendChild(btn);
+    });
 
-  const track = TRACKS[lbTrack] || TRACKS[0];
-  const trackId = track ? track.id : lbTrack;
-  if(panelTitle) {
-    panelTitle.textContent = lbMode === 'versus'
-      ? `${track.name} · BEST VERSUS LAPS`
-      : `${track.name} · BEST LAPS`;
+    const track = TRACKS[lbTrack] || TRACKS[0];
+    trackId = track ? track.id : lbTrack;
+    if(panelTitle) {
+      panelTitle.textContent = lbMode === 'versus'
+        ? `${track.name} · BEST VERSUS LAPS`
+        : `${track.name} · BEST LAPS`;
+    }
+  } else {
+    trackTabs.style.display = 'none';
+    if(panelTitle) panelTitle.textContent = 'ONLINE WINS · GLOBAL RANKINGS';
   }
 
   const head = document.querySelector('#screen-leaderboard .lb-head');
@@ -10930,23 +10994,48 @@ async function buildLeaderboardScreen() {
   content.innerHTML = `
     <div class="lb-empty">
       <div class="lb-empty-title">LOADING RECORDS...</div>
-      <div class="lb-empty-sub">Fetching the cloud leaderboard for this track.</div>
+      <div class="lb-empty-sub">${isOnlineWins ? 'Fetching global online win counts.' : 'Fetching the cloud leaderboard for this track.'}</div>
     </div>`;
 
   let entries = [];
-  try {
-    const data = await leaderboardFetchJson(`/api/leaderboard?mode=${encodeURIComponent(lbMode)}&trackId=${encodeURIComponent(trackId)}`);
-    if(seq !== _lbBuildSeq) return;
-    entries = ((data && data.scores) || []).slice().sort((a, b) => a.bestLap - b.bestLap).slice(0, 50);
-  } catch(e) {
-    if(seq !== _lbBuildSeq) return;
-    if(head) head.style.display = 'none';
-    content.innerHTML = `
-      <div class="lb-empty">
-        <div class="lb-empty-title">LEADERBOARD OFFLINE</div>
-        <div class="lb-empty-sub">${(e && e.message) ? String(e.message).replace(/_/g,' ') : 'Could not reach the cloud leaderboard.'}</div>
-      </div>`;
-    return;
+  if(isOnlineWins) {
+    let cloudEntries = [];
+    let cloudErr = null;
+    try {
+      const data = await leaderboardFetchJson(`/api/leaderboard?mode=online&trackId=0`);
+      if(seq !== _lbBuildSeq) return;
+      cloudEntries = (data && data.scores) || [];
+    } catch(e) {
+      cloudErr = e;
+    }
+
+    const seedEntries = await fetchOnlineWinsSeed();
+    entries = mergeOnlineWinsEntries(cloudEntries, seedEntries);
+
+    if(!entries.length) {
+      if(head) head.style.display = 'none';
+      content.innerHTML = `
+        <div class="lb-empty">
+          <div class="lb-empty-title">LEADERBOARD OFFLINE</div>
+          <div class="lb-empty-sub">${cloudErr && cloudErr.message ? String(cloudErr.message).replace(/_/g,' ') : 'Could not reach the cloud leaderboard, and no seed data was found.'}</div>
+        </div>`;
+      return;
+    }
+  } else {
+    try {
+      const data = await leaderboardFetchJson(`/api/leaderboard?mode=${encodeURIComponent(lbMode)}&trackId=${encodeURIComponent(trackId)}`);
+      if(seq !== _lbBuildSeq) return;
+      entries = ((data && data.scores) || []).slice().sort((a, b) => a.bestLap - b.bestLap).slice(0, 50);
+    } catch(e) {
+      if(seq !== _lbBuildSeq) return;
+      if(head) head.style.display = 'none';
+      content.innerHTML = `
+        <div class="lb-empty">
+          <div class="lb-empty-title">LEADERBOARD OFFLINE</div>
+          <div class="lb-empty-sub">${(e && e.message) ? String(e.message).replace(/_/g,' ') : 'Could not reach the cloud leaderboard.'}</div>
+        </div>`;
+      return;
+    }
   }
 
   if(entries.length === 0) {
@@ -10954,27 +11043,31 @@ async function buildLeaderboardScreen() {
     content.innerHTML = `
       <div class="lb-empty">
         <div class="lb-empty-title">NO RECORDS YET</div>
-        <div class="lb-empty-sub">Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track.<br>Your first completed lap will ask for a username once, then auto-save every lap.</div>
+        <div class="lb-empty-sub">${isOnlineWins ? 'Win an online race in 1st place to climb the board.' : `Finish a ${lbMode === 'versus' ? 'versus race' : 'time trial'} on this track.<br>Your first completed lap will ask for a username once, then auto-save every lap.`}</div>
       </div>`;
     return;
   }
 
   const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
   let html = entries.map((e, i) => {
-    const meta = lbMode === 'versus'
-      ? (e.winner ? `WIN ${e.winner}` : '—')
-      : (e.total != null ? `RACE ${fmtTime(e.total)}` : 'BEST LAP');
+    const wins = Number(e && (e.wins != null ? e.wins : e.bestLap != null ? e.bestLap : 0)) || 0;
+    const meta = isOnlineWins
+      ? (wins > 0 ? `${wins} WINS` : '—')
+      : (lbMode === 'versus'
+        ? (e.winner ? `WIN ${e.winner}` : '—')
+        : (e.total != null ? `RACE ${fmtTime(e.total)}` : 'BEST LAP'));
+    const timeVal = isOnlineWins ? String(wins) : fmtTime(e.bestLap);
     return `
       <div class="lb-row${i === 0 ? ' lb-top' : ''}">
         <div class="lb-rank" style="color:${rankColors[i] || 'rgba(255,255,255,.45)'}">${i + 1}</div>
         <div class="lb-name">${e.username || '—'}</div>
-        <div class="lb-time">${fmtTime(e.bestLap)}</div>
+        <div class="lb-time">${timeVal}</div>
         <div class="lb-meta">${meta}</div>
         <div class="lb-date">${fmtLbDate(e.createdAt)}</div>
       </div>`;
   }).join('');
 
-  html += `<div class="lb-foot">Showing top ${entries.length} · cloud leaderboard</div>`;
+  html += `<div class="lb-foot">${isOnlineWins ? `Showing top ${entries.length} · cloud + seed file` : `Showing top ${entries.length} · cloud leaderboard`}</div>`;
   content.innerHTML = html;
 
   if(lbMode === 'trial' && typeof CG !== 'undefined' && CG.showBoard) {

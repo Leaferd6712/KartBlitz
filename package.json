@@ -10,7 +10,8 @@
     "test:sim": "node sim/__tests__/parity.test.mjs",
     "preparty:deploy": "npm run tracks:export && npm run sim:browser && npm run test:sim",
     "deploy:online": "npm run party:deploy",
-    "backup:leaderboard": "node scripts/backup-leaderboard.mjs"
+    "backup:leaderboard": "node scripts/backup-leaderboard.mjs",
+    "seed:online-wins": "node scripts/seed-online-wins.mjs"
   },
   "dependencies": {
     "partyserver": "^0.5.10"

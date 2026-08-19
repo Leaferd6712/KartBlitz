@@ -1,5 +1,5 @@
 const USERNAME_RE = /^[A-Z0-9]{3,12}$/;
-const ALLOWED_MODES = new Set(["trial", "versus"]);
+const ALLOWED_MODES = new Set(["trial", "versus", "online"]);
 const TOP_N = 50;
 
 export type DeviceRecord = {
@@ -51,6 +51,15 @@ export async function ensureLeaderboardSchema(db: D1Database): Promise<void> {
     db.prepare(
       "CREATE INDEX IF NOT EXISTS idx_scores_rankings ON scores(mode, track_id, best_lap)"
     ),
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS online_wins (
+        device_token TEXT PRIMARY KEY,
+        username_snapshot TEXT NOT NULL,
+        wins INTEGER NOT NULL DEFAULT 0,
+        updated_at REAL NOT NULL
+      )`
+    ),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_online_wins_rank ON online_wins(wins DESC)"),
   ]);
 }
 
@@ -68,9 +77,9 @@ function validateDeviceToken(raw: unknown): string | null {
   return token;
 }
 
-function normalizeMode(raw: unknown): "trial" | "versus" | null {
+function normalizeMode(raw: unknown): "trial" | "versus" | "online" | null {
   const mode = String(raw || "");
-  return ALLOWED_MODES.has(mode) ? (mode as "trial" | "versus") : null;
+  return ALLOWED_MODES.has(mode) ? (mode as "trial" | "versus" | "online") : null;
 }
 
 export async function getDeviceByToken(db: D1Database, deviceTokenRaw: unknown): Promise<DeviceRecord | null> {
@@ -226,16 +235,124 @@ export async function submitScore(
   return { ok: true, saved: true, username: device.username, bestLap };
 }
 
+export async function recordOnlineWin(db: D1Database, deviceTokenRaw: unknown): Promise<{
+  ok: true;
+  username: string;
+  wins: number;
+} | { ok: false; error: string; status: number }> {
+  const deviceToken = validateDeviceToken(deviceTokenRaw);
+  if (!deviceToken) return { ok: false, error: "invalid_device_token", status: 400 };
+
+  const device = await getDeviceByToken(db, deviceToken);
+  if (!device) return { ok: false, error: "unregistered_device", status: 401 };
+
+  const now = Date.now();
+  await ensureLeaderboardSchema(db);
+  await db
+    .prepare(
+      `INSERT INTO online_wins (device_token, username_snapshot, wins, updated_at)
+       VALUES (?, ?, 1, ?)
+       ON CONFLICT(device_token) DO UPDATE SET
+         wins = wins + 1,
+         username_snapshot = excluded.username_snapshot,
+         updated_at = excluded.updated_at`
+    )
+    .bind(deviceToken, device.username, now)
+    .run();
+
+  const row = await db
+    .prepare(`SELECT wins FROM online_wins WHERE device_token = ?`)
+    .bind(deviceToken)
+    .first<{ wins: number }>();
+
+  return { ok: true, username: device.username, wins: Number(row?.wins) || 0 };
+}
+
+type OnlineWinsRow = {
+  username_snapshot: string;
+  wins: number;
+  updated_at: number;
+};
+
+export async function getOnlineWinsLeaderboard(
+  db: D1Database
+): Promise<{ ok: true; scores: Array<{ username: string; wins: number; createdAt: number }> } | { ok: false; error: string; status: number }> {
+  await ensureLeaderboardSchema(db);
+
+  const rows = await db
+    .prepare(
+      `SELECT username_snapshot, SUM(wins) as wins, MAX(updated_at) as updated_at
+       FROM online_wins
+       GROUP BY username_snapshot
+       ORDER BY wins DESC
+       LIMIT ?`
+    )
+    .bind(TOP_N)
+    .all<OnlineWinsRow>();
+
+  return {
+    ok: true,
+    scores: (rows.results || []).map((r) => ({
+      username: r.username_snapshot,
+      wins: Number(r.wins) || 0,
+      createdAt: Number(r.updated_at) || 0,
+    })),
+  };
+}
+
 export async function getLeaderboard(
   db: D1Database,
   modeRaw: unknown,
   trackIdRaw: unknown
 ): Promise<
-  | { ok: true; scores: Array<{ username: string; mode: string; trackId: number; trackName: string | null; bestLap: number; total: number | null; winner: string | null; createdAt: number }> }
+  | {
+      ok: true;
+      scores: Array<{
+        username: string;
+        mode: string;
+        trackId: number;
+        trackName: string | null;
+        bestLap: number;
+        total: number | null;
+        winner: string | null;
+        createdAt: number;
+        wins?: number;
+      }>;
+    }
   | { ok: false; error: string; status: number }
 > {
   const mode = normalizeMode(modeRaw);
   if (!mode) return { ok: false, error: "invalid_mode", status: 400 };
+
+  if (mode === "online") {
+    const wins = await getOnlineWinsLeaderboard(db);
+    if (!wins.ok) return wins;
+    return {
+      ok: true,
+      scores: wins.scores.map((r) => ({
+        username: r.username,
+        mode: "online",
+        trackId: 0,
+        trackName: null,
+        bestLap: r.wins, // legacy field; UI for online will read `wins` when present
+        total: null,
+        winner: null,
+        createdAt: r.createdAt,
+        wins: r.wins,
+      })) as unknown as Array<{
+        username: string;
+        mode: string;
+        trackId: number;
+        trackName: string | null;
+        bestLap: number;
+        total: number | null;
+        winner: string | null;
+        createdAt: number;
+        wins: number;
+      }>,
+    };
+  }
+
   const trackId = Number(trackIdRaw);
   if (!Number.isFinite(trackId) || trackId < 0 || trackId > 999) {
     return { ok: false, error: "invalid_track", status: 400 };
@@ -291,6 +408,7 @@ export type LeaderboardBackupPayload = {
   generatedAt: string;
   deviceCount: number;
   scoreCount: number;
+  onlineWinCount: number;
   devices: Array<{ username: string; registeredAt: string; lastSeenAt: string }>;
   scores: Array<{
     mode: string;
@@ -303,6 +421,12 @@ export type LeaderboardBackupPayload = {
     totalText: string | null;
     winner: string | null;
     createdAt: string;
+    updatedAt: string;
+  }>;
+  onlineWins: Array<{
+    username: string;
+    wins: number;
+    winsText: string;
     updatedAt: string;
   }>;
 };
@@ -334,6 +458,7 @@ export function formatLeaderboardBackupText(payload: LeaderboardBackupPayload): 
     "Generated (UTC): " + payload.generatedAt,
     "Registered devices: " + payload.deviceCount,
     "Saved scores: " + payload.scoreCount,
+    "Saved online wins: " + payload.onlineWinCount,
     "",
     "This file is a full snapshot of cloud leaderboard records (usernames and times).",
     "Device tokens are omitted so the file is safe to keep in git.",
@@ -390,6 +515,26 @@ export function formatLeaderboardBackupText(payload: LeaderboardBackupPayload): 
   lines.push(
     "",
     "------------------------------------------------------------------------------",
+    "ONLINE WINS (wins desc)",
+    "------------------------------------------------------------------------------"
+  );
+
+  if (!payload.onlineWins.length) {
+    lines.push("No online wins saved yet.");
+  } else {
+    lines.push(
+      pad("USERNAME", 16) +
+        pad("WINS", 12) +
+        "UPDATED (UTC)"
+    );
+    for (const win of payload.onlineWins) {
+      lines.push(pad(win.username, 16) + pad(win.winsText, 12) + win.updatedAt);
+    }
+  }
+
+  lines.push(
+    "",
+    "------------------------------------------------------------------------------",
     "MACHINE-READABLE JSON (for restore / import)",
     "------------------------------------------------------------------------------",
     JSON.stringify(payload, null, 2),
@@ -420,6 +565,21 @@ export async function exportLeaderboardBackup(db: D1Database): Promise<{
     )
     .all<BackupScoreRow>();
 
+  type BackupOnlineWinRow = {
+    username_snapshot: string;
+    wins: number;
+    updated_at: number;
+  };
+
+  const onlineWinRows = await db
+    .prepare(
+      `SELECT username_snapshot, SUM(wins) as wins, MAX(updated_at) as updated_at
+       FROM online_wins
+       GROUP BY username_snapshot
+       ORDER BY wins DESC`
+    )
+    .all<BackupOnlineWinRow>();
+
   const devices = (deviceRows.results || []).map((row) => ({
     username: String(row.username || ""),
     registeredAt: isoFromEpoch(Number(row.created_at) || 0),
@@ -443,13 +603,25 @@ export async function exportLeaderboardBackup(db: D1Database): Promise<{
     };
   });
 
+  const onlineWins = (onlineWinRows.results || []).map((row) => {
+    const wins = Number(row.wins) || 0;
+    return {
+      username: String(row.username_snapshot || ""),
+      wins,
+      winsText: String(wins),
+      updatedAt: isoFromEpoch(Number(row.updated_at) || 0),
+    };
+  });
+
   const payload: LeaderboardBackupPayload = {
     version: 1,
     generatedAt: new Date().toISOString(),
     deviceCount: devices.length,
     scoreCount: scores.length,
+    onlineWinCount: onlineWins.length,
     devices,
     scores,
+    onlineWins,
   };
 
   return { ok: true, text: formatLeaderboardBackupText(payload), payload };

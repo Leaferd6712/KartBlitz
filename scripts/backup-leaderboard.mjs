@@ -35,6 +35,7 @@ function formatLeaderboardBackupText(payload) {
     "Generated (UTC): " + payload.generatedAt,
     "Registered devices: " + payload.deviceCount,
     "Saved scores: " + payload.scoreCount,
+    "Saved online wins: " + payload.onlineWinCount,
     "",
     "This file is a full snapshot of cloud leaderboard records (usernames and times).",
     "Device tokens are omitted so the file is safe to keep in git.",
@@ -85,6 +86,22 @@ function formatLeaderboardBackupText(payload) {
           pad(score.winner || "-", 10) +
           score.createdAt
       );
+    }
+  }
+
+  lines.push(
+    "",
+    "------------------------------------------------------------------------------",
+    "ONLINE WINS (wins desc)",
+    "------------------------------------------------------------------------------"
+  );
+
+  if (!payload.onlineWins.length) {
+    lines.push("No online wins saved yet.");
+  } else {
+    lines.push(pad("USERNAME", 16) + pad("WINS", 12) + "UPDATED (UTC)");
+    for (const win of payload.onlineWins) {
+      lines.push(pad(win.username, 16) + pad(win.winsText, 12) + win.updatedAt);
     }
   }
 
@@ -166,6 +183,9 @@ async function exportFromD1() {
   const scoreRows = await queryD1(
     "SELECT username_snapshot, mode, track_id, track_name, best_lap, total, winner, created_at, updated_at FROM scores ORDER BY mode ASC, track_id ASC, best_lap ASC"
   );
+  const onlineWinRows = await queryD1(
+    "SELECT username_snapshot, SUM(wins) as wins, MAX(updated_at) as updated_at FROM online_wins GROUP BY username_snapshot ORDER BY wins DESC"
+  );
 
   const devices = (deviceRows || []).map((row) => ({
     username: String(row.username || ""),
@@ -190,13 +210,25 @@ async function exportFromD1() {
     };
   });
 
+  const onlineWins = (onlineWinRows || []).map((row) => {
+    const wins = Number(row.wins) || 0;
+    return {
+      username: String(row.username_snapshot || ""),
+      wins,
+      winsText: String(wins),
+      updatedAt: isoFromEpoch(Number(row.updated_at) || 0),
+    };
+  });
+
   const payload = {
     version: 1,
     generatedAt: new Date().toISOString(),
     deviceCount: devices.length,
     scoreCount: scores.length,
+    onlineWinCount: onlineWins.length,
     devices,
     scores,
+    onlineWins,
   };
   return formatLeaderboardBackupText(payload);
 }
