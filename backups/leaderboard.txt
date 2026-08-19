@@ -1,7 +1,8 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-19T06:34:59.797Z
+Generated (UTC): 2026-08-19T07:22:31.047Z
 Registered devices: 3
 Saved scores: 5
+Saved online wins: 0
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
 Device tokens are omitted so the file is safe to keep in git.
@@ -26,13 +27,19 @@ trial     5       TITAN LOOP              AAAAAAAAAAAA  0:43.162    1:26.977    
 trial     5       TITAN LOOP              SCOOPDOG      0:43.415    0:43.415    -         2026-08-18T23:09:51.132Z
 
 ------------------------------------------------------------------------------
+ONLINE WINS (wins desc)
+------------------------------------------------------------------------------
+No online wins saved yet.
+
+------------------------------------------------------------------------------
 MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-19T06:34:59.797Z",
+  "generatedAt": "2026-08-19T07:22:31.047Z",
   "deviceCount": 3,
   "scoreCount": 5,
+  "onlineWinCount": 0,
   "devices": [
     {
       "username": "LEAFERD",
@@ -116,5 +123,6 @@ MACHINE-READABLE JSON (for restore / import)
       "createdAt": "2026-08-18T23:09:51.132Z",
       "updatedAt": "2026-08-18T23:09:51.132Z"
     }
-  ]
+  ],
+  "onlineWins": []
 }
