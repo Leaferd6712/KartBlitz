@@ -1,5 +1,5 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-19T11:48:27.921Z
+Generated (UTC): 2026-08-19T11:59:30.355Z
 Registered devices: 3
 Saved scores: 10
 Saved online wins: 0
@@ -12,7 +12,7 @@ Use this if D1 data is lost and you need to refer back to previous records.
 REGISTERED USERNAMES
 ------------------------------------------------------------------------------
 USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
-LEAFERD         2026-08-18T10:21:09.992Z  2026-08-19T03:11:43.047Z
+LEAFERD         2026-08-18T10:21:09.992Z  2026-08-19T11:57:45.302Z
 AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-19T03:07:25.284Z
 SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-18T23:09:51.132Z
 
@@ -22,7 +22,7 @@ SCORES (best lap first within each mode/track)
 MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
 trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.432    0:24.432    -         2026-08-18T10:21:10.193Z
 trial     1       MEADOW PARK             LEAFERD       0:22.682    0:22.682    -         2026-08-19T03:11:43.047Z
-trial     5       TITAN LOOP              LEAFERD       0:41.866    1:26.547    -         2026-08-18T23:08:54.278Z
+trial     5       TITAN LOOP              LEAFERD       0:41.813    1:26.877    -         2026-08-18T23:08:54.278Z
 trial     5       TITAN LOOP              AAAAAAAAAAAA  0:43.162    1:26.977    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              SCOOPDOG      0:43.415    0:43.415    -         2026-08-18T23:09:51.132Z
 trial     5       TITAN LOOP              WHEEL4295     0:43.878    3:00.991    -         2026-08-19T07:24:23.580Z
@@ -41,7 +41,7 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-19T11:48:27.921Z",
+  "generatedAt": "2026-08-19T11:59:30.355Z",
   "deviceCount": 3,
   "scoreCount": 10,
   "onlineWinCount": 0,
@@ -49,7 +49,7 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "username": "LEAFERD",
       "registeredAt": "2026-08-18T10:21:09.992Z",
-      "lastSeenAt": "2026-08-19T03:11:43.047Z"
+      "lastSeenAt": "2026-08-19T11:57:45.302Z"
     },
     {
       "username": "AAAAAAAAAAAA",
@@ -94,13 +94,13 @@ MACHINE-READABLE JSON (for restore / import)
       "trackId": 5,
       "trackName": "TITAN LOOP",
       "username": "LEAFERD",
-      "bestLap": 41.86569999999553,
-      "bestLapText": "0:41.866",
-      "total": 86.54729999999702,
-      "totalText": "1:26.547",
+      "bestLap": 41.81319999998808,
+      "bestLapText": "0:41.813",
+      "total": 86.87669999998808,
+      "totalText": "1:26.877",
       "winner": null,
       "createdAt": "2026-08-18T23:08:54.278Z",
-      "updatedAt": "2026-08-18T23:09:36.168Z"
+      "updatedAt": "2026-08-19T11:57:45.302Z"
     },
     {
       "mode": "trial",
