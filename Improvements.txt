@@ -1,0 +1,9 @@
+online mode position lag
+
+
+Right now for the car colour changes, chassis changes the chassis, front wing changes car tyre colour. Rear wing does the same on the outside edge of the wheels, nose changes the car supports, accents change the wheel rims, change that to actually make it work. Also take 
+
+some parts dont have the back option to go back 
+
+merge the track editor into the admin html 
+
