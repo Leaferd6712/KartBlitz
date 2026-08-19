@@ -26,7 +26,7 @@ body{
   -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
   -webkit-touch-callout:none;
 }
-#gameCanvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:none;}
+#gameCanvas{position:absolute;top:0;left:0;width:100%;height:100%;display:none;}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,#b8ade8 0%,#8b7fd4 40%,#6a5fba 100%);}
 .screen::before{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(-30deg,transparent,transparent 60px,rgba(255,255,255,0.045) 60px,rgba(255,255,255,0.045) 62px);z-index:0;}
 .screen.hidden{display:none!important;}
@@ -363,7 +363,7 @@ body{
 .track-card{position:relative;}
 .setup-section-label{font-family:'Nunito',sans-serif;font-size:11px;color:rgba(255,255,255,.55);letter-spacing:.06em;margin:14px 0 4px;text-align:center;font-weight:800;}
 /* ── TOUCH CONTROLS ─────────────────────────────── */
-#touch-overlay{display:none;position:fixed;top:0;left:0;width:1280px;height:720px;pointer-events:none;z-index:99;transform-origin:top left;}
+#touch-overlay{display:none;position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99;}
 .touch-pad{position:absolute;inset:0;pointer-events:none;}
 .touch-stick{position:absolute;width:150px;height:150px;left:48px;bottom:36px;pointer-events:all;touch-action:none;user-select:none;-webkit-user-select:none;}
 .touch-stick-base{position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,0.1);border:3px solid rgba(255,255,255,0.4);box-shadow:inset 0 0 20px rgba(255,255,255,0.06);}
@@ -1843,13 +1843,35 @@ body::after{
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const W = 1280, H = 720;
+const MENU_PAGE_BG = '#7b6fca';
+const RACE_VIEW_MAX_EDGE = 1920;
+let W = 1280, H = 720;
+let _raceFillBg = null;
 canvas.width = W; canvas.height = H;
 
+function applyPageBackground() {
+  const color = (canvas.style.display === 'block' && _raceFillBg) ? _raceFillBg : MENU_PAGE_BG;
+  document.documentElement.style.background = color;
+  document.body.style.background = color;
+}
+
 function resizeCanvas() {
-  const sc = Math.min(window.innerWidth / W, window.innerHeight / H);
-  canvas.style.width = (W * sc) + 'px';
-  canvas.style.height = (H * sc) + 'px';
+  const vw = Math.max(2, window.innerWidth || 2);
+  const vh = Math.max(2, window.innerHeight || 2);
+  let nextW = vw;
+  let nextH = vh;
+  const longEdge = Math.max(nextW, nextH);
+  if(longEdge > RACE_VIEW_MAX_EDGE) {
+    const s = RACE_VIEW_MAX_EDGE / longEdge;
+    nextW = Math.max(2, Math.round(nextW * s));
+    nextH = Math.max(2, Math.round(nextH * s));
+  }
+  W = nextW;
+  H = nextH;
+  if(canvas.width !== W) canvas.width = W;
+  if(canvas.height !== H) canvas.height = H;
+  canvas.style.width = vw + 'px';
+  canvas.style.height = vh + 'px';
   // Countdown overlay spans the full viewport; .cd-num self-centers with left/top 50%.
   // Avoid sizing+transform on the overlay — that shifted all countdown text left.
   const overlay = document.getElementById('countdownOverlay');
@@ -1862,6 +1884,7 @@ function resizeCanvas() {
     overlay.style.bottom = '';
     overlay.style.transform = 'none';
   }
+  applyPageBackground();
 }
 window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
@@ -2073,6 +2096,7 @@ const CG = (() => {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   canvas.style.display = 'none';
+  applyPageBackground();
   document.getElementById('countdownOverlay').style.display = 'none';
   const po = document.getElementById('pause-overlay');
   if(po) po.style.display = 'none';
@@ -7690,6 +7714,7 @@ class Race {
     stopAllDriftSnds();
     showTouchOverlay(false);
     canvas.style.display = 'none';
+    applyPageBackground();
     document.getElementById('countdownOverlay').style.display = 'none';
     const order = this.qualiOrder;
     const wrap = document.getElementById('quali-results-wrap');
@@ -8644,6 +8669,7 @@ class Race {
     CG.gameplayStop(); // notify CrazyGames platform: gameplay ended
 
     canvas.style.display = 'none';
+    applyPageBackground();
     document.getElementById('countdownOverlay').style.display = 'none';
 
     const resultsWrap = document.getElementById('results-wrap');
@@ -9011,6 +9037,7 @@ function teardownRaceUI() {
   const ad = document.getElementById('ad-block-overlay');
   if (ad) ad.style.display = 'none';
   canvas.style.display = 'none';
+  applyPageBackground();
   showTouchOverlay(false);
 }
 
@@ -9897,6 +9924,7 @@ function selectTrackStart(idx) {
   incRaceCount(); // track race count for FTUE hint
   const t = TRACKS[idx];
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  _raceFillBg = (t && t.bgColor) || null;
   canvas.style.display = 'block';
   resizeCanvas();
   // Force a layout pass before the first painted countdown/HUD frame
@@ -10010,6 +10038,7 @@ function startRaceFromQualifying() {
     k.speed = 0;
   });
 
+  _raceFillBg = (race && race.track && race.track.bgColor) || _raceFillBg;
   canvas.style.display = 'block';
   resizeCanvas();
   void canvas.offsetWidth;
@@ -10086,13 +10115,8 @@ function updateLandscapeHint(raceVisible) {
 function scaleTouchOverlay() {
   const overlay = document.getElementById('touch-overlay');
   if(!overlay) return;
-  const ww = window.innerWidth, wh = window.innerHeight;
-  const sc = Math.min(ww / 1280, wh / 720);
-  const scaledW = 1280 * sc, scaledH = 720 * sc;
-  const offX = (ww - scaledW) / 2;
-  const offY = (wh - scaledH) / 2;
-  overlay.style.transformOrigin = 'top left';
-  overlay.style.transform = `translate(${offX}px, ${offY}px) scale(${sc})`;
+  overlay.style.transformOrigin = '';
+  overlay.style.transform = 'none';
 }
 
 function showTouchOverlay(visible) {
