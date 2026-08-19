@@ -332,9 +332,12 @@ export function stepKart(
   }
 
   const hasAnalogDrive = typeof inp.throttle === "number" || typeof inp.brake === "number";
-  const throttleTarget = hasAnalogDrive ? Math.max(0, Math.min(1, inp.throttle || 0)) : inp.up ? 1 : 0;
+  let throttleTarget = hasAnalogDrive ? Math.max(0, Math.min(1, inp.throttle || 0)) : inp.up ? 1 : 0;
   const brakeTarget = hasAnalogDrive ? Math.max(0, Math.min(1, inp.brake || 0)) : inp.down ? 1 : 0;
-  kart._throttleAssist += (throttleTarget - kart._throttleAssist) * (inp.up ? 0.22 : 0.34);
+  const opposingDrive = !hasAnalogDrive && inp.up && inp.down;
+  if (opposingDrive) throttleTarget = 0;
+  kart._throttleAssist += (throttleTarget - kart._throttleAssist) * (inp.up && !opposingDrive ? 0.22 : 0.34);
+  if (opposingDrive) kart._throttleAssist *= 0.4;
   kart._brakeAssist += (brakeTarget - kart._brakeAssist) * (inp.down ? 0.16 : 0.11);
   const throttleInput = Math.max(0, Math.min(1, kart._throttleAssist));
   const brakeInput = Math.max(0, Math.min(1, kart._brakeAssist));
@@ -359,9 +362,9 @@ export function stepKart(
     kart._ersPower = Math.max(0, (kart._ersPower || 0) - (1 / 1.15) * dt);
     let regen = 0;
     if (brakeInput > 0.05 && ersSpdAbs > 18) {
-      regen += (0.038 * brakeInput + 0.084 * brakeInput * brakeInput) * (0.45 + ersSpdRatio * 0.55);
+      regen += (0.057 * brakeInput + 0.126 * brakeInput * brakeInput) * (0.45 + ersSpdRatio * 0.55);
     } else if (throttleInput < 0.08 && brakeInput < 0.05 && ersSpdAbs > 12) {
-      regen += (throttleInput < 0.02 ? 0.043 : 0.032) * (0.35 + ersSpdRatio * 0.65);
+      regen += (throttleInput < 0.02 ? 0.065 : 0.048) * (0.35 + ersSpdRatio * 0.65);
     }
     if (!ersSteering && throttleInput > 0.55 && ersSpdRatio > 0.58 && brakeInput < 0.05) {
       kart._ersStraightTimer = (kart._ersStraightTimer || 0) + dt;
@@ -369,7 +372,7 @@ export function stepKart(
       kart._ersStraightTimer = Math.max(0, (kart._ersStraightTimer || 0) - dt * 2);
     }
     if (kart._ersStraightTimer > 1.0) {
-      regen += 0.014 + Math.min(0.011, (kart._ersStraightTimer - 1.0) * 0.0055);
+      regen += 0.021 + Math.min(0.017, (kart._ersStraightTimer - 1.0) * 0.008);
     }
     if (regen > 0) kart.ersCharge = Math.min(1, kart.ersCharge + regen * dt);
   }
@@ -384,7 +387,7 @@ export function stepKart(
   if (kart.tyreWear >= 1.0) spdLimit = Math.min(spdLimit, 125);
 
   const ersAccMult = 1 + 0.14 * ersPower;
-  if (throttleInput > 0.02) {
+  if (throttleInput > 0.02 && brakeInput <= 0.02) {
     kart.speed += acc * throttleInput * dt * ersAccMult;
   } else if (brakeInput > 0.02) {
     if (kart.speed > 0) kart.speed -= kart.brakeForce * brakeInput * dt;
