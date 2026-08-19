@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-19T07:22:31.047Z
+Generated (UTC): 2026-08-19T07:28:34.256Z
 Registered devices: 3
-Saved scores: 5
+Saved scores: 10
 Saved online wins: 0
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
@@ -25,6 +25,11 @@ trial     1       MEADOW PARK             LEAFERD       0:22.682    0:22.682    
 trial     5       TITAN LOOP              LEAFERD       0:41.866    1:26.547    -         2026-08-18T23:08:54.278Z
 trial     5       TITAN LOOP              AAAAAAAAAAAA  0:43.162    1:26.977    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              SCOOPDOG      0:43.415    0:43.415    -         2026-08-18T23:09:51.132Z
+trial     5       TITAN LOOP              WHEEL4295     0:43.878    3:00.991    -         2026-08-19T07:24:23.580Z
+trial     5       TITAN LOOP              TURBO2228     0:43.976    3:05.288    -         2026-08-19T07:24:23.580Z
+trial     5       TITAN LOOP              SPEED8348     0:44.023    3:12.661    -         2026-08-19T07:24:23.580Z
+trial     5       TITAN LOOP              GRID1066      0:44.953    3:19.204    -         2026-08-19T07:24:23.580Z
+trial     5       TITAN LOOP              BOOST8916     0:45.934    3:18.355    -         2026-08-19T07:24:23.580Z
 
 ------------------------------------------------------------------------------
 ONLINE WINS (wins desc)
@@ -36,9 +41,9 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-19T07:22:31.047Z",
+  "generatedAt": "2026-08-19T07:28:34.256Z",
   "deviceCount": 3,
-  "scoreCount": 5,
+  "scoreCount": 10,
   "onlineWinCount": 0,
   "devices": [
     {
@@ -122,6 +127,71 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-18T23:09:51.132Z",
       "updatedAt": "2026-08-18T23:09:51.132Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
+      "username": "WHEEL4295",
+      "bestLap": 43.878,
+      "bestLapText": "0:43.878",
+      "total": 180.991,
+      "totalText": "3:00.991",
+      "winner": null,
+      "createdAt": "2026-08-19T07:24:23.580Z",
+      "updatedAt": "2026-08-19T07:24:36.983Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
+      "username": "TURBO2228",
+      "bestLap": 43.976,
+      "bestLapText": "0:43.976",
+      "total": 185.288,
+      "totalText": "3:05.288",
+      "winner": null,
+      "createdAt": "2026-08-19T07:24:23.580Z",
+      "updatedAt": "2026-08-19T07:24:40.342Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
+      "username": "SPEED8348",
+      "bestLap": 44.023,
+      "bestLapText": "0:44.023",
+      "total": 192.661,
+      "totalText": "3:12.661",
+      "winner": null,
+      "createdAt": "2026-08-19T07:24:23.580Z",
+      "updatedAt": "2026-08-19T07:24:43.907Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
+      "username": "GRID1066",
+      "bestLap": 44.953,
+      "bestLapText": "0:44.953",
+      "total": 199.204,
+      "totalText": "3:19.204",
+      "winner": null,
+      "createdAt": "2026-08-19T07:24:23.580Z",
+      "updatedAt": "2026-08-19T07:24:50.843Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
+      "username": "BOOST8916",
+      "bestLap": 45.934,
+      "bestLapText": "0:45.934",
+      "total": 198.355,
+      "totalText": "3:18.355",
+      "winner": null,
+      "createdAt": "2026-08-19T07:24:23.580Z",
+      "updatedAt": "2026-08-19T07:24:47.680Z"
     }
   ],
   "onlineWins": []
