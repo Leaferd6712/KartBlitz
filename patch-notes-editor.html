@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KartBlitz – Patch Notes Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --panel: #121820;
+      --border: rgba(0,245,255,0.25);
+      --cyan: #00f5ff;
+      --gold: #f5c518;
+      --orange: #ff6b35;
+      --text: #e8eef5;
+      --muted: rgba(255,255,255,0.55);
+      --ok: #6dd46a;
+      --err: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Nunito, sans-serif;
+      background: radial-gradient(ellipse at top, #101820 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+    h1, .brand { font-family: Orbitron, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    /* ── Header ── */
+    .header {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 28px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand { font-size: 1.1rem; color: var(--cyan); margin: 0; }
+    .header-sub { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+    /* ── Panels ── */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      margin-bottom: 20px;
+    }
+    .panel-title {
+      font-family: Orbitron, sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin: 0 0 16px;
+    }
+
+    /* ── Form elements ── */
+    label { display: block; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(0,0,0,0.35);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      transition: border-color 0.15s;
+    }
+    input:focus { outline: 2px solid rgba(0,245,255,0.35); border-color: var(--cyan); }
+
+    /* ── Bullet list editor ── */
+    .bullets-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .bullet-row { display: flex; gap: 8px; align-items: center; }
+    .bullet-row input[type="text"] { flex: 1; }
+    .btn-icon {
+      flex-shrink: 0;
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .btn-icon:hover { background: rgba(255,255,255,0.14); }
+    .btn-icon.remove { border-color: rgba(255,107,107,0.4); color: var(--err); }
+    .btn-icon.remove:hover { background: rgba(255,107,107,0.18); }
+    .btn-add {
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px dashed rgba(0,245,255,0.4);
+      background: transparent;
+      color: var(--cyan);
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.15s;
+    }
+    .btn-add:hover { background: rgba(0,245,255,0.08); }
+
+    /* ── Main buttons ── */
+    .btn {
+      font: inherit;
+      font-weight: 900;
+      font-size: 0.88rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px 28px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.25);
+      background: linear-gradient(180deg,#7ee8f8 0%,#3bbde8 100%);
+      color: #fff;
+      cursor: pointer;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+      transition: filter 0.15s, transform 0.1s;
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .btn-gold { background: linear-gradient(180deg,#ffe066 0%,#f5a623 100%); border-color: rgba(255,255,255,0.5); }
+    .btn-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+
+    /* ── Status message ── */
+    .status-msg {
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      min-height: 20px;
+      margin-top: 10px;
+    }
+    .status-msg.ok { color: var(--ok); }
+    .status-msg.err { color: var(--err); }
+    .status-msg.info { color: var(--cyan); }
+
+    /* ── Two column layout ── */
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 680px) { .cols { grid-template-columns: 1fr; } }
+
+    /* ── In-game patch notes preview ── */
+    .preview-wrap {
+      background: rgba(60,50,110,0.7);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 240px;
+    }
+    .patch-card-preview {
+      background: rgba(40,35,70,0.96);
+      border: 3px solid rgba(245,197,24,0.5);
+      border-radius: 22px;
+      padding: 28px 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      color: #fff;
+      font-family: Nunito, sans-serif;
+      text-align: left;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .patch-card-preview h2 {
+      color: #f5c518;
+      margin: 0 0 6px;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      font-weight: 900;
+    }
+    .patch-card-preview .patch-date {
+      color: rgba(255,255,255,0.7);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+    .patch-card-preview ul {
+      margin: 0 0 22px;
+      padding-left: 18px;
+      font-size: 13px;
+      line-height: 1.7;
+      opacity: 0.9;
+    }
+    .patch-card-preview li { margin-bottom: 8px; }
+    .patch-card-preview .got-it-btn {
+      display: block;
+      margin: 0 auto;
+      font-family: Nunito, sans-serif;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 11px 28px;
+      border: 3px solid rgba(255,255,255,0.85);
+      background: linear-gradient(180deg,#ffe066 0%,#f5a623 100%);
+      color: #fff;
+      border-radius: 14px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.35);
+      box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: default;
+    }
+
+    /* ── File picker section ── */
+    .file-info {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 8px;
+      word-break: break-all;
+    }
+    .file-info.loaded { color: var(--ok); }
+
+    /* ── Password row ── */
+    .pw-row { display: flex; gap: 10px; align-items: flex-end; }
+    .pw-row > div:first-child { flex: 1; }
+
+    /* ── Hint note ── */
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+    .hint strong { color: var(--gold); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1 class="brand">KartBlitz</h1>
+      <p class="header-sub">Patch Notes Editor</p>
+    </div>
+  </div>
+
+  <!-- Step 1: pick index.html -->
+  <div class="panel" id="step-file">
+    <div class="panel-title">Step 1 — Open index.html</div>
+    <p class="hint">Click the button below and select your <strong>index.html</strong> file. The current patch notes will be loaded automatically.</p>
+    <button class="btn" id="btn-pick-file">Choose index.html</button>
+    <div class="file-info" id="file-info">No file selected.</div>
+  </div>
+
+  <!-- Step 2: editor + preview -->
+  <div class="cols" id="step-edit" style="display:none;">
+    <div class="panel">
+      <div class="panel-title">Edit Patch Notes</div>
+
+      <div style="margin-bottom:16px;">
+        <label for="input-date">Date label</label>
+        <input type="text" id="input-date" placeholder="e.g. AUGUST 18" maxlength="40">
+      </div>
+
+      <label>Bullet points</label>
+      <div class="bullets-list" id="bullets-list"></div>
+      <button class="btn-add" id="btn-add-bullet">+ Add bullet</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Live Preview</div>
+      <div class="preview-wrap">
+        <div class="patch-card-preview">
+          <h2>PATCH NOTES</h2>
+          <div class="patch-date" id="preview-date">—</div>
+          <ul id="preview-bullets"></ul>
+          <button class="got-it-btn" tabindex="-1">GOT IT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: save -->
+  <div class="panel" id="step-save" style="display:none;">
+    <div class="panel-title">Step 3 — Save to index.html</div>
+    <p class="hint">Enter your <strong>leaderboard admin password</strong> to confirm and write the changes.</p>
+
+    <div class="pw-row">
+      <div>
+        <label for="input-password">Admin password</label>
+        <input type="password" id="input-password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <button class="btn btn-gold" id="btn-save">Save Patch Notes</button>
+    </div>
+
+    <div class="status-msg" id="save-status"></div>
+  </div>
+
+</div>
+
+<script>
+  const LB_API = 'https://kartblitz-online.kartblitz.workers.dev';
+  const PW_KEY = 'kartblitz_admin_pw';
+
+  let fileHandle = null;
+  let originalContent = '';
+
+  // ── File picker ──────────────────────────────────────────
+  document.getElementById('btn-pick-file').addEventListener('click', async () => {
+    if (!window.showOpenFilePicker) {
+      alert('Your browser does not support the File System Access API.\nPlease use Chrome or Edge and open this file locally (not via file:// — use a local server or drag into browser).');
+      return;
+    }
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'HTML files', accept: { 'text/html': ['.html'] } }],
+        multiple: false
+      });
+      fileHandle = handle;
+      const file = await handle.getFile();
+      originalContent = await file.text();
+
+      const info = document.getElementById('file-info');
+      info.textContent = '✓ Loaded: ' + handle.name;
+      info.className = 'file-info loaded';
+
+      loadCurrentPatchNotes(originalContent);
+      document.getElementById('step-edit').style.display = '';
+      document.getElementById('step-save').style.display = '';
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        document.getElementById('file-info').textContent = 'Error: ' + e.message;
+      }
+    }
+  });
+
+  // ── Parse current patch notes from index.html ────────────
+  function loadCurrentPatchNotes(html) {
+    const dateMatch = html.match(/<div class="patch-date">([^<]*)<\/div>/);
+    const date = dateMatch ? dateMatch[1].trim() : '';
+
+    const ulMatch = html.match(/<ul>([\s\S]*?)<\/ul>/);
+    const bullets = [];
+    if (ulMatch) {
+      const liRegex = /<li>([\s\S]*?)<\/li>/g;
+      let m;
+      while ((m = liRegex.exec(ulMatch[1])) !== null) {
+        // Strip inner HTML tags for plain-text editing, keep <strong> visible as text
+        bullets.push(m[1].replace(/<strong>/g, '**').replace(/<\/strong>/g, '**').replace(/<[^>]+>/g, '').trim());
+      }
+    }
+
+    document.getElementById('input-date').value = date;
+    renderBullets(bullets.length ? bullets : ['']);
+    updatePreview();
+  }
+
+  // ── Bullet list ──────────────────────────────────────────
+  function renderBullets(items) {
+    const list = document.getElementById('bullets-list');
+    list.innerHTML = '';
+    items.forEach((text, i) => addBulletRow(text));
+  }
+
+  function addBulletRow(text) {
+    const list = document.getElementById('bullets-list');
+    const row = document.createElement('div');
+    row.className = 'bullet-row';
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.value = text || '';
+    inp.placeholder = 'Bullet point text (use **bold** for bold)';
+    inp.addEventListener('input', updatePreview);
+
+    const del = document.createElement('button');
+    del.className = 'btn-icon remove';
+    del.title = 'Remove';
+    del.textContent = '×';
+    del.addEventListener('click', () => { row.remove(); updatePreview(); });
+
+    row.appendChild(inp);
+    row.appendChild(del);
+    list.appendChild(row);
+    updatePreview();
+  }
+
+  document.getElementById('btn-add-bullet').addEventListener('click', () => {
+    addBulletRow('');
+    // Focus the new input
+    const rows = document.querySelectorAll('.bullet-row');
+    if (rows.length) rows[rows.length - 1].querySelector('input').focus();
+  });
+
+  document.getElementById('input-date').addEventListener('input', updatePreview);
+
+  // ── Live preview ─────────────────────────────────────────
+  function bulletTextToHTML(raw) {
+    // Convert **text** → <strong>text</strong>
+    return raw.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  }
+
+  function updatePreview() {
+    const date = document.getElementById('input-date').value || '—';
+    document.getElementById('preview-date').textContent = date;
+
+    const ul = document.getElementById('preview-bullets');
+    ul.innerHTML = '';
+    document.querySelectorAll('.bullet-row input').forEach(inp => {
+      if (!inp.value.trim()) return;
+      const li = document.createElement('li');
+      li.innerHTML = bulletTextToHTML(inp.value);
+      ul.appendChild(li);
+    });
+  }
+
+  // ── Build new patch notes HTML block ────────────────────
+  function buildNewPatchNotesBlock() {
+    const date = document.getElementById('input-date').value.trim();
+    const liItems = [];
+    document.querySelectorAll('.bullet-row input').forEach(inp => {
+      const val = inp.value.trim();
+      if (val) liItems.push('      <li>' + bulletTextToHTML(val) + '</li>');
+    });
+
+    return `<!-- PATCH NOTES (once per page load) -->
+<div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
+  <div id="patch-notes-card">
+    <h2 id="patch-notes-title">PATCH NOTES</h2>
+    <div class="patch-date">${date}</div>
+    <ul>
+${liItems.join('\n')}
+    </ul>
+    <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
+  </div>
+</div>`;
+  }
+
+  // ── Save ─────────────────────────────────────────────────
+  function setStatus(msg, kind) {
+    const el = document.getElementById('save-status');
+    el.textContent = msg;
+    el.className = 'status-msg' + (kind ? ' ' + kind : '');
+  }
+
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    const pw = document.getElementById('input-password').value.trim();
+    if (!pw) { setStatus('Please enter the admin password.', 'err'); return; }
+    if (!fileHandle) { setStatus('No file loaded. Complete Step 1 first.', 'err'); return; }
+
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
+    setStatus('Verifying password…', 'info');
+
+    // Verify password against the leaderboard API
+    try {
+      const res = await fetch(LB_API + '/api/admin/leaderboard', {
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body && (body.error || body.message)) || 'Incorrect password');
+      }
+    } catch (e) {
+      setStatus('Auth failed: ' + (e.message || 'Incorrect password'), 'err');
+      btn.disabled = false;
+      return;
+    }
+
+    setStatus('Writing file…', 'info');
+
+    // Replace the patch notes block in index.html
+    const newBlock = buildNewPatchNotesBlock();
+    const pattern = /<!-- PATCH NOTES \(once per page load\) -->[\s\S]*?<\/div>\s*<\/div>/;
+
+    if (!pattern.test(originalContent)) {
+      setStatus('Could not find the patch notes block in index.html. Make sure you selected the right file.', 'err');
+      btn.disabled = false;
+      return;
+    }
+
+    const newContent = originalContent.replace(pattern, newBlock);
+
+    try {
+      const writable = await fileHandle.createWritable();
+      await writable.write(newContent);
+      await writable.close();
+      originalContent = newContent; // update in memory so re-saves work
+      setStatus('✓ Saved successfully! Refresh index.html to see the changes.', 'ok');
+
+      // Save password to session for convenience
+      try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {}
+    } catch (e) {
+      setStatus('Write failed: ' + e.message, 'err');
+    }
+
+    btn.disabled = false;
+  });
+
+  document.getElementById('input-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-save').click();
+  });
+
+  // Pre-fill password from session if available
+  try {
+    const saved = sessionStorage.getItem(PW_KEY);
+    if (saved) document.getElementById('input-password').value = saved;
+  } catch (e) {}
+</script>
+</body>
+</html>
