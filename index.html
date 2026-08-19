@@ -11002,7 +11002,7 @@ async function buildLeaderboardScreen() {
     let cloudEntries = [];
     let cloudErr = null;
     try {
-      const data = await leaderboardFetchJson(`/api/leaderboard?mode=online&trackId=0`);
+      const data = await leaderboardFetchJson(`/api/leaderboard?mode=online&trackId=0&t=${Date.now()}`);
       if(seq !== _lbBuildSeq) return;
       cloudEntries = (data && data.scores) || [];
     } catch(e) {
@@ -11023,7 +11023,7 @@ async function buildLeaderboardScreen() {
     }
   } else {
     try {
-      const data = await leaderboardFetchJson(`/api/leaderboard?mode=${encodeURIComponent(lbMode)}&trackId=${encodeURIComponent(trackId)}`);
+      const data = await leaderboardFetchJson(`/api/leaderboard?mode=${encodeURIComponent(lbMode)}&trackId=${encodeURIComponent(trackId)}&t=${Date.now()}`);
       if(seq !== _lbBuildSeq) return;
       entries = ((data && data.scores) || []).slice().sort((a, b) => a.bestLap - b.bestLap).slice(0, 50);
     } catch(e) {

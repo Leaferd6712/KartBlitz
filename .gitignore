@@ -1,6 +1,7 @@
 node_modules/
 .partykit/
 .wrangler/
+.dev.vars
 dist/
 *.log
 .DS_Store

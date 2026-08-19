@@ -13,6 +13,7 @@ Open [docs/online-mode.html](docs/online-mode.html) in a browser. That is the fu
 | File | Role |
 |------|------|
 | `KartBlitz.html` | The game |
+| `leaderboard-admin.html` | Password-protected leaderboard editor (optional, keep URL private) |
 | `online.js` | Online lobby / netcode client |
 | `online-codec.js` | Binary snapshot/input codec |
 | `online-sim.js` | Shared physics (same as Worker `sim/`) for local prediction |
@@ -70,6 +71,22 @@ npx wrangler d1 execute kartblitz-leaderboard --remote --file d1/leaderboard-sch
 The Worker also creates the tables lazily on first leaderboard request, so the SQL file is mainly for explicit setup / inspection.
 
 On first Time Trial lap, the game prompts once for a username per device. After that, every completed lap auto-saves to the cloud leaderboard.
+
+### Leaderboard admin page
+
+Edit all leaderboard data (online wins, Time Trial laps, Versus laps) from a password-protected web UI with auto-save:
+
+1. Set the admin password (production — do **not** commit this):
+   ```bash
+   npx wrangler secret put LEADERBOARD_ADMIN_PASSWORD
+   ```
+2. Deploy the Worker: `npm run deploy:online`
+3. Upload `leaderboard-admin.html` alongside the game on Netlify (same folder as `index.html`)
+4. Open `https://YOUR-SITE/leaderboard-admin.html` and log in
+
+Local `wrangler dev` uses a password from `.dev.vars` (copy from `.dev.vars.example`). Production uses only `wrangler secret` — do **not** put the admin password in `wrangler.jsonc` `vars` or deploy will overwrite your remote secret.
+
+The admin page is **not linked from the game menu** — keep the URL private. Anyone with the password can edit all leaderboard rows including real players.
 
 Cloud scores are also snapshotted to [`backups/leaderboard.txt`](backups/leaderboard.txt) automatically every 6 hours (GitHub Action). Download a live dump from `/api/leaderboard-backup.txt`, or run `npm run backup:leaderboard` locally. For a full D1 restore file (includes device tokens, keep private): `npx wrangler d1 export kartblitz-leaderboard --remote --output backups/leaderboard-full.sql`.
 
