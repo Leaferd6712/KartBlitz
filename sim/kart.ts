@@ -92,6 +92,7 @@ export class SimKart {
   bestLap = Infinity;
   finished = false;
   finishTime: number | null = null;
+  finishOrder: number | null = null;
   totalLaps = 3;
   prevX: number;
   prevY: number;
@@ -496,6 +497,7 @@ export function copyKartState(dst: SimKart, src: SimKart) {
   dst.bestLap = src.bestLap;
   dst.finished = src.finished;
   dst.finishTime = src.finishTime;
+  dst.finishOrder = src.finishOrder;
   dst.tyreWear = src.tyreWear;
   dst.tyreTemp = src.tyreTemp;
   dst.ersCharge = src.ersCharge;
@@ -525,7 +527,7 @@ export function copyKartState(dst: SimKart, src: SimKart) {
 
 export function applyNetPose(kart: SimKart, snap: {
   x: number; y: number; angle: number; speed: number;
-  lap?: number; finished?: boolean; finishTime?: number | null;
+  lap?: number; finished?: boolean; finishTime?: number | null; finishOrder?: number | null;
   tyreWear?: number; tyreTemp?: number; ersCharge?: number; ersActive?: boolean;
   drsActive?: boolean; drsAvailable?: boolean;
   checkpointsBit?: number; _nearestSplineIdx?: number;
@@ -538,6 +540,7 @@ export function applyNetPose(kart: SimKart, snap: {
   if (typeof snap.lap === "number") kart.lap = snap.lap;
   if (snap.finished != null) kart.finished = !!snap.finished;
   if (snap.finishTime !== undefined) kart.finishTime = snap.finishTime;
+  if (snap.finishOrder !== undefined) kart.finishOrder = snap.finishOrder;
   if (typeof snap.tyreWear === "number") kart.tyreWear = snap.tyreWear;
   if (typeof snap.tyreTemp === "number") kart.tyreTemp = snap.tyreTemp;
   if (typeof snap.ersCharge === "number") kart.ersCharge = snap.ersCharge;

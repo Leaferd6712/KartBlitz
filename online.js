@@ -644,6 +644,7 @@
     if (typeof s.lap === 'number') k.lap = s.lap;
     if (s.finished != null) k.finished = !!s.finished;
     if (s.finishTime !== undefined) k.finishTime = s.finishTime;
+    if (s.finishOrder !== undefined) k.finishOrder = s.finishOrder;
     if (s.tyreId) k.tyreId = s.tyreId;
     if (!isLocal) {
       if (typeof s.tyreWear === 'number') k.tyreWear = s.tyreWear;

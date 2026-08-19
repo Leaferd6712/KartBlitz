@@ -5,7 +5,7 @@
   'use strict';
 
   var NET_MAGIC = 0x4b42;
-  var NET_VERSION = 3;
+  var NET_VERSION = 4;
   var MSG_INPUT = 1;
   var MSG_STATE = 2;
   var PHASE_TO_ID = { countdown: 0, launch: 1, racing: 2, finished: 3 };
@@ -124,7 +124,7 @@
           k.bestLap !== pk.bestLap ||
           Math.abs((k.maxSpeed || 0) - (pk.maxSpeed || 0)) > 1
         ) mask |= 0x02;
-        if (!!k.finished !== !!pk.finished || k.finishTime !== pk.finishTime) mask |= 0x04;
+        if (!!k.finished !== !!pk.finished || k.finishTime !== pk.finishTime || k.finishOrder !== pk.finishOrder) mask |= 0x04;
       }
       v.setUint8(o++, mask);
       var flags = 0;
@@ -154,6 +154,7 @@
       }
       if (mask & 0x04) {
         v.setFloat32(o, k.finishTime == null ? -1 : k.finishTime, true); o += 4;
+        v.setUint8(o++, k.finishOrder == null ? 0 : Math.min(255, k.finishOrder | 0));
       }
     }
     return buf.slice(0, o);
@@ -198,6 +199,7 @@
       var maxSpeed = pk ? pk.maxSpeed : 0;
       var bestLap = pk ? pk.bestLap : null;
       var finishTime = pk ? pk.finishTime : null;
+      var finishOrder = pk ? pk.finishOrder : null;
       if (mask & 0x02) {
         lap = v.getUint8(o++);
         tyreId = tyreFromId(v.getUint8(o++));
@@ -214,10 +216,12 @@
       if (mask & 0x04) {
         var ft = v.getFloat32(o, true); o += 4;
         finishTime = ft < 0 ? null : ft;
+        var fo = v.getUint8(o++);
+        finishOrder = fo > 0 ? fo : null;
       }
       karts.push({
         id: i, x: x, y: y, angle: angle, speed: speed, lap: lap,
-        finished: !!(flags & 8), finishTime: finishTime, tyreId: tyreId, tyreWear: tyreWear,
+        finished: !!(flags & 8), finishTime: finishTime, finishOrder: finishOrder, tyreId: tyreId, tyreWear: tyreWear,
         tyreTemp: tyreTemp,
         ersCharge: ersCharge, ersActive: !!(flags & 1), drsActive: !!(flags & 2),
         drsAvailable: !!(flags & 4), pitPhase: null, inPit: !!(flags & 16),

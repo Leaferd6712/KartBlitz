@@ -3597,6 +3597,7 @@ class Kart {
     this.splitTimes = [];
     this.finished = false;
     this.finishTime = null;
+    this.finishOrder = null;
     this.totalLaps = 3;
     // prev pos for crossing check
     this.prevX = spawnX; this.prevY = spawnY;
@@ -4501,6 +4502,9 @@ class Kart {
             if(Number.isFinite(this.totalLaps) && this.lap >= this.totalLaps && !keepDriving) {
               this.finished = true;
               this.finishTime = this.lapTimes.reduce((a,b)=>a+b,0);
+              if(typeof race !== 'undefined' && race) {
+                this.finishOrder = race._nextFinishOrder++;
+              }
               playFinish();
               stopEngine(this.id);
             } else {
@@ -6457,14 +6461,44 @@ function drawGhost(ctx, kart, camX, camY, W, H) {
   ctx.restore();
 }
 
+// ── RACE POSITION RANKING ───────────────────────────────
+function kartRaceProgress(kart, track) {
+  const cum = track.cum, totalLen = track.totalLen;
+  if(!cum || !totalLen) return kart.lap || 0;
+  return (kart.lap || 0) + (cum[kart._nearestSplineIdx || 0] || 0) / totalLen;
+}
+
+function isKartRankedFinished(kart) {
+  return !!(kart.finished && kart.finishTime != null);
+}
+
+function compareKartRacePosition(a, b, track) {
+  const aFin = isKartRankedFinished(a);
+  const bFin = isKartRankedFinished(b);
+  if(aFin && !bFin) return -1;
+  if(!aFin && bFin) return 1;
+  if(aFin && bFin) {
+    const dt = a.finishTime - b.finishTime;
+    if(dt !== 0) return dt;
+    const fo = (a.finishOrder ?? 9999) - (b.finishOrder ?? 9999);
+    if(fo !== 0) return fo;
+    return (a.id ?? 0) - (b.id ?? 0);
+  }
+  return kartRaceProgress(b, track) - kartRaceProgress(a, track);
+}
+
+function buildRaceRankings(karts, track) {
+  return karts.map((kart, i) => ({ kart, i }))
+    .sort((a, b) => compareKartRacePosition(a.kart, b.kart, track));
+}
+
 // ── POSITION TRACKER ────────────────────────────────────
 function drawPositionTracker(ctx, karts, W, H) {
   if(!race || !race.track) return;
   const track = race.track;
   const cum = track.cum, totalLen = track.totalLen;
   if(!cum || !totalLen) return;
-  const progOf = k => k.lap + (cum[k._nearestSplineIdx || 0] || 0) / totalLen;
-  const sorted = karts.slice().sort((a, b) => progOf(b) - progOf(a));
+  const sorted = karts.slice().sort((a, b) => compareKartRacePosition(a, b, track));
   const leaderK = sorted[0];
   // Draw above minimap in bottom-right
   const rowH = 17;
@@ -6495,12 +6529,18 @@ function drawPositionTracker(ctx, karts, W, H) {
     if(race.mode === 'online') name = isHuman ? 'YOU' : (k.onlineName || ('P' + (k.id + 1)));
     ctx.fillText(`P${rank+1}  ${name}`, bx + 6, ry);
     if(isHuman && rank > 0) {
-      const gapDist = Math.max(0, (progOf(leaderK) - progOf(k)) * totalLen);
-      const avgSpd = Math.max(1, Math.abs(k.speed));
       ctx.fillStyle = '#ff9500';
       ctx.textAlign = 'right';
       ctx.font = '8px Nunito,sans-serif';
-      ctx.fillText('+' + (gapDist / avgSpd).toFixed(1) + 's', bx + bw - 4, ry);
+      if(isKartRankedFinished(k) && isKartRankedFinished(leaderK)) {
+        ctx.fillText('+' + fmtTime(k.finishTime - leaderK.finishTime), bx + bw - 4, ry);
+      } else if(isKartRankedFinished(k)) {
+        ctx.fillText('FIN', bx + bw - 4, ry);
+      } else {
+        const gapDist = Math.max(0, (kartRaceProgress(leaderK, track) - kartRaceProgress(k, track)) * totalLen);
+        const avgSpd = Math.max(1, Math.abs(k.speed));
+        ctx.fillText('+' + (gapDist / avgSpd).toFixed(1) + 's', bx + bw - 4, ry);
+      }
     } else if(isHuman) {
       ctx.fillStyle = '#4ade80';
       ctx.textAlign = 'right';
@@ -6583,22 +6623,34 @@ function getRaceDirectorMessages(raceState, kart) {
   const cum = raceState.track.cum;
   const totalLen = raceState.track.totalLen;
   if(cum && totalLen && raceState.karts && raceState.karts.length > 1) {
+    const track = raceState.track;
     const ranking = raceState.karts.map((entryKart, index) => ({
       kart: entryKart,
       index,
-      prog: entryKart.lap + ((cum[entryKart._nearestSplineIdx || 0] || 0) / totalLen)
-    })).sort((a, b) => b.prog - a.prog);
+    })).sort((a, b) => compareKartRacePosition(a.kart, b.kart, track));
     const myIndex = ranking.findIndex(row => row.kart === kart);
     if(myIndex === 0 && ranking[1]) {
-      const gapDist = Math.max(0, (ranking[0].prog - ranking[1].prog) * totalLen);
-      const avgSpeed = Math.max(120, (Math.abs(kart.speed) + Math.abs(ranking[1].kart.speed)) * 0.5);
-      messages.push({ level:'info', text:`LEADING · +${(gapDist / avgSpeed).toFixed(1)}s OVER P2` });
+      const leader = ranking[0].kart;
+      const p2 = ranking[1].kart;
+      if(isKartRankedFinished(leader) && isKartRankedFinished(p2)) {
+        messages.push({ level:'info', text:`LEADING · +${fmtTime(p2.finishTime - leader.finishTime)} OVER P2` });
+      } else {
+        const gapDist = Math.max(0, (kartRaceProgress(leader, track) - kartRaceProgress(p2, track)) * totalLen);
+        const avgSpeed = Math.max(120, (Math.abs(kart.speed) + Math.abs(p2.speed)) * 0.5);
+        messages.push({ level:'info', text:`LEADING · +${(gapDist / avgSpeed).toFixed(1)}s OVER P2` });
+      }
     } else if(myIndex > 0) {
       const ahead = ranking[myIndex - 1];
-      const gapDist = Math.max(0, (ahead.prog - ranking[myIndex].prog) * totalLen);
-      const avgSpeed = Math.max(120, (Math.abs(kart.speed) + Math.abs(ahead.kart.speed)) * 0.5);
-      const gap = gapDist / avgSpeed;
-      messages.push({ level:gap < 1.2 ? 'warn' : 'info', text:`P${myIndex + 1} · ${gap.toFixed(1)}s TO CAR AHEAD` });
+      const me = ranking[myIndex];
+      if(isKartRankedFinished(ahead.kart) && isKartRankedFinished(me.kart)) {
+        const gap = me.kart.finishTime - ahead.kart.finishTime;
+        messages.push({ level:gap < 1.2 ? 'warn' : 'info', text:`P${myIndex + 1} · +${fmtTime(gap)} TO CAR AHEAD` });
+      } else {
+        const gapDist = Math.max(0, (kartRaceProgress(ahead.kart, track) - kartRaceProgress(me.kart, track)) * totalLen);
+        const avgSpeed = Math.max(120, (Math.abs(kart.speed) + Math.abs(ahead.kart.speed)) * 0.5);
+        const gap = gapDist / avgSpeed;
+        messages.push({ level:gap < 1.2 ? 'warn' : 'info', text:`P${myIndex + 1} · ${gap.toFixed(1)}s TO CAR AHEAD` });
+      }
     }
   }
 
@@ -6838,6 +6890,7 @@ class Race {
     this.finishedTimer = 0;
     this.startTime = null;
     this.resultsShown = false; // BUG FIX: prevent repeated showResults calls
+    this._nextFinishOrder = 1;
     this._gameplayStarted = false;
     this.launchTimer = 0;
     this.launchDuration = 1.2;
@@ -7060,6 +7113,7 @@ class Race {
     }
     this.gridSlots = null;
     this.phase = 'racing';
+    this._nextFinishOrder = 1;
     this.startTime = performance.now();
     this._trialStartTyrePick = true;
     this._openPitBox(k, 0);
@@ -7245,6 +7299,7 @@ class Race {
     k.speed = 0;
     k.finished = false;
     k.finishTime = null;
+    k.finishOrder = null;
     k._shootoutStowed = false;
     k.inPit = false;
     k.pitPhase = null;
@@ -7411,6 +7466,7 @@ class Race {
     k.splitTimes = [];
     k.finished = false;
     k.finishTime = null;
+    k.finishOrder = null;
     k.totalLaps = lapsForStage;
     k.pitPhase = null;
     k.inPit = false;
@@ -7912,6 +7968,7 @@ class Race {
       }
     });
     this.phase = 'racing';
+    this._nextFinishOrder = 1;
     this.startTime = performance.now();
     if(this.mode === 'shootout') {
       startEngine(shootoutActive);
@@ -8752,21 +8809,7 @@ class Race {
       const diffCoinMult = diffMultMap2[diff] || 1.0;
       document.getElementById('results-title').textContent = 'AI RACE RESULTS';
 
-      // Sort karts by finish order
-      const progOf = (kart) => {
-        const cum = t.cum, totalLen = t.totalLen;
-        if(!cum || !totalLen) return kart.lap;
-        return kart.lap + (cum[kart._nearestSplineIdx||0]||0)/totalLen;
-      };
-      const rankings = this.karts.map((kart,i)=>({kart,i})).sort((a,b)=>{
-        // Treat null finishTime (auto-DNF) as unfinished for ranking purposes
-        const aReallyFinished = a.kart.finished && a.kart.finishTime !== null;
-        const bReallyFinished = b.kart.finished && b.kart.finishTime !== null;
-        if(aReallyFinished && !bReallyFinished) return -1;
-        if(!aReallyFinished && bReallyFinished) return 1;
-        if(aReallyFinished && bReallyFinished) return a.kart.finishTime - b.kart.finishTime;
-        return progOf(b.kart)-progOf(a.kart);
-      });
+      const rankings = buildRaceRankings(this.karts, t);
       const humanRank = rankings.findIndex(r=>r.i===0) + 1;
 
       if(humanRank === 1) {
@@ -8789,7 +8832,7 @@ class Race {
         const isHuman = r.i === 0;
         const name = isHuman ? 'YOU' : `AI ${r.i}`;
         const col = isHuman ? '#00f5ff' : (rank===0?'#ffd700':'rgba(255,255,255,.6)');
-        const timeStr = r.kart.finished ? fmtTime(r.kart.finishTime) : 'DNF';
+        const timeStr = isKartRankedFinished(r.kart) ? fmtTime(r.kart.finishTime) : 'DNF';
         html += `<div class="result-row"><span class="result-label" style="color:${col}">P${rank+1} ${name}</span><span class="result-val">${timeStr}</span></div>`;
       });
       html += '</div>';
@@ -8848,19 +8891,7 @@ class Race {
       const localIdx = onlineCameraIndex();
       const k = this.karts[localIdx] || this.karts[0];
       document.getElementById('results-title').textContent = 'ONLINE RACE RESULTS';
-      const progOf = (kart) => {
-        const cum = t.cum, totalLen = t.totalLen;
-        if(!cum || !totalLen) return kart.lap;
-        return kart.lap + (cum[kart._nearestSplineIdx||0]||0)/totalLen;
-      };
-      const rankings = this.karts.map((kart,i)=>({kart,i})).sort((a,b)=>{
-        const aReallyFinished = a.kart.finished && a.kart.finishTime !== null;
-        const bReallyFinished = b.kart.finished && b.kart.finishTime !== null;
-        if(aReallyFinished && !bReallyFinished) return -1;
-        if(!aReallyFinished && bReallyFinished) return 1;
-        if(aReallyFinished && bReallyFinished) return a.kart.finishTime - b.kart.finishTime;
-        return progOf(b.kart)-progOf(a.kart);
-      });
+      const rankings = buildRaceRankings(this.karts, t);
       const humanRank = rankings.findIndex(r=>r.i===localIdx) + 1;
       if(humanRank === 1) {
         resultsWrap.innerHTML = `<div class="winner-banner"> YOU WIN!</div>`;
@@ -8879,7 +8910,7 @@ class Race {
         const isYou = r.i === localIdx;
         const name = isYou ? 'YOU' : (r.kart.onlineName || ('P'+(r.i+1)));
         const col = isYou ? '#00f5ff' : (rank===0?'#ffd700':'rgba(255,255,255,.6)');
-        const timeStr = (r.kart.finished && r.kart.finishTime != null) ? fmtTime(r.kart.finishTime) : 'DNF';
+        const timeStr = isKartRankedFinished(r.kart) ? fmtTime(r.kart.finishTime) : 'DNF';
         html += `<div class="result-row"><span class="result-label" style="color:${col}">P${rank+1} ${name}</span><span class="result-val">${timeStr}</span></div>`;
       });
       html += '</div>';
@@ -8900,7 +8931,8 @@ class Race {
       if(k1.finished && !k2.finished) winner = 0;
       else if(k2.finished && !k1.finished) winner = 1;
       else if(k1.finished && k2.finished) {
-        winner = k1.finishTime < k2.finishTime ? 0 : k2.finishTime < k1.finishTime ? 1 : null;
+        const cmp = compareKartRacePosition(k1, k2, t);
+        winner = cmp < 0 ? 0 : cmp > 0 ? 1 : null;
       } else {
         // Neither finished - more laps wins; else best lap
         if(k1.lap !== k2.lap) winner = k1.lap > k2.lap ? 0 : 1;

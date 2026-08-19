@@ -13,7 +13,7 @@ const COAST_DECEL_PER_SEC = 25;
 const SIM_HZ = 60;
 const STATE_HZ = 30;
 const FIXED_DT = 1 / SIM_HZ;
-const ONLINE_PROTOCOL = 3;
+const ONLINE_PROTOCOL = 4;
 const TRACK_BAKE_VERSION = 2;
 const INPUT_HZ = 30;
 const STEPS_PER_INPUT = SIM_HZ / INPUT_HZ;
@@ -327,6 +327,7 @@ class SimKart {
         this.bestLap = Infinity;
         this.finished = false;
         this.finishTime = null;
+        this.finishOrder = null;
         this.totalLaps = 3;
         this.tyreId = "med";
         this.tyreWear = 0;
@@ -711,6 +712,7 @@ function copyKartState(dst, src) {
     dst.bestLap = src.bestLap;
     dst.finished = src.finished;
     dst.finishTime = src.finishTime;
+    dst.finishOrder = src.finishOrder;
     dst.tyreWear = src.tyreWear;
     dst.tyreTemp = src.tyreTemp;
     dst.ersCharge = src.ersCharge;
@@ -748,6 +750,8 @@ function applyNetPose(kart, snap) {
         kart.finished = !!snap.finished;
     if (snap.finishTime !== undefined)
         kart.finishTime = snap.finishTime;
+    if (snap.finishOrder !== undefined)
+        kart.finishOrder = snap.finishOrder;
     if (typeof snap.tyreWear === "number")
         kart.tyreWear = snap.tyreWear;
     if (typeof snap.tyreTemp === "number")
@@ -831,6 +835,7 @@ class OnlineRaceSim {
         this.inputQueues = new Map();
         this.lastProcessedInput = new Map();
         this.finishedEmitted = false;
+        this._nextFinishOrder = 1;
         this._stateAcc = 0;
         this._prevNet = null;
         this._epochWall = Date.now();
@@ -944,6 +949,9 @@ class OnlineRaceSim {
                         resolveCollisions: false,
                         nowMs: this.simTimeMs,
                     });
+                    if (k.finished && k.finishOrder == null && k.finishTime != null) {
+                        k.finishOrder = this._nextFinishOrder++;
+                    }
                 }
             }
             resolveKartCollisions(this.karts, this.collisionEnabled);
@@ -998,6 +1006,7 @@ class OnlineRaceSim {
             lap: k.lap || 0,
             finished: !!k.finished,
             finishTime: k.finishTime == null ? null : k.finishTime,
+            finishOrder: k.finishOrder == null ? null : k.finishOrder,
             tyreId: k.tyreId || "med",
             tyreWear: k.tyreWear || 0,
             tyreTemp: k.tyreTemp || 0,
