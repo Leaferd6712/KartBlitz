@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-19T00:57:06.995Z
+Generated (UTC): 2026-08-19T06:34:59.797Z
 Registered devices: 3
-Saved scores: 4
+Saved scores: 5
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
 Device tokens are omitted so the file is safe to keep in git.
@@ -11,8 +11,8 @@ Use this if D1 data is lost and you need to refer back to previous records.
 REGISTERED USERNAMES
 ------------------------------------------------------------------------------
 USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
-LEAFERD         2026-08-18T10:21:09.992Z  2026-08-18T23:09:36.168Z
-AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-18T23:09:38.531Z
+LEAFERD         2026-08-18T10:21:09.992Z  2026-08-19T03:11:43.047Z
+AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-19T03:07:25.284Z
 SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-18T23:09:51.132Z
 
 ------------------------------------------------------------------------------
@@ -20,6 +20,7 @@ SCORES (best lap first within each mode/track)
 ------------------------------------------------------------------------------
 MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
 trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.432    0:24.432    -         2026-08-18T10:21:10.193Z
+trial     1       MEADOW PARK             LEAFERD       0:22.682    0:22.682    -         2026-08-19T03:11:43.047Z
 trial     5       TITAN LOOP              LEAFERD       0:41.866    1:26.547    -         2026-08-18T23:08:54.278Z
 trial     5       TITAN LOOP              AAAAAAAAAAAA  0:43.162    1:26.977    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              SCOOPDOG      0:43.415    0:43.415    -         2026-08-18T23:09:51.132Z
@@ -29,19 +30,19 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-19T00:57:06.995Z",
+  "generatedAt": "2026-08-19T06:34:59.797Z",
   "deviceCount": 3,
-  "scoreCount": 4,
+  "scoreCount": 5,
   "devices": [
     {
       "username": "LEAFERD",
       "registeredAt": "2026-08-18T10:21:09.992Z",
-      "lastSeenAt": "2026-08-18T23:09:36.168Z"
+      "lastSeenAt": "2026-08-19T03:11:43.047Z"
     },
     {
       "username": "AAAAAAAAAAAA",
       "registeredAt": "2026-08-18T23:08:59.310Z",
-      "lastSeenAt": "2026-08-18T23:09:38.531Z"
+      "lastSeenAt": "2026-08-19T03:07:25.284Z"
     },
     {
       "username": "SCOOPDOG",
@@ -62,6 +63,19 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-18T10:21:10.193Z",
       "updatedAt": "2026-08-18T11:35:48.184Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 1,
+      "trackName": "MEADOW PARK",
+      "username": "LEAFERD",
+      "bestLap": 22.68219999999553,
+      "bestLapText": "0:22.682",
+      "total": 22.68219999999553,
+      "totalText": "0:22.682",
+      "winner": null,
+      "createdAt": "2026-08-19T03:11:43.047Z",
+      "updatedAt": "2026-08-19T03:11:43.047Z"
     },
     {
       "mode": "trial",
