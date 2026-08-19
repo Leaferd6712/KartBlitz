@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>KART BLITZ ⚡</title>
+<title>KART BLITZ</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 <script src="online-codec.js"></script>
@@ -460,6 +460,12 @@ body{
 #pause-overlay .pause-title{font-family:'Nunito',sans-serif;font-size:clamp(40px,6vw,64px);font-weight:900;color:#fff;letter-spacing:.08em;text-shadow:0 4px 0 #3a2a6e;-webkit-text-stroke:2px #3a2a6e;}
 #pause-overlay .pause-btns{display:flex;flex-direction:column;gap:14px;align-items:center;min-width:280px;}
 #pause-overlay .pause-btns .btn{width:100%;min-width:260px;}
+
+/* ── RACE PAUSE / EXIT HUD ─────────────────────────── */
+#race-controls-hud{display:none;position:fixed;top:12px;right:12px;z-index:105;flex-direction:column;gap:8px;pointer-events:auto;}
+#race-controls-hud .race-ctrl-btn{font-family:'Nunito',sans-serif;font-size:10px;font-weight:900;letter-spacing:.12em;padding:8px 14px;border-radius:10px;border:2px solid rgba(255,255,255,.35);background:rgba(50,42,90,.88);color:#fff;cursor:pointer;min-width:88px;text-align:center;}
+#race-controls-hud .race-ctrl-btn:hover{background:rgba(70,60,120,.95);}
+#race-controls-hud .race-ctrl-exit{border-color:rgba(255,107,53,.65);color:#ffb088;}
 
 /* ── WARPED KART UI REFRESH ─────────────────────────── */
 :root{
@@ -1219,12 +1225,12 @@ body::after{
       <div class="menu-panel-title">Launch straight into the grid</div>
       <div class="menu-panel-sub">Time Trial jumps straight to circuit select. Custom Race opens versus, AI, online, and shootout setup.</div>
       <div class="menu-actions">
-        <button class="btn btn-cyan" onclick="startTimeTrial()">⏱ TIME TRIAL</button>
-        <button class="btn btn-gold btn-sm" onclick="initAudio();playUIClick();showScreen('mode');">⚙ CUSTOM RACE</button>
-        <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()">🔧 GARAGE</button>
-        <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');">🏆 LEADERBOARD</button>
-        <button class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();showControlsScreen()">🎮 CONTROLS &amp; SETTINGS</button>
-        <button type="button" class="btn btn-sm" id="btn-track-editor" style="color:#3dd6c6;" onclick="openTrackEditorFromMenu()">🛠 TRACK EDITOR</button>
+        <button class="btn btn-cyan" onclick="startTimeTrial()"> TIME TRIAL</button>
+        <button class="btn btn-gold btn-sm" onclick="initAudio();playUIClick();showScreen('mode');"> CUSTOM RACE</button>
+        <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()"> GARAGE</button>
+        <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');"> LEADERBOARD</button>
+        <button class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();showControlsScreen()"> CONTROLS &amp; SETTINGS</button>
+        <button type="button" class="btn btn-sm" id="btn-track-editor" style="color:#3dd6c6;" onclick="openTrackEditorFromMenu()"> TRACK EDITOR</button>
       </div>
       <div class="menu-utility-card">
         <div class="menu-utility-title">Desktop Layout</div>
@@ -1233,8 +1239,8 @@ body::after{
     </div>
   </div>
   <div id="menu-coins" class="menu-coins">
-    <div class="menu-currency-chip" id="menu-coins-chip">💰 0</div>
-    <div class="menu-currency-chip gems" id="menu-gems-chip">💎 0</div>
+    <div class="menu-currency-chip" id="menu-coins-chip">COINS 0</div>
+    <div class="menu-currency-chip gems" id="menu-gems-chip">GEMS 0</div>
   </div>
 </div>
 
@@ -1246,25 +1252,25 @@ body::after{
   <div class="section-sub">CHOOSE YOUR RACE TYPE</div>
   <div class="mode-grid">
     <div class="mode-card" onclick="selectMode('versus')">
-      <div class="m-icon">🏆</div>
+      <div class="m-icon"></div>
       <div class="m-name">VERSUS RACE</div>
       <div class="m-desc">Race a friend.<br>Split-screen, same track.</div>
       <div class="m-tag">2 PLAYERS</div>
     </div>
     <div class="mode-card" onclick="showOnlineLobby()">
-      <div class="m-icon">🌐</div>
+      <div class="m-icon"></div>
       <div class="m-name">ONLINE LOBBY</div>
       <div class="m-desc">Host or join a room.<br>Up to 6 players online.</div>
       <div class="m-tag">FREE · PARTYKIT</div>
     </div>
     <div class="mode-card" onclick="showAIDifficultyUI()">
-      <div class="m-icon">🤖</div>
+      <div class="m-icon"></div>
       <div class="m-name">AI RACE</div>
       <div class="m-desc">Race the field of AI cars.<br>Pick how hard they push.</div>
       <div class="m-tag">SOLO · VS AI</div>
     </div>
     <div class="mode-card" onclick="showShootoutDiffUI()">
-      <div class="m-icon">⚡</div>
+      <div class="m-icon"></div>
       <div class="m-name">ONE LAP SHOOTOUT</div>
       <div class="m-desc">One flying lap each.<br>Beat the AI’s time.</div>
       <div class="m-tag">SOLO · 1 LAP</div>
@@ -1287,7 +1293,7 @@ body::after{
       <div id="online-join-list-wrap" style="display:none;margin-top:8px;">
         <div class="online-row" style="justify-content:space-between;margin-bottom:8px;">
           <div style="font:bold 12px Nunito,sans-serif;letter-spacing:.04em;opacity:.85;">OPEN LOBBIES</div>
-          <button class="btn btn-sm" style="padding:6px 12px;font-size:11px;" onclick="refreshOnlineLobbyList()">↻ REFRESH</button>
+          <button class="btn btn-sm" style="padding:6px 12px;font-size:11px;" onclick="refreshOnlineLobbyList()">REFRESH</button>
         </div>
         <div class="online-roster" id="online-lobby-list"></div>
         <div class="online-status" id="online-join-status" style="margin-top:8px;">Loading lobbies…</div>
@@ -1322,7 +1328,7 @@ body::after{
       </div>
       <div class="online-row" style="margin-top:16px;">
         <button class="btn btn-gold btn-sm" id="online-ready-btn" onclick="toggleOnlineReady()">READY</button>
-        <button class="btn btn-cyan btn-sm" id="online-start-btn" style="display:none;" onclick="startOnlineRace()">▶ START RACE</button>
+        <button class="btn btn-cyan btn-sm" id="online-start-btn" style="display:none;" onclick="startOnlineRace()">START RACE</button>
         <button class="btn btn-orange btn-sm" onclick="leaveOnlineLobby()">LEAVE</button>
       </div>
     </div>
@@ -1332,37 +1338,37 @@ body::after{
 <!-- SHOOTOUT DIFFICULTY OVERLAY -->
 <div id="shootout-difficulty" style="display:none;position:fixed;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:150;background:rgba(0,0,0,0.9);">
   <button class="back-btn" onclick="document.getElementById('shootout-difficulty').style.display='none'">← BACK</button>
-  <div class="section-title" style="margin-bottom:4px;">⚡ ONE LAP SHOOTOUT</div>
+  <div class="section-title" style="margin-bottom:4px;"> ONE LAP SHOOTOUT</div>
   <div class="diff-label">SELECT AI DIFFICULTY</div>
   <div class="diff-pills" id="shootout-diff-pills">
-    <div class="diff-pill ultraeasy" onclick="selectShootoutDiff('ultraeasy')">🔵 ULTRA EASY</div>
-    <div class="diff-pill easy" onclick="selectShootoutDiff('easy')">🟢 EASY</div>
-    <div class="diff-pill medium sel" onclick="selectShootoutDiff('medium')">🟡 MEDIUM</div>
-    <div class="diff-pill hard" onclick="selectShootoutDiff('hard')">🔴 HARD</div>
-    <div class="diff-pill extreme" onclick="selectShootoutDiff('extreme')">💀 EXTREME</div>
+    <div class="diff-pill ultraeasy" onclick="selectShootoutDiff('ultraeasy')"> ULTRA EASY</div>
+    <div class="diff-pill easy" onclick="selectShootoutDiff('easy')"> EASY</div>
+    <div class="diff-pill medium sel" onclick="selectShootoutDiff('medium')"> MEDIUM</div>
+    <div class="diff-pill hard" onclick="selectShootoutDiff('hard')"> HARD</div>
+    <div class="diff-pill extreme" onclick="selectShootoutDiff('extreme')"> EXTREME</div>
   </div>
-  <button class="btn btn-cyan" style="margin-top:10px;" onclick="confirmShootoutMode()">▶ CHOOSE TRACK</button>
+  <button class="btn btn-cyan" style="margin-top:10px;" onclick="confirmShootoutMode()">CHOOSE TRACK</button>
 </div>
 
 
 <!-- AI DIFFICULTY OVERLAY -->
 <div id="ai-difficulty">
   <button class="back-btn" onclick="document.getElementById('ai-difficulty').style.display='none'">← BACK</button>
-  <div class="section-title" style="margin-bottom:4px;">🤖 AI RACE</div>
+  <div class="section-title" style="margin-bottom:4px;"> AI RACE</div>
   <div class="diff-label">SELECT DIFFICULTY</div>
   <div class="diff-pills" id="ai-diff-pills">
-    <div class="diff-pill ultraeasy" onclick="selectAIDiff('ultraeasy')">🔵 ULTRA EASY</div>
-    <div class="diff-pill easy" onclick="selectAIDiff('easy')">🟢 EASY</div>
-    <div class="diff-pill medium sel" onclick="selectAIDiff('medium')">🟡 MEDIUM</div>
-    <div class="diff-pill hard" onclick="selectAIDiff('hard')">🔴 HARD</div>
-    <div class="diff-pill extreme" onclick="selectAIDiff('extreme')">💀 EXTREME</div>
+    <div class="diff-pill ultraeasy" onclick="selectAIDiff('ultraeasy')"> ULTRA EASY</div>
+    <div class="diff-pill easy" onclick="selectAIDiff('easy')"> EASY</div>
+    <div class="diff-pill medium sel" onclick="selectAIDiff('medium')"> MEDIUM</div>
+    <div class="diff-pill hard" onclick="selectAIDiff('hard')"> HARD</div>
+    <div class="diff-pill extreme" onclick="selectAIDiff('extreme')"> EXTREME</div>
   </div>
   <div class="diff-label" style="margin-top:14px;">NUMBER OF OPPONENTS</div>
   <div class="range-wrap">
     <input id="ai-count-slider" type="range" min="1" max="10" step="1" value="3" oninput="setAICountFromSlider(this.value)">
     <div class="range-val" id="ai-count-value">3 AI</div>
   </div>
-  <button class="btn btn-cyan" style="margin-top:10px;" onclick="confirmAIMode()">▶ CHOOSE TRACK</button>
+  <button class="btn btn-cyan" style="margin-top:10px;" onclick="confirmAIMode()">CHOOSE TRACK</button>
 </div>
 
 <!-- TRACK SELECT -->
@@ -1377,13 +1383,13 @@ body::after{
 <!-- QUALIFYING RESULTS -->
 <div id="screen-quali-results" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
-  <div class="section-title">🏁 QUALIFYING RESULTS</div>
+  <div class="section-title"> QUALIFYING RESULTS</div>
   <div class="section-sub" id="quali-results-sub">STARTING GRID</div>
   <div class="results-wrap" id="quali-results-wrap"></div>
   <div id="quali-tyre-selector"></div>
   <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;justify-content:center;padding-bottom:20px;">
-    <button class="btn btn-cyan" onclick="startRaceFromQualifying()">▶ START RACE</button>
-    <button class="btn btn-orange btn-sm" onclick="returnToMainMenu()">⌂ MAIN MENU</button>
+    <button class="btn btn-cyan" onclick="startRaceFromQualifying()">START RACE</button>
+    <button class="btn btn-orange btn-sm" onclick="returnToMainMenu()">MAIN MENU</button>
   </div>
 </div>
 
@@ -1394,9 +1400,8 @@ body::after{
   <div class="results-wrap" id="results-wrap"></div>
   <div id="coins-earned-display"></div>
   <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;justify-content:center;padding-bottom:20px;">
-    <button class="btn btn-gold btn-sm" id="btn-save-lb" onclick="showSaveAndLeaderboard()">💾 SAVE SCORE</button>
-    <button class="btn btn-cyan btn-sm" onclick="restartRace()">↺ RACE AGAIN</button>
-    <button class="btn btn-orange btn-sm" onclick="returnToMainMenu()">⌂ MAIN MENU</button>
+    <button class="btn btn-cyan btn-sm" onclick="restartRace()">RACE AGAIN</button>
+    <button class="btn btn-orange btn-sm" onclick="returnToMainMenu()">MAIN MENU</button>
   </div>
 </div>
 
@@ -1449,13 +1454,13 @@ body::after{
 <div id="screen-garage" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('menu')">← BACK</button>
-  <div class="section-title">🔧 GARAGE</div>
+  <div class="section-title"> GARAGE</div>
   <div class="coins-disp" id="garage-coins" style="position:absolute;top:20px;right:24px;margin:0;z-index:5;">
-    <span id="garage-coins-chip">💰 0</span>
-    <span id="garage-gems-chip" style="color:#7dd3fc;">💎 0</span>
+    <span id="garage-coins-chip">COINS 0</span>
+    <span id="garage-gems-chip" style="color:#7dd3fc;">GEMS 0</span>
   </div>
   <div style="text-align:center;margin-bottom:8px;">
-    <button class="btn btn-sm btn-cyan" onclick="watchAdForCoins()" id="garage-ad-btn" title="Optional: watch a short video ad for +50 coins. You can also earn coins by racing.">▶ VIDEO · +50 COINS</button>
+    <button class="btn btn-sm btn-cyan" onclick="watchAdForCoins()" id="garage-ad-btn" title="Optional: watch a short video ad for +50 coins. You can also earn coins by racing.">VIDEO · +50 COINS</button>
     <div id="garage-ad-hint" style="font-size:11px;opacity:.55;margin-top:6px;letter-spacing:.06em;">Optional reward · earn coins by racing too</div>
   </div>
   <div class="garage-tabs" id="garage-tabs">
@@ -1470,7 +1475,7 @@ body::after{
 <div id="screen-setup" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('track')">← BACK</button>
-  <div class="section-title">⚙ RACE SETUP</div>
+  <div class="section-title"> RACE SETUP</div>
   <div class="section-sub" id="setup-track-name"></div>
   <div class="setup-section-label">CAR SETUP</div>
   <div class="setup-grid" id="setup-grid"></div>
@@ -1511,7 +1516,7 @@ body::after{
     <div class="lap-row" id="trial-pit-row"></div>
   </div>
   <div style="margin-top:20px;text-align:center;padding-bottom:20px;">
-    <button class="btn btn-cyan" id="setup-start-btn" onclick="confirmSetupAndStart()">▶ RACE!</button>
+    <button class="btn btn-cyan" id="setup-start-btn" onclick="confirmSetupAndStart()">RACE!</button>
   </div>
 </div>
 
@@ -1522,9 +1527,9 @@ body::after{
   <div class="section-title">CONTROLS &amp; SETTINGS</div>
   <div class="section-sub">BIND KEYS · AUDIO · QUALITY · HOW TO PLAY</div>
   <div class="ctrl-tab-bar">
-    <button class="ctrl-tab active" id="ctab-bindings" onclick="switchCtrlTab('bindings')">🎮 KEY BINDINGS</button>
-    <button class="ctrl-tab" id="ctab-settings" onclick="switchCtrlTab('settings')">⚙ SETTINGS</button>
-    <button class="ctrl-tab" id="ctab-howto" onclick="switchCtrlTab('howto')">📖 HOW TO PLAY</button>
+    <button class="ctrl-tab active" id="ctab-bindings" onclick="switchCtrlTab('bindings')"> KEY BINDINGS</button>
+    <button class="ctrl-tab" id="ctab-settings" onclick="switchCtrlTab('settings')"> SETTINGS</button>
+    <button class="ctrl-tab" id="ctab-howto" onclick="switchCtrlTab('howto')"> HOW TO PLAY</button>
   </div>
   <div id="ctrl-pane-bindings" class="ctrl-pane"></div>
   <div id="ctrl-pane-settings" class="ctrl-pane" style="display:none;"></div>
@@ -1585,10 +1590,9 @@ body::after{
       <div class="touch-stick-knob" id="touch-knob-p1"></div>
     </div>
     <div class="touch-actions">
-      <div class="touch-btn" data-action="ers" data-player="p1">⚡ERS</div>
-      <div class="touch-btn" data-action="drs" data-player="p1">💨DRS</div>
-      <div class="touch-btn" data-action="pit" data-player="p1">🔧PIT</div>
-      <div class="touch-btn touch-btn-pause" id="touch-btn-pause-p1" data-action="pause" data-player="p1">❚❚</div>
+      <div class="touch-btn" data-action="ers" data-player="p1">ERS</div>
+      <div class="touch-btn" data-action="drs" data-player="p1">DRS</div>
+      <div class="touch-btn" data-action="pit" data-player="p1">PIT</div>
     </div>
   </div>
   <div id="touch-pad-p2" class="touch-pad">
@@ -1597,10 +1601,9 @@ body::after{
       <div class="touch-stick-knob" id="touch-knob-p2"></div>
     </div>
     <div class="touch-actions">
-      <div class="touch-btn" data-action="ers" data-player="p2">⚡ERS</div>
-      <div class="touch-btn" data-action="drs" data-player="p2">💨DRS</div>
-      <div class="touch-btn" data-action="pit" data-player="p2">🔧PIT</div>
-      <div class="touch-btn touch-btn-pause" id="touch-btn-pause-p2" data-action="pause" data-player="p2">❚❚</div>
+      <div class="touch-btn" data-action="ers" data-player="p2">ERS</div>
+      <div class="touch-btn" data-action="drs" data-player="p2">DRS</div>
+      <div class="touch-btn" data-action="pit" data-player="p2">PIT</div>
     </div>
   </div>
 </div>
@@ -1614,7 +1617,7 @@ body::after{
 
 <div id="pit-ui-overlay">
   <div class="pit-ui-card">
-    <div class="pit-ui-title" id="pit-ui-title">🔧 PIT STOP — PICK TYRES</div>
+    <div class="pit-ui-title" id="pit-ui-title">PIT STOP — PICK TYRES</div>
     <div class="pit-ui-sub" id="pit-ui-sub">Click or tap a tyre, then press W (P1) / ↑ (P2) to confirm.</div>
     <div class="pit-ui-choices" id="pit-ui-choices"></div>
     <div class="pit-ui-actions">
@@ -1623,20 +1626,26 @@ body::after{
   </div>
 </div>
 
+<!-- RACE PAUSE / EXIT (all modes) -->
+<div id="race-controls-hud">
+  <button type="button" class="race-ctrl-btn" id="race-ctrl-pause" onclick="pauseGame()">PAUSE</button>
+  <button type="button" class="race-ctrl-btn race-ctrl-exit" id="race-ctrl-exit" onclick="pauseQuit()">EXIT</button>
+</div>
+
 <!-- PAUSE MENU -->
 <div id="pause-overlay">
-  <div class="pause-title">⏸ PAUSED</div>
+  <div class="pause-title">PAUSED</div>
   <div class="pause-btns">
-    <button class="btn btn-cyan" onclick="resumeGame()">▶ RESUME</button>
-    <button class="btn btn-gold btn-sm" onclick="pauseRestartRace()">↺ RESTART RACE</button>
-    <button class="btn btn-orange btn-sm" id="pause-quit-btn" onclick="pauseQuit()">⌂ QUIT TO MENU</button>
+    <button class="btn btn-cyan" onclick="resumeGame()">RESUME</button>
+    <button class="btn btn-gold btn-sm" onclick="pauseRestartRace()">RESTART RACE</button>
+    <button class="btn btn-orange btn-sm" id="pause-quit-btn" onclick="pauseQuit()">QUIT TO MENU</button>
   </div>
   <div style="margin-top:14px;font-size:10px;opacity:.35;letter-spacing:.2em;">ESC OR PAUSE TO RESUME</div>
 </div>
 
 <!-- FTUE HINT (controls reminder shown during countdown for first 3 races) -->
 <div id="ftue-hint" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:106;background:rgba(50,42,90,0.92);border:2px solid rgba(255,255,255,0.35);border-radius:14px;padding:10px 22px;text-align:center;pointer-events:none;white-space:nowrap;max-width:min(96vw,920px);">
-  <div style="font-family:'Nunito',sans-serif;font-size:10px;color:#f5c518;letter-spacing:.06em;margin-bottom:6px;font-weight:900;">🎮 CONTROLS REMINDER</div>
+  <div style="font-family:'Nunito',sans-serif;font-size:10px;color:#f5c518;letter-spacing:.06em;margin-bottom:6px;font-weight:900;"> CONTROLS REMINDER</div>
   <div id="ftue-hint-text" style="font-family:'Nunito',sans-serif;font-size:10px;color:#fff;letter-spacing:.04em;line-height:1.8;font-weight:700;"></div>
 </div>
 
@@ -4185,9 +4194,13 @@ class Kart {
       this._isCompletelyOff = !nearPitLane && Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
 
       if (this._isCompletelyOff) {
-        // Aggressively drag speed down and hard-cap it while off track
-        this.speed *= Math.pow(0.92, dt * 60);
-        if (Math.abs(this.speed) > 100) this.speed = Math.sign(this.speed) * 100;
+        // Gradual bleed toward off-track cap — no instant snap to 80 km/h
+        this.speed *= Math.pow(0.978, dt * 60);
+        const offCap = 100;
+        if (Math.abs(this.speed) > offCap) {
+          const over = Math.abs(this.speed) - offCap;
+          this.speed -= Math.sign(this.speed) * Math.min(over, Math.max(over * 2.6 * dt, 18 * dt));
+        }
 
         if (this._penaltyTimer === 0) {
           // First frame of going completely off — impact sound + sparks
@@ -4208,7 +4221,7 @@ class Kart {
           this._penaltyTimer    = 0;
           this._isCompletelyOff = false;
           this.flashTimer = 2.2;
-          this.rankFlash  = '⚠ TRACK LIMIT — RESET!';
+          this.rankFlash  = 'TRACK LIMIT — RESET!';
         }
       } else {
         this._penaltyTimer    = 0;
@@ -5577,7 +5590,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
       ctx.fillStyle = '#ffffff';
       ctx.font = narrow ? 'bold 11px Nunito,sans-serif' : 'bold 14px Nunito,sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(narrow ? '⚠ TYRE FAILURE' : '⚠ TYRE FAILURE — 100 KM/H LIMIT', w/2, h/2 - 103);
+      ctx.fillText(narrow ? 'TYRE FAILURE' : 'TYRE FAILURE — 100 KM/H LIMIT', w/2, h/2 - 103);
       ctx.textAlign = 'left';
     }
   }
@@ -5593,7 +5606,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 9px Nunito,sans-serif';
-    ctx.fillText(narrow ? '⚠ WRONG TYRES' : '⚠ WRONG TYRES — EXTREMELY SLOW', pad+5, wy+15);
+    ctx.fillText(narrow ? 'WRONG TYRES' : 'WRONG TYRES — EXTREMELY SLOW', pad+5, wy+15);
     warnRow++;
   }
 
@@ -5612,7 +5625,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     ctx.fillStyle = '#00f5ff';
     ctx.font = narrow ? 'bold 10px Nunito,sans-serif' : 'bold 12px Nunito,sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(narrow ? `🔧 ${newTyre.label}` : `🔧 FITTING ${newTyre.label} TYRES...`, w/2, oy+22);
+    ctx.fillText(narrow ? `${newTyre.label}` : `FITTING ${newTyre.label} TYRES...`, w/2, oy+22);
     // Progress bar
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.fillRect(ox+12, oy+34, ow-24, 14);
@@ -5659,7 +5672,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     ctx.fillStyle = '#ff3333';
     ctx.font = narrow ? 'bold 12px Nunito,sans-serif' : 'bold 20px Nunito,sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(narrow ? '⚠ NOT AT PIT ENTRY' : '⚠ NOT AT PIT ENTRY — COMPLETE THE LAP TO REACH PIT LANE', w/2, h/2 - 92);
+    ctx.fillText(narrow ? 'NOT AT PIT ENTRY' : 'NOT AT PIT ENTRY — COMPLETE THE LAP TO REACH PIT LANE', w/2, h/2 - 92);
     ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
@@ -5678,7 +5691,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
       ctx.fillStyle = '#000';
       ctx.font = 'bold 10px Nunito,sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(narrow ? '🔧 PIT ENTRY — DRIVE IN' : '🔧 PIT ENTRY AHEAD — DRIVE IN', w/2, h - 40);
+      ctx.fillText(narrow ? 'PIT ENTRY — DRIVE IN' : 'PIT ENTRY AHEAD — DRIVE IN', w/2, h - 40);
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
     } else if(kart._onPitLane && garageDist < 400) {
@@ -5690,7 +5703,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
       ctx.fillStyle = '#000';
       ctx.font = 'bold 10px Nunito,sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(narrow ? '🔧 DRIVE TO GARAGE' : '🔧 DRIVE TO GARAGE — AUTO STOP', w/2, h - 40);
+      ctx.fillText(narrow ? 'DRIVE TO GARAGE' : 'DRIVE TO GARAGE — AUTO STOP', w/2, h - 40);
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
     }
@@ -5719,8 +5732,8 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const offMsg = remaining > 0
-      ? (narrow ? `⚠ OFF TRACK  ${remaining.toFixed(1)}s` : `⚠  OFF TRACK — RETURN TO TRACK  ${remaining.toFixed(1)}s`)
-      : '⚠  RESETTING…';
+      ? (narrow ? `OFF TRACK  ${remaining.toFixed(1)}s` : `OFF TRACK — RETURN TO TRACK  ${remaining.toFixed(1)}s`)
+      : '  RESETTING…';
     ctx.fillText(offMsg, w / 2, h / 2 - 97);
     // Speed penalty note
     if (remaining > 0) {
@@ -7712,24 +7725,25 @@ class Race {
     if(animId) { cancelAnimationFrame(animId); animId = null; lastTime = null; }
     stopAllEngines();
     stopAllDriftSnds();
-    showTouchOverlay(false);
-    canvas.style.display = 'none';
+  showTouchOverlay(false);
+  updateRaceControlsHud(false);
+  canvas.style.display = 'none';
     applyPageBackground();
     document.getElementById('countdownOverlay').style.display = 'none';
     const order = this.qualiOrder;
     const wrap = document.getElementById('quali-results-wrap');
     document.getElementById('quali-results-sub').textContent = `STARTING GRID — ${this.track.name}`;
     const posColors = ['#ffd700','#c0c0c0','#cd7f32'];
-    const posEmoji  = ['🥇','🥈','🥉'];
+    const posLabels = ['P1','P2','P3'];
     let html = '<div class="results-card">';
     order.forEach((kartIdx, rank) => {
       const k = this.karts[kartIdx];
       const isHuman = kartIdx === 0;
-      const name = isHuman ? '▶ YOU' : `AI ${kartIdx}`;
+      const name = isHuman ? 'YOU' : `AI ${kartIdx}`;
       const col = isHuman ? '#00f5ff' : (rank < 3 ? posColors[rank] : 'rgba(255,255,255,0.6)');
       const savedTime = this.qualiTimes ? this.qualiTimes[kartIdx] : k.bestLap;
       const timeStr = (savedTime !== undefined && savedTime < Infinity) ? fmtTime(savedTime) : 'NO TIME';
-      const prefix = rank < 3 ? posEmoji[rank] : `P${rank+1}`;
+      const prefix = rank < 3 ? posLabels[rank] : `P${rank+1}`;
       html += `<div class="result-row">
         <span class="result-label" style="color:${col}">${prefix} P${rank+1} ${name}</span>
         <span class="result-val" style="color:${col}">${timeStr}</span>
@@ -7744,7 +7758,7 @@ class Race {
     const defaultTyre = this.karts[0] ? this.karts[0].tyreId : 'med';
     window._raceStartTyreId = defaultTyre;
     let tyreHtml = `<div style="margin:18px auto 0;max-width:380px;">
-      <div style="color:#ff9500;font:bold 11px Nunito,sans-serif;text-align:center;margin-bottom:8px;">🔧 CHOOSE RACE START TYRES</div>
+      <div style="color:#ff9500;font:bold 11px Nunito,sans-serif;text-align:center;margin-bottom:8px;"> CHOOSE RACE START TYRES</div>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">`;
     avail.forEach(t => {
       const lapLife = getTyreLapLifespan(this.track.id, t.id);
@@ -8547,7 +8561,7 @@ class Race {
         ctx.beginPath(); ctx.moveTo(bx + 4 + (barW-8)*goodL, by + 2); ctx.lineTo(bx + 4 + (barW-8)*goodL, by + barH - 2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(bx + 4 + (barW-8)*goodR, by + 2); ctx.lineTo(bx + 4 + (barW-8)*goodR, by + barH - 2); ctx.stroke();
         // Status text
-        const statusText = overRev ? '🔴 WHEELSPIN — ease off!' : inGreen ? '🟢 PERFECT — hold it!' : bogZone ? '🟡 TOO LOW — more throttle' : '🔵 GOOD — hold steady';
+        const statusText = overRev ? 'WHEELSPIN — ease off!' : inGreen ? 'PERFECT — hold it!' : bogZone ? 'TOO LOW — more throttle' : 'GOOD — hold steady';
         ctx.fillStyle = inGreen ? '#4ade80' : overRev ? '#ff4444' : '#ffd700';
         ctx.font = `bold 10px Nunito,sans-serif`;
         ctx.textAlign = 'center';
@@ -8650,7 +8664,7 @@ class Race {
       ctx.fillStyle = '#aaddff';
       ctx.font = 'bold 11px Nunito,sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🌧 WET TRACK', wetX + wetW/2, wetY + 16);
+      ctx.fillText('WET TRACK', wetX + wetW/2, wetY + 16);
       ctx.textAlign = 'left';
       ctx.restore();
     }
@@ -8666,6 +8680,7 @@ class Race {
     stopAllEngines();
     stopAllDriftSnds();
     showTouchOverlay(false);
+    updateRaceControlsHud(false);
     CG.gameplayStop(); // notify CrazyGames platform: gameplay ended
 
     canvas.style.display = 'none';
@@ -8680,7 +8695,7 @@ class Race {
       const t = this.track;
 
       // Title
-      document.getElementById('results-title').textContent = k.finished ? '🏁 TIME TRIAL COMPLETE' : '⏱ TIME TRIAL RESULTS';
+      document.getElementById('results-title').textContent = k.finished ? 'TIME TRIAL COMPLETE' : 'TIME TRIAL RESULTS';
 
       let html = `<div class="results-card">
         <div class="result-row"><span class="result-label">TRACK</span><span class="result-val cyan">${t.name}</span></div>
@@ -8704,7 +8719,7 @@ class Race {
       html += '</div>';
 
       if(k.finished && k.bestLap < t.targetLap) {
-        html = `<div class="winner-banner">✨ TARGET BEATEN! ✨</div>` + html;
+        html = `<div class="winner-banner"> TARGET BEATEN!</div>` + html;
         launchConfetti();
         CG.happytime();
       }
@@ -8717,16 +8732,16 @@ class Race {
         const minPossible = t.lapDistance ? t.lapDistance / 640 : 8;
         if (k.bestLap >= minPossible) CG.saveScore(`track_${t.id}_lap`, Math.round(k.bestLap * 1000));
       }
-      document.getElementById('coins-earned-display').innerHTML = earned>0 ? `<div class="coins-earn">💰 +${earned} COINS EARNED!</div>` : '';
+      document.getElementById('coins-earned-display').innerHTML = earned>0 ? `<div class="coins-earn">COINS +${earned} COINS EARNED!</div>` : '';
 
     } else if(this.mode === 'ai') {
       const k = this.karts[0];
       const t = this.track;
       const diff = this.aiDifficulty || 'medium';
-      const diffLabel = {ultraeasy:'🔵 ULTRA EASY', easy:'🟢 EASY', medium:'🟡 MEDIUM', hard:'🔴 HARD', extreme:'💀 EXTREME'}[diff] || diff.toUpperCase();
+      const diffLabel = {ultraeasy:'ULTRA EASY', easy:'EASY', medium:'MEDIUM', hard:'HARD', extreme:'EXTREME'}[diff] || diff.toUpperCase();
       const diffMultMap2 = {ultraeasy:0.75, easy:1.0, medium:1.25, hard:1.5, extreme:2.0};
       const diffCoinMult = diffMultMap2[diff] || 1.0;
-      document.getElementById('results-title').textContent = '🤖 AI RACE RESULTS';
+      document.getElementById('results-title').textContent = 'AI RACE RESULTS';
 
       // Sort karts by finish order
       const progOf = (kart) => {
@@ -8746,7 +8761,7 @@ class Race {
       const humanRank = rankings.findIndex(r=>r.i===0) + 1;
 
       if(humanRank === 1) {
-        resultsWrap.innerHTML = `<div class="winner-banner">🏆 YOU WIN!</div>`;
+        resultsWrap.innerHTML = `<div class="winner-banner"> YOU WIN!</div>`;
         launchConfetti();
         CG.happytime();
       } else {
@@ -8763,7 +8778,7 @@ class Race {
       html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1);font-family:Nunito,sans-serif;font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.1em;">FULL LEADERBOARD</div>';
       rankings.forEach((r, rank)=>{
         const isHuman = r.i === 0;
-        const name = isHuman ? '▶ YOU' : `AI ${r.i}`;
+        const name = isHuman ? 'YOU' : `AI ${r.i}`;
         const col = isHuman ? '#00f5ff' : (rank===0?'#ffd700':'rgba(255,255,255,.6)');
         const timeStr = r.kart.finished ? fmtTime(r.kart.finishTime) : 'DNF';
         html += `<div class="result-row"><span class="result-label" style="color:${col}">P${rank+1} ${name}</span><span class="result-val">${timeStr}</span></div>`;
@@ -8777,7 +8792,7 @@ class Race {
         const minPossible = t.lapDistance ? t.lapDistance / 640 : 8;
         if (k.bestLap >= minPossible) CG.saveScore(`track_${t.id}_lap`, Math.round(k.bestLap * 1000));
       }
-      document.getElementById('coins-earned-display').innerHTML = earnedAI>0 ? `<div class="coins-earn">💰 +${earnedAI} COINS EARNED!</div>` : '';
+      document.getElementById('coins-earned-display').innerHTML = earnedAI>0 ? `<div class="coins-earn">COINS +${earnedAI} COINS EARNED!</div>` : '';
 
     } else if(this.mode === 'shootout') {
       const t = this.track;
@@ -8785,15 +8800,15 @@ class Race {
       const aLap = this.shootoutAiLap;
       const playerWon = pLap < aLap;
       const diff = Math.abs(pLap - aLap);
-      const diffLabel = {ultraeasy:'🔵 ULTRA EASY', easy:'🟢 EASY', medium:'🟡 MEDIUM', hard:'🔴 HARD', extreme:'💀 EXTREME'}[this.shootoutDifficulty] || (this.shootoutDifficulty||'MEDIUM').toUpperCase();
+      const diffLabel = {ultraeasy:'ULTRA EASY', easy:'EASY', medium:'MEDIUM', hard:'HARD', extreme:'EXTREME'}[this.shootoutDifficulty] || (this.shootoutDifficulty||'MEDIUM').toUpperCase();
 
-      document.getElementById('results-title').textContent = '⚡ ONE LAP SHOOTOUT RESULTS';
+      document.getElementById('results-title').textContent = 'ONE LAP SHOOTOUT RESULTS';
       if(playerWon) {
-        resultsWrap.innerHTML = `<div class="winner-banner">🏁 YOU WIN!</div>`;
+        resultsWrap.innerHTML = `<div class="winner-banner"> YOU WIN!</div>`;
         launchConfetti();
         CG.happytime();
       } else {
-        resultsWrap.innerHTML = `<div class="winner-banner" style="color:#ff6b35;border-color:#ff6b35;">🤖 AI WINS</div>`;
+        resultsWrap.innerHTML = `<div class="winner-banner" style="color:#ff6b35;border-color:#ff6b35;"> AI WINS</div>`;
       }
 
       let html = `<div class="results-card">
@@ -8817,13 +8832,13 @@ class Race {
         total:pLap
       };
       const earnedS = awardCoins(window._lastResult);
-      document.getElementById('coins-earned-display').innerHTML = earnedS>0 ? `<div class="coins-earn">💰 +${earnedS} COINS EARNED!</div>` : '';
+      document.getElementById('coins-earned-display').innerHTML = earnedS>0 ? `<div class="coins-earn">COINS +${earnedS} COINS EARNED!</div>` : '';
 
     } else if(this.mode === 'online') {
       const t = this.track;
       const localIdx = onlineCameraIndex();
       const k = this.karts[localIdx] || this.karts[0];
-      document.getElementById('results-title').textContent = '🌐 ONLINE RACE RESULTS';
+      document.getElementById('results-title').textContent = 'ONLINE RACE RESULTS';
       const progOf = (kart) => {
         const cum = t.cum, totalLen = t.totalLen;
         if(!cum || !totalLen) return kart.lap;
@@ -8839,7 +8854,7 @@ class Race {
       });
       const humanRank = rankings.findIndex(r=>r.i===localIdx) + 1;
       if(humanRank === 1) {
-        resultsWrap.innerHTML = `<div class="winner-banner">🏆 YOU WIN!</div>`;
+        resultsWrap.innerHTML = `<div class="winner-banner"> YOU WIN!</div>`;
         launchConfetti();
         CG.happytime();
       } else {
@@ -8853,7 +8868,7 @@ class Race {
       html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1);font-family:Nunito,sans-serif;font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.1em;">FULL LEADERBOARD</div>';
       rankings.forEach((r, rank)=>{
         const isYou = r.i === localIdx;
-        const name = isYou ? '▶ YOU' : (r.kart.onlineName || ('P'+(r.i+1)));
+        const name = isYou ? 'YOU' : (r.kart.onlineName || ('P'+(r.i+1)));
         const col = isYou ? '#00f5ff' : (rank===0?'#ffd700':'rgba(255,255,255,.6)');
         const timeStr = (r.kart.finished && r.kart.finishTime != null) ? fmtTime(r.kart.finishTime) : 'DNF';
         html += `<div class="result-row"><span class="result-label" style="color:${col}">P${rank+1} ${name}</span><span class="result-val">${timeStr}</span></div>`;
@@ -8870,7 +8885,7 @@ class Race {
     } else {
       const [k1, k2] = this.karts;
       const t = this.track;
-      document.getElementById('results-title').textContent = '🏆 VERSUS RESULTS';
+      document.getElementById('results-title').textContent = 'VERSUS RESULTS';
 
       let winner = null;
       if(k1.finished && !k2.finished) winner = 0;
@@ -8884,11 +8899,11 @@ class Race {
       }
 
       if(winner !== null) {
-        resultsWrap.innerHTML = `<div class="winner-banner">🏆 PLAYER ${winner+1} WINS!</div>`;
+        resultsWrap.innerHTML = `<div class="winner-banner"> PLAYER ${winner+1} WINS!</div>`;
         launchConfetti();
         CG.happytime();
       } else {
-        resultsWrap.innerHTML = `<div class="winner-banner" style="color:#00f5ff;border-color:#00f5ff;">🤝 IT'S A TIE!</div>`;
+        resultsWrap.innerHTML = `<div class="winner-banner" style="color:#00f5ff;border-color:#00f5ff;"> IT'S A TIE!</div>`;
         launchConfetti();
       }
 
@@ -8914,7 +8929,7 @@ class Race {
         winner:winner, p1Total:k1.finishTime, p2Total:k2.finishTime
       };
       const earnedV = awardCoins(window._lastResult);
-      document.getElementById('coins-earned-display').innerHTML = earnedV>0 ? `<div class="coins-earn">💰 +${earnedV} COINS EARNED!</div>` : '';
+      document.getElementById('coins-earned-display').innerHTML = earnedV>0 ? `<div class="coins-earn">COINS +${earnedV} COINS EARNED!</div>` : '';
     }
 
     // Show mid-roll ad then reveal the results screen
@@ -8942,13 +8957,13 @@ function showCountdown(n) {
     if (n === 3 && getRaceCount() <= 3) {
       if (touchMode) {
         document.getElementById('ftue-hint-text').innerHTML =
-          `🕹️ JOYSTICK: steer · throttle/brake &nbsp;&nbsp;|&nbsp;&nbsp; ⚡ ERS · 💨 DRS · 🔧 PIT on the right &nbsp;&nbsp;|&nbsp;&nbsp; ❚❚ pause`;
+          `JOYSTICK: steer · throttle/brake &nbsp;&nbsp;|&nbsp;&nbsp; ERS · DRS · PIT on the right &nbsp;&nbsp;|&nbsp;&nbsp; PAUSE (top-right)`;
       } else {
         const ersKey = keyLabel(BINDINGS.p1.ers).toUpperCase();
         const drsKey = keyLabel(BINDINGS.p1.drs).toUpperCase();
         const pitKey = keyLabel(BINDINGS.p1.pit).toUpperCase();
         document.getElementById('ftue-hint-text').innerHTML =
-          `⚡ ERS [${ersKey}]: +25% boost · regen on brake/lift &nbsp;&nbsp;|&nbsp;&nbsp; 💨 DRS [${drsKey}]: +15% in blue zones &nbsp;&nbsp;|&nbsp;&nbsp; 🔧 PIT [${pitKey}]: near garage`;
+          `ERS [${ersKey}]: +25% boost · regen on brake/lift &nbsp;&nbsp;|&nbsp;&nbsp; DRS [${drsKey}]: +15% in blue zones &nbsp;&nbsp;|&nbsp;&nbsp; PIT [${pitKey}]: near garage`;
       }
       ftueEl.style.display = 'block';
     } else if (n < 0) {
@@ -8979,24 +8994,48 @@ function playCountdownBeep(n) {
 
 // ── PAUSE ─────────────────────────────────────────────
 let isPaused = false;
+function updateRaceControlsHud(visible) {
+  const hud = document.getElementById('race-controls-hud');
+  if (!hud) return;
+  if (!visible || !race || isPaused) {
+    hud.style.display = 'none';
+    return;
+  }
+  const pausable = ['racing', 'countdown', 'qualifying', 'quali-turn', 'launch'];
+  if (!pausable.includes(race.phase)) {
+    hud.style.display = 'none';
+    return;
+  }
+  const exitBtn = document.getElementById('race-ctrl-exit');
+  if (exitBtn) {
+    if (race.mode === 'trial') exitBtn.textContent = 'EXIT';
+    else if (race.mode === 'online') exitBtn.textContent = 'LEAVE';
+    else exitBtn.textContent = 'EXIT';
+  }
+  hud.style.display = 'flex';
+}
 function pauseGame() {
   if (!race || isPaused) return;
-  if (race.mode === 'online') return; // host-authoritative — pausing one client would desync
   const pausable = ['racing', 'countdown', 'qualifying', 'quali-turn', 'launch'];
   if (!pausable.includes(race.phase)) return;
   isPaused = true;
   if (animId) { cancelAnimationFrame(animId); animId = null; }
-  setAdMuted(true); // reuse transient mute gate while paused
+  setAdMuted(true);
   const po = document.getElementById('pause-overlay');
   if (po) po.style.display = 'flex';
   const quitBtn = document.getElementById('pause-quit-btn');
   const restartBtn = po && po.querySelector('.btn-gold');
-  if(quitBtn) {
-    quitBtn.textContent = race.mode === 'trial' ? '⏹ END SESSION' : '⌂ QUIT TO MENU';
+  if (quitBtn) {
+    if (race.mode === 'trial') quitBtn.textContent = 'END SESSION';
+    else if (race.mode === 'online') quitBtn.textContent = 'LEAVE RACE';
+    else quitBtn.textContent = 'QUIT TO MENU';
   }
-  if(restartBtn) {
-    restartBtn.textContent = race.mode === 'trial' ? '↺ RESTART SESSION' : '↺ RESTART RACE';
+  if (restartBtn) {
+    if (race.mode === 'trial') restartBtn.textContent = 'RESTART SESSION';
+    else if (race.mode === 'online') restartBtn.textContent = 'BACK TO LOBBY';
+    else restartBtn.textContent = 'RESTART RACE';
   }
+  updateRaceControlsHud(false);
   const pitUi = document.getElementById('pit-ui-overlay');
   if(pitUi) { pitUi.style.display = 'none'; pitUi.dataset.signature = ''; clearPitUiLayoutClasses(pitUi); }
   showTouchOverlay(false);
@@ -9010,6 +9049,7 @@ function resumeGame() {
   setAdMuted(false);
   resumeAudioContextIfNeeded();
   showTouchOverlay(true);
+  updateRaceControlsHud(true);
   lastTime = null;
   animId = requestAnimationFrame(gameLoop);
 }
@@ -9039,6 +9079,7 @@ function teardownRaceUI() {
   canvas.style.display = 'none';
   applyPageBackground();
   showTouchOverlay(false);
+  updateRaceControlsHud(false);
 }
 
 function pauseQuit() {
@@ -9286,7 +9327,7 @@ function drawOnlineNetDebug(sess) {
     ctx.textAlign = 'left';
     ctx.fillText('NET delay ' + d.delay + 'ms  jit ' + d.jitter + 'ms', 14, 26);
     ctx.fillText((d.extrapolating ? 'EXTRAP ' + d.extrapMs + 'ms' : 'interp') + '  snaps ' + d.snaps, 14, 44);
-    ctx.fillText('↓' + d.bytesIn + ' B/s  ↑' + d.bytesOut + ' B/s', 14, 62);
+    ctx.fillText('↓' + d.bytesIn + 'B/s  ↑' + d.bytesOut + 'B/s', 14, 62);
     ctx.fillText('corr ' + d.corrErr + '  disp ' + (d.dispErr != null ? d.dispErr : 0) + '  underrun ' + d.underruns, 14, 80);
     ctx.restore();
   } catch(e) {}
@@ -9421,20 +9462,18 @@ function buildTrackGrid() {
     el.className = `track-card ${t.diffLetter}`;
     el.style.cursor = isLocked ? 'default' : 'pointer';
     const mult = t.coinMult ? `${t.coinMult}x` : '1x';
-    const aiBadge = t.aiFriendly ? `<div style="position:absolute;top:8px;right:8px;font:bold 8px Nunito,sans-serif;letter-spacing:.08em;padding:3px 6px;background:rgba(0,0,0,.72);border:1px solid #4ade80;color:#4ade80;">AI READY</div>` : '';
     el.innerHTML = `
       <img class="track-preview" src="${thumb}" alt="${t.name}">
-      ${aiBadge}
       <div class="track-info">
         <div class="track-name" style="color:${t.borderColor}">${t.name}</div>
-        <div class="track-diff ${t.diffClass}">● ${t.difficulty} &nbsp; 💰${mult} COINS</div>
+        <div class="track-diff ${t.diffClass}">● ${t.difficulty} &nbsp; ${mult} COINS</div>
         <div class="track-target">TARGET: ${fmtTime(t.targetLap)} / LAP</div>
       </div>
       ${isLocked ? `<div class="locked-overlay">
-        <div style="font-size:22px">🔒</div>
-        <div style="font-family:Nunito,sans-serif;font-size:10px;letter-spacing:.1em;color:#ffd700;">REQUIRES 💰${t.unlockCost}</div>
-        <div style="font-size:9px;margin-top:3px;color:${pd.coins>=t.unlockCost?'#4ade80':'#f87171'};">${pd.coins>=t.unlockCost?'✓ YOU CAN UNLOCK THIS!':'NEED 💰'+(t.unlockCost-pd.coins)+' MORE'}</div>
-        <button class="btn btn-sm ${pd.coins>=t.unlockCost?'btn-gold':'btn-pink'}" onclick="event.stopPropagation();unlockTrack(${t.id})" style="font-size:9px;padding:5px 12px;margin-top:5px;">${pd.coins>=t.unlockCost?'✓ UNLOCK NOW':'UNLOCK 🔒'}</button>
+        <div style="font-size:22px;font-family:Nunito,sans-serif;font-weight:900;letter-spacing:.12em;">LOCKED</div>
+        <div style="font-family:Nunito,sans-serif;font-size:10px;letter-spacing:.1em;color:#ffd700;">REQUIRES COINS ${t.unlockCost}</div>
+        <div style="font-size:9px;margin-top:3px;color:${pd.coins>=t.unlockCost?'#4ade80':'#f87171'};">${pd.coins>=t.unlockCost?'YOU CAN UNLOCK THIS!':'NEED '+(t.unlockCost-pd.coins)+' MORE COINS'}</div>
+        <button class="btn btn-sm ${pd.coins>=t.unlockCost?'btn-gold':'btn-pink'}" onclick="event.stopPropagation();unlockTrack(${t.id})" style="font-size:9px;padding:5px 12px;margin-top:5px;">${pd.coins>=t.unlockCost?'UNLOCK NOW':'UNLOCK'}</button>
       </div>` : ''}`;
     if(!isLocked) el.onclick = () => selectTrack(i);
     grid.appendChild(el);
@@ -9457,7 +9496,7 @@ function selectMode(m) {
   const labels = {
     trial:'TIME TRIAL — CHOOSE CIRCUIT',
     versus:'VERSUS RACE — CHOOSE CIRCUIT',
-    ai:'AI RACE — PICK AN AI READY TRACK',
+    ai:'AI RACE — CHOOSE CIRCUIT',
     shootout:'ONE LAP SHOOTOUT — CHOOSE CIRCUIT',
     online:'ONLINE RACE — HOST PICKS CIRCUIT'
   };
@@ -9543,7 +9582,7 @@ function bindOnlineSessionEvents() {
     const hostPlayer = (msg && msg.players || []).find(function(p) { return p.id === (msg && msg.hostId); });
     const hostName = (hostPlayer && hostPlayer.name) || 'P2';
     race._onlineHostBanner = {
-      text: 'HOST LEFT — ' + hostName + ' IS NOW HOST',
+      text: 'HOST LEFT — ' + hostName + 'IS NOW HOST',
       until: performance.now() + 3500
     };
   });
@@ -9728,7 +9767,7 @@ function refreshOnlineLobbyUI() {
       const isRoomHost = p.id === sess.hostId;
       row.innerHTML =
         '<div class="op-name" style="color:' + (p.color || '#00f5ff') + '">' +
-          (isRoomHost ? '👑 ' : '') + (p.name || 'RACER') + (isYou ? ' (YOU)' : '') +
+          (isRoomHost ? ' ' : '') + (p.name || 'RACER') + (isYou ? ' (YOU)' : '') +
         '</div>' +
         '<div class="op-meta">P' + (idx + 1) + ' · ' + (p.ready ? 'READY' : 'WAITING') + '</div>';
       roster.appendChild(row);
@@ -9931,6 +9970,7 @@ function selectTrackStart(idx) {
   void canvas.offsetWidth;
   race = new Race(currentMode, t);
   showTouchOverlay(true);
+  updateRaceControlsHud(true);
   _pPool.forEach(p => { p.active = false; }); // reset particle pool
   if(race.phase === 'countdown') {
     document.getElementById('countdownOverlay').style.display = 'flex';
@@ -10050,6 +10090,7 @@ function startRaceFromQualifying() {
   race.countdownTimer = 0;
   race.phase = 'countdown';
   showTouchOverlay(true);
+  updateRaceControlsHud(true);
   showCountdown(3);
   lastTime = null;
   animId = requestAnimationFrame(gameLoop);
@@ -10204,11 +10245,7 @@ function setupTouchControls() {
     const action = el.getAttribute('data-action');
     if(!player || !action) return;
     const setPressed = (on) => {
-      if(action === 'pause') {
-        if(on) { el.classList.add('pressed'); pauseGame(); }
-        else el.classList.remove('pressed');
-        return;
-      }
+      if(action === 'pause') return;
       const ts = touchState[player];
       if(!ts) return;
       ts[action] = !!on;
@@ -10324,10 +10361,10 @@ function syncPitSelectionOverlay() {
     const currentTyre = TYRE_DEFS.find(t => t.id === kart.tyreId) || TYRE_DEFS[1];
     const isTrialStart = !!(race && race._trialStartTyrePick);
     title.textContent = isTrialStart
-      ? '🔧 TIME TRIAL — CHOOSE START TYRES'
+      ? 'TIME TRIAL — CHOOSE START TYRES'
       : (isVersusSplit
         ? `${playerIndex === 0 ? 'P1' : 'P2'} PIT STOP`
-        : `🔧 ${playerIndex === 0 ? 'P1' : 'P2'} PIT STOP — PICK TYRES`);
+        : ` ${playerIndex === 0 ? 'P1' : 'P2'} PIT STOP — PICK TYRES`);
     sub.textContent = isTrialStart
       ? `Pick a compound, then ${touchMode ? 'tap confirm' : 'press ' + confirmKey} to confirm and drive out of the pits (${navKeys} to cycle).`
       : (isVersusSplit
@@ -10903,7 +10940,7 @@ async function buildLeaderboardScreen() {
     const globalBtn = document.createElement('button');
     globalBtn.className = 'btn btn-sm btn-cyan';
     globalBtn.style.cssText = 'margin:14px auto 16px;display:block;';
-    globalBtn.textContent = '🌍 GLOBAL LEADERBOARD';
+    globalBtn.textContent = 'GLOBAL LEADERBOARD';
     globalBtn.onclick = () => CG.showBoard(`track_${trackId}_lap`);
     content.appendChild(globalBtn);
   }
@@ -11042,16 +11079,16 @@ window.setPlayerLiveryPart = setPlayerLiveryPart;
 
 // Legacy numeric upgrade tree kept for save migration into the part-based development system.
 const UPG_DEFS = [
-  { id:'speed',    name:'MAX SPEED',     icon:'🚀', costs:[40,100,200,380,700,1200,2000,3200,5000,8000], bonuses:[40,95,175,280,420,590,790,1020,1280,1600] },
-  { id:'accel',    name:'ACCELERATION',  icon:'⚡', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[30,65,120,195,285,395,530,690,880,1100] },
-  { id:'traction', name:'TRACTION',      icon:'🛞', costs:[30,75,150,290,540,980,1600,2500,3700,5400],  bonuses:[15,35,60,95,135,185,240,305,380,470]  },
-  { id:'braking',  name:'BRAKING',       icon:'🔴', costs:[30,75,150,290,540,980,1600,2500,3700,5400],  bonuses:[60,130,220,340,480,640,820,1020,1250,1500]},
-  { id:'handling', name:'HANDLING',      icon:'🎯', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[0.12,0.26,0.42,0.60,0.82,1.06,1.32,1.60,1.92,2.30]},
+  { id:'speed',    name:'MAX SPEED',     icon:'', costs:[40,100,200,380,700,1200,2000,3200,5000,8000], bonuses:[40,95,175,280,420,590,790,1020,1280,1600] },
+  { id:'accel',    name:'ACCELERATION',  icon:'', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[30,65,120,195,285,395,530,690,880,1100] },
+  { id:'traction', name:'TRACTION',      icon:'', costs:[30,75,150,290,540,980,1600,2500,3700,5400],  bonuses:[15,35,60,95,135,185,240,305,380,470]  },
+  { id:'braking',  name:'BRAKING',       icon:'', costs:[30,75,150,290,540,980,1600,2500,3700,5400],  bonuses:[60,130,220,340,480,640,820,1020,1250,1500]},
+  { id:'handling', name:'HANDLING',      icon:'', costs:[35,85,170,320,600,1050,1750,2800,4200,6600],  bonuses:[0.12,0.26,0.42,0.60,0.82,1.06,1.32,1.60,1.92,2.30]},
 ];
 
 const DEV_DEFS = [
   {
-    id:'engine', name:'ENGINE', icon:'⚙️', desc:'Power unit research and driveline upgrades.',
+    id:'engine', name:'ENGINE', icon:'', desc:'Power unit research and driveline upgrades.',
     parts:[
       { id:'eng-intake',      code:'E-01', name:'High-Flow Intake',        researchCost:70,  implementCost:90,  desc:'Sharpen throttle pickup out of slow corners.', bonus:{ accel:26 } },
       { id:'eng-ecu',         code:'E-02', name:'Race ECU Mapping',        researchCost:110, implementCost:140, desc:'Unlocks cleaner fuel and ignition delivery.', bonus:{ speed:30, accel:18 } },
@@ -11060,7 +11097,7 @@ const DEV_DEFS = [
     ]
   },
   {
-    id:'aero', name:'AERO', icon:'💨', desc:'Downforce and drag management for corner entry and exit.',
+    id:'aero', name:'AERO', icon:'', desc:'Downforce and drag management for corner entry and exit.',
     parts:[
       { id:'aero-front',    code:'A-01', name:'Front Canards',       researchCost:80,  implementCost:100, desc:'Adds front bite in medium-speed sections.', bonus:{ handling:0.14 } },
       { id:'aero-floor',    code:'A-02', name:'Floor Tunnels',       researchCost:120, implementCost:150, desc:'Builds efficient downforce under the kart.', bonus:{ handling:0.22, traction:18 } },
@@ -11069,7 +11106,7 @@ const DEV_DEFS = [
     ]
   },
   {
-    id:'chassis', name:'CHASSIS', icon:'🛞', desc:'Structure, suspension and braking confidence under load.',
+    id:'chassis', name:'CHASSIS', icon:'', desc:'Structure, suspension and braking confidence under load.',
     parts:[
       { id:'chassis-susp',   code:'C-01', name:'Suspension Geometry Kit', researchCost:75,  implementCost:95,  desc:'Keeps the kart settled over weight transfer.', bonus:{ handling:0.16, traction:18 } },
       { id:'chassis-brakes', code:'C-02', name:'Brake Cooling Ducts',     researchCost:105, implementCost:130, desc:'Lets you brake later without fade.', bonus:{ braking:120 } },
@@ -11150,21 +11187,21 @@ function formatDevelopmentBonus(bonus) {
 
 function getDevelopmentStageMeta(stage, part) {
   if(stage >= 2) {
-    return { status:'IMPLEMENTED', color:'#4ade80', actionLabel:'✓ FITTED', actionCost:0, canAdvance:false };
+    return { status:'IMPLEMENTED', color:'#4ade80', actionLabel:'FITTED', actionCost:0, canAdvance:false };
   }
   if(stage === 1) {
-    return { status:'RESEARCH COMPLETE', color:'#ffd700', actionLabel:`IMPLEMENT 💰${part.implementCost}`, actionCost:part.implementCost, canAdvance:true };
+    return { status:'RESEARCH COMPLETE', color:'#ffd700', actionLabel:`IMPLEMENT · ${part.implementCost} COINS`, actionCost:part.implementCost, canAdvance:true };
   }
-  return { status:'NOT STARTED', color:'#f472b6', actionLabel:`RESEARCH 💰${part.researchCost}`, actionCost:part.researchCost, canAdvance:true };
+  return { status:'NOT STARTED', color:'#f472b6', actionLabel:`RESEARCH · ${part.researchCost} COINS`, actionCost:part.researchCost, canAdvance:true };
 }
 
 const SETUP_DEFS = [
-  { id:'downforce', name:'DOWNFORCE', icon:'⬇️', desc:'High grip & tighter turns<br>Lower top speed',  speedMult:0.87, turnMult:1.22, tractBonus:22 },
-  { id:'balanced',  name:'BALANCED',  icon:'⚖️', desc:'Default configuration<br>All stats normal',    speedMult:1.00, turnMult:1.00, tractBonus:0  },
-  { id:'speed',     name:'SPEED RUN', icon:'💨', desc:'Maximum top speed<br>Less cornering grip',    speedMult:1.14, turnMult:0.82, tractBonus:-12},
-  { id:'wet',       name:'WET SETUP', icon:'🌧', desc:'Optimised for rain<br>Better wet traction',   speedMult:0.93, turnMult:1.10, tractBonus:30 },
+  { id:'downforce', name:'DOWNFORCE', icon:'', desc:'High grip & tighter turns<br>Lower top speed',  speedMult:0.87, turnMult:1.22, tractBonus:22 },
+  { id:'balanced',  name:'BALANCED',  icon:'', desc:'Default configuration<br>All stats normal',    speedMult:1.00, turnMult:1.00, tractBonus:0  },
+  { id:'speed',     name:'SPEED RUN', icon:'', desc:'Maximum top speed<br>Less cornering grip',    speedMult:1.14, turnMult:0.82, tractBonus:-12},
+  { id:'wet',       name:'WET SETUP', icon:'', desc:'Optimised for rain<br>Better wet traction',   speedMult:0.93, turnMult:1.10, tractBonus:30 },
   // Custom placeholder: actual values are stored per-player in player data under <player>customSetup
-  { id:'custom',    name:'CUSTOM',     icon:'🛠', desc:'Create your own setup: tweak speed, downforce and traction', speedMult:1.00, turnMult:1.00, tractBonus:0 },
+  { id:'custom',    name:'CUSTOM',     icon:'', desc:'Create your own setup: tweak speed, downforce and traction', speedMult:1.00, turnMult:1.00, tractBonus:0 },
 ];
 
 // Triple-slider setup (Downforce / Grip / Brake Bias) maps onto the legacy customSetup fields.
@@ -11226,10 +11263,10 @@ function resolvePlayerSetup(pd, player) {
 }
 
 const PIT_STRATEGY_DEFS = [
-  { id:'undercut', label:'UNDERCUT', icon:'⚡', desc:'Pit early for clean air and a softer second stint.', wearOpen:0.42, wearNow:0.58, tyrePref:'soft' },
-  { id:'balanced', label:'BALANCED', icon:'⚖️', desc:'Normal one-stop window with a medium tyre target.', wearOpen:0.55, wearNow:0.70, tyrePref:'med' },
-  { id:'overcut',  label:'OVERCUT',  icon:'🛡️', desc:'Stay out longer and lean on track position.', wearOpen:0.66, wearNow:0.82, tyrePref:'hard' },
-  { id:'safe',     label:'SAFE',     icon:'🔧', desc:'Only pit when wear gets high or the tyres are failing.', wearOpen:0.78, wearNow:0.92, tyrePref:'hard' },
+  { id:'undercut', label:'UNDERCUT', icon:'', desc:'Pit early for clean air and a softer second stint.', wearOpen:0.42, wearNow:0.58, tyrePref:'soft' },
+  { id:'balanced', label:'BALANCED', icon:'', desc:'Normal one-stop window with a medium tyre target.', wearOpen:0.55, wearNow:0.70, tyrePref:'med' },
+  { id:'overcut',  label:'OVERCUT',  icon:'', desc:'Stay out longer and lean on track position.', wearOpen:0.66, wearNow:0.82, tyrePref:'hard' },
+  { id:'safe',     label:'SAFE',     icon:'', desc:'Only pit when wear gets high or the tyres are failing.', wearOpen:0.78, wearNow:0.92, tyrePref:'hard' },
 ];
 
 function createDefaultPitStrategyCustom() {
@@ -11280,7 +11317,7 @@ function getPlayerPitStrategyPlan(playerData, weather) {
   return {
     id:'custom',
     label:`CUSTOM · ${tyre.label}`,
-    icon:'🛠',
+    icon:'',
     desc:`Pit window opens at ${openPct}% wear, box this lap at ${nowPct}% wear, fit ${tyre.label}.`,
     wearOpen: custom.wearOpen,
     wearNow: custom.wearNow,
@@ -11349,9 +11386,9 @@ function getAiPitStrategyId(aiIndex, difficulty, totalLaps) {
 }
 
 const WEATHER_DEFS = [
-  { id:'dry',   label:'DRY ☀️',   icon:'☀️', gripMult:1.0,  speedPen:0.00, ambientTemp:32 },
-  { id:'wet',   label:'WET 🌧',   icon:'🌧', gripMult:0.78, speedPen:0.08, ambientTemp:18 },
-  { id:'heavy', label:'STORM ⛈', icon:'⛈', gripMult:0.66, speedPen:0.14, ambientTemp:12 },
+  { id:'dry',   label:'DRY ',   icon:'', gripMult:1.0,  speedPen:0.00, ambientTemp:32 },
+  { id:'wet',   label:'WET ',   icon:'', gripMult:0.78, speedPen:0.08, ambientTemp:18 },
+  { id:'heavy', label:'STORM', icon:'', gripMult:0.66, speedPen:0.14, ambientTemp:12 },
 ];
 
 function normalizeWeatherId(weather) {
@@ -11513,7 +11550,7 @@ let BINDINGS = {p1:{...DEFAULT_BINDINGS.p1}, p2:{...DEFAULT_BINDINGS.p2}};
 })();
 function saveBindings(){ try{ localStorage.setItem('kartblitz_bindings',JSON.stringify(BINDINGS)); }catch(e){} }
 function keyLabel(k){
-  const M={'ArrowUp':'↑','ArrowDown':'↓','ArrowLeft':'←','ArrowRight':'→',' ':'SPC','Escape':'ESC','Enter':'↵','Backspace':'⌫','Shift':'⇧','Control':'Ctrl','Alt':'Alt','Tab':'Tab','CapsLock':'CAPS',' ':' '};
+  const M={'ArrowUp':'↑','ArrowDown':'↓','ArrowLeft':'←','ArrowRight':'→',' ':'SPC','Escape':'ESC','Enter':'↵','Backspace':'','Shift':'⇧','Control':'Ctrl','Alt':'Alt','Tab':'Tab','CapsLock':'CAPS',' ':' '};
   return M[k]||(k&&k.length===1?k.toUpperCase():k)||'?';
 }
 function keyActive(k){
@@ -11591,7 +11628,7 @@ function buildSettingsPane(){
   const modeLabel = touchMode ? 'TOUCH' : 'KEYBOARD';
   pane.innerHTML = `
     <div class="howto-section" style="width:min(560px,94vw);">
-      <div class="howto-heading">🎮 CONTROL MODE</div>
+      <div class="howto-heading"> CONTROL MODE</div>
       <p>Keyboard uses remappable bindings. Touch enables on-screen joysticks (face-to-face layout in 2-player).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;">
         <button class="key-btn${!touchMode?' key-btn-active':''}" onclick="setDeviceMode(false);playUIClick();buildSettingsPane();">KEYBOARD</button>
@@ -11600,7 +11637,7 @@ function buildSettingsPane(){
       <p style="text-align:center;margin-top:10px;font-size:12px;opacity:.55;">Current: <strong style="color:var(--cyan)">${modeLabel}</strong></p>
     </div>
     <div class="howto-section" style="width:min(560px,94vw);">
-      <div class="howto-heading">🔊 AUDIO</div>
+      <div class="howto-heading"> AUDIO</div>
       <p>Mute stops all engine and UI sounds. CrazyGames platform mute always overrides the in-game toggle.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;">
         <button class="btn btn-sm ${muted ? 'btn-orange' : 'btn-cyan'}"
@@ -11612,7 +11649,7 @@ function buildSettingsPane(){
       ${platformLocked ? '<p class="howto-tip">Platform muteAudio is active — sound stays off until CrazyGames unmutes.</p>' : ''}
     </div>
     <div class="howto-section" style="width:min(560px,94vw);">
-      <div class="howto-heading">🖥 GRAPHICS QUALITY</div>
+      <div class="howto-heading"> GRAPHICS QUALITY</div>
       <p>Lower quality improves performance on Chromebooks and smaller iframes. You can also cycle with F8 in-race.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;">
         ${['low','medium','high'].map(level => `
@@ -11622,7 +11659,7 @@ function buildSettingsPane(){
       <p style="text-align:center;margin-top:10px;font-size:12px;opacity:.55;">Current: <strong style="color:var(--cyan)">${q.toUpperCase()}</strong></p>
     </div>
     <div class="howto-section" style="width:min(560px,94vw);border-bottom:none;">
-      <div class="howto-heading">🎮 QUICK TIPS</div>
+      <div class="howto-heading"> QUICK TIPS</div>
       <div class="info-kv"><span class="info-k">TIME TRIAL</span><span class="info-v">From the title screen, jump straight to circuit select for a solo session.</span></div>
       <div class="info-kv"><span class="info-k">PAUSE</span><span class="info-v">Press Esc, or the pause button in touch mode.</span></div>
       <div class="info-kv"><span class="info-k">TOUCH</span><span class="info-v">Joystick steers and throttles; switch mode anytime in Settings.</span></div>
@@ -11650,13 +11687,13 @@ function setMode(player, key, val){
 function buildBindingsPane(){
   _rebindState = null;
   const ACTIONS = [
-    {id:'up',    label:'Accelerate',      icon:'⬆️'},
-    {id:'down',  label:'Brake / Reverse', icon:'⬇️'},
-    {id:'left',  label:'Steer Left',      icon:'⬅️'},
-    {id:'right', label:'Steer Right',     icon:'➡️'},
-    {id:'pit',   label:'Pit Stop',        icon:'🔧'},
-    {id:'ers',   label:'ERS Boost',       icon:'⚡'},
-    {id:'drs',   label:'DRS Open',        icon:'💨'},
+    {id:'up',    label:'Accelerate',      icon:''},
+    {id:'down',  label:'Brake / Reverse', icon:''},
+    {id:'left',  label:'Steer Left',      icon:''},
+    {id:'right', label:'Steer Right',     icon:''},
+    {id:'pit',   label:'Pit Stop',        icon:''},
+    {id:'ers',   label:'ERS Boost',       icon:''},
+    {id:'drs',   label:'DRS Open',        icon:''},
   ];
   const playerColor = ['#00f5ff','#ff6b35'];
   const pane = document.getElementById('ctrl-pane-bindings');
@@ -11675,14 +11712,14 @@ function buildBindingsPane(){
           `).join('')}
           <div class="ctrl-mode-section">
             <div class="ctrl-mode-row">
-              <span class="ctrl-mode-label">⚡ ERS MODE</span>
+              <span class="ctrl-mode-label"> ERS MODE</span>
               <div class="ctrl-mode-btns">
                 <button class="key-btn${(BINDINGS[p].ersMode||'toggle')==='toggle'?' key-btn-active':''}" onclick="setMode('${p}','ersMode','toggle')">TOGGLE</button>
                 <button class="key-btn${(BINDINGS[p].ersMode||'toggle')==='hold'?' key-btn-active':''}" onclick="setMode('${p}','ersMode','hold')">HOLD</button>
               </div>
             </div>
             <div class="ctrl-mode-row">
-              <span class="ctrl-mode-label">💨 DRS MODE</span>
+              <span class="ctrl-mode-label"> DRS MODE</span>
               <div class="ctrl-mode-btns">
                 <button class="key-btn${(BINDINGS[p].drsMode||'toggle')==='toggle'?' key-btn-active':''}" onclick="setMode('${p}','drsMode','toggle')">TOGGLE</button>
                 <button class="key-btn${(BINDINGS[p].drsMode||'toggle')==='hold'?' key-btn-active':''}" onclick="setMode('${p}','drsMode','hold')">HOLD</button>
@@ -11696,9 +11733,9 @@ function buildBindingsPane(){
       <button class="btn btn-sm ${isEffectivelyMuted() ? 'btn-orange' : 'btn-cyan'}"
         onclick="initAudio();toggleUserMute();playUIClick();buildBindingsPane();"
         ${isPlatformMuted() ? 'disabled style="opacity:.45;cursor:not-allowed;"' : ''}>
-        ${isPlatformMuted() ? 'MUTED BY PLATFORM' : (isUserMuted() ? '🔊 UNMUTE' : '🔇 MUTE')}
+        ${isPlatformMuted() ? 'MUTED BY PLATFORM' : (isUserMuted() ? 'UNMUTE' : 'MUTE')}
       </button>
-      <button class="btn btn-orange btn-sm" onclick="resetBindings()">↺ RESET TO DEFAULTS</button>
+      <button class="btn btn-orange btn-sm" onclick="resetBindings()">RESET TO DEFAULTS</button>
     </div>
     <div id="rebind-hint" style="font-size:11px;opacity:.4;letter-spacing:.14em;margin-top:10px;min-height:18px;text-align:center;"></div>
     <div style="font-size:10px;opacity:.28;letter-spacing:.1em;margin-top:4px;text-align:center;">CLICK A KEY TO REBIND IT</div>
@@ -11709,7 +11746,7 @@ function buildHowToPane(){
   pane.dataset.built = '1';
   pane.innerHTML = `
     <div class="howto-section">
-      <div class="howto-heading">🚗 CAR CONTROLS</div>
+      <div class="howto-heading"> CAR CONTROLS</div>
       <div class="info-kv"><span class="info-k">ACCELERATE</span><span class="info-v">Hold to build speed. The car accelerates based on your engine upgrade level.</span></div>
       <div class="info-kv"><span class="info-k">BRAKE</span><span class="info-v">Hold to slow down. Hold when already stopped to reverse slowly.</span></div>
       <div class="info-kv"><span class="info-k">STEER</span><span class="info-v">Turn left or right. Steering becomes less responsive at very high speeds — this is intentional.</span></div>
@@ -11718,7 +11755,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">⏱️ TIME TRIAL</div>
+      <div class="howto-heading"> TIME TRIAL</div>
       <p>Open solo session against the clock in dry conditions. Keep pushing laps until you end the session.</p>
       <div class="info-kv"><span class="info-k">SETUP</span><span class="info-v">Only car setup before you start — no lap count, weather, or pit strategy.</span></div>
       <div class="info-kv"><span class="info-k">START</span><span class="info-v">You load in the pit garage, pick tyres, then drive out onto the circuit.</span></div>
@@ -11730,7 +11767,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">🏆 VERSUS RACE</div>
+      <div class="howto-heading"> VERSUS RACE</div>
       <p>Two players race head-to-head on a split screen. Both share the same team build and R&amp;D; each can still use their own paint.</p>
       <div class="info-kv"><span class="info-k">WINNER</span><span class="info-v">First player to complete all laps.</span></div>
       <div class="info-kv"><span class="info-k">SLIPSTREAM</span><span class="info-v">Follow within ~600 units behind the other kart to gain +10% top speed automatically.</span></div>
@@ -11739,7 +11776,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">🏁 CHECKPOINTS &amp; LAPS</div>
+      <div class="howto-heading"> CHECKPOINTS &amp; LAPS</div>
       <p>Each circuit has numbered gate lines between the start/finish line. You must cross them in order.</p>
       <div class="info-kv"><span class="info-k">YELLOW GATE</span><span class="info-v">Checkpoint not yet reached this lap.</span></div>
       <div class="info-kv"><span class="info-k">GREEN GATE</span><span class="info-v">Checkpoint passed in the correct order.</span></div>
@@ -11749,7 +11786,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">🔴🟡⚪ TYRE COMPOUNDS</div>
+      <div class="howto-heading"> TYRE COMPOUNDS</div>
       <p>Pick your compound in Race Setup. Grip, speed, and lifespan vary by compound.</p>
       <div class="info-kv"><span class="info-k">SOFT</span><span class="info-v">Fastest but wears quickly — ~14 laps. Best for short stints.</span></div>
       <div class="info-kv"><span class="info-k">MEDIUM</span><span class="info-v">Balanced all-rounder — ~28 laps. Good default for most races.</span></div>
@@ -11762,7 +11799,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">🔧 PIT STOPS</div>
+      <div class="howto-heading"> PIT STOPS</div>
       <p>Stop at the garage to swap tyres mid-race. Drive the pit lane — cars never teleport into the box.</p>
       <div class="info-kv"><span class="info-k">1. SIGNAL</span><span class="info-v">Press PIT near the pit entry (or just drive in). The car commits to the pit lane route.</span></div>
       <div class="info-kv"><span class="info-k">2. PIT LANE</span><span class="info-v">Follow the pit lane to the orange garage box. Speed is limited in the lane.</span></div>
@@ -11772,7 +11809,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">⚡ ERS — ENERGY RECOVERY SYSTEM</div>
+      <div class="howto-heading"> ERS — ENERGY RECOVERY SYSTEM</div>
       <p>A deployable battery that boosts your top speed by up to +25% while active. Drains over ~5 seconds. Charge recovers from lifting, coasting, braking, and long straights — not a free passive refill.</p>
       <div class="info-kv"><span class="info-k">TOGGLE MODE</span><span class="info-v">Press once to activate, press again to deactivate. ERS turns off automatically when the charge hits zero.</span></div>
       <div class="info-kv"><span class="info-k">HOLD MODE</span><span class="info-v">Active while you hold the key down. Releases when you let go.</span></div>
@@ -11784,7 +11821,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">💨 DRS — DRAG REDUCTION SYSTEM</div>
+      <div class="howto-heading"> DRS — DRAG REDUCTION SYSTEM</div>
       <p>Opens the rear wing to reduce drag, giving +15% top speed on designated blue-gate straights.</p>
       <div class="info-kv"><span class="info-k">TOGGLE MODE</span><span class="info-v">Press once inside a zone to open DRS, press again to close it. Closes automatically when you leave the zone.</span></div>
       <div class="info-kv"><span class="info-k">HOLD MODE</span><span class="info-v">Active while you hold the key inside the zone. Closes on release or when you exit the zone.</span></div>
@@ -11796,7 +11833,7 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section">
-      <div class="howto-heading">🔧 GARAGE — DEVELOPMENT &amp; PAINT</div>
+      <div class="howto-heading"> GARAGE — DEVELOPMENT &amp; PAINT</div>
       <p>Open the Garage to run a proper development programme. Each part now has a research cost and an implementation cost before the upgrade becomes live on the kart.</p>
       <div class="info-kv"><span class="info-k">ENGINE</span><span class="info-v">Power unit work like intake, ECU, internals, and final-drive upgrades improves top speed and acceleration.</span></div>
       <div class="info-kv"><span class="info-k">AERO</span><span class="info-v">Canards, floor work, diffusers, and wing packages improve downforce grip, balance, and loaded speed.</span></div>
@@ -11809,12 +11846,12 @@ function buildHowToPane(){
     </div>
 
     <div class="howto-section" style="border-bottom:none">
-      <div class="howto-heading">💰 COINS &amp; TRACK UNLOCKS</div>
+      <div class="howto-heading">COINS COINS &amp; TRACK UNLOCKS</div>
       <p>Earn coins from every race. Spend them in the Garage on upgrades or unlock premium circuits.</p>
       <div class="info-kv"><span class="info-k">EARNINGS</span><span class="info-v">3 coins per lap + 10 for finishing + 8 bonus for beating the target time. Multiplied by the track's coin rate.</span></div>
-      <div class="info-kv"><span class="info-k">CIRCUITS</span><span class="info-v">${TRACKS.length} tracks: an AI-ready pack (Sunset, Meadow, Blue Bay, Hurricane, Riviera) plus author challenge circuits (Titan, Amber, Neon).</span></div>
-      <div class="info-kv"><span class="info-k">COST RANGE</span><span class="info-v">AI-ready tracks are free. Amber Highway unlocks for 200 💰 and Neon City GP for 450 💰.</span></div>
-      <p class="howto-tip">For AI races, pick tracks marked AI READY — they are wide and flowing so the field races cleanly. Save Titan / Amber / Neon for when you want a tougher layout.</p>
+      <div class="info-kv"><span class="info-k">CIRCUITS</span><span class="info-v">${TRACKS.length} tracks: a starter pack (Sunset, Meadow, Blue Bay, Hurricane, Riviera) plus challenge circuits (Titan, Amber, Neon).</span></div>
+      <div class="info-kv"><span class="info-k">COST RANGE</span><span class="info-v">Starter tracks are free. Amber Highway unlocks for 200 COINS and Neon City GP for 450 COINS .</span></div>
+      <p class="howto-tip">For AI races, pick the wider starter circuits (Sunset, Meadow, Blue Bay, Hurricane, Riviera) so the field races cleanly. Save Titan, Amber, and Neon for when you want a tougher layout.</p>
     </div>
   `;
 }
@@ -11887,18 +11924,18 @@ function updateCurrencyDisplays(pd) {
   const coins = pd.coins || 0;
   const gems = pd.gems || 0;
   const mc = document.getElementById('menu-coins-chip');
-  if (mc) mc.textContent = `💰 ${coins}`;
+  if (mc) mc.textContent = `COINS ${coins}`;
   const mg = document.getElementById('menu-gems-chip');
-  if (mg) mg.textContent = `💎 ${gems}`;
+  if (mg) mg.textContent = `GEMS ${gems}`;
   // Legacy single-node fallback if chips were flattened
   const menuWrap = document.getElementById('menu-coins');
-  if (menuWrap && !mc && !mg) menuWrap.textContent = `💰 ${coins}  ·  💎 ${gems}`;
+  if (menuWrap && !mc && !mg) menuWrap.textContent = `COINS ${coins}  ·  GEMS ${gems}`;
   const gc = document.getElementById('garage-coins-chip');
-  if (gc) gc.textContent = `💰 ${coins}`;
+  if (gc) gc.textContent = `COINS ${coins}`;
   const gg = document.getElementById('garage-gems-chip');
-  if (gg) gg.textContent = `💎 ${gems}`;
+  if (gg) gg.textContent = `GEMS ${gems}`;
   const garageWrap = document.getElementById('garage-coins');
-  if (garageWrap && !gc && !gg) garageWrap.textContent = `💰 ${coins}  ·  💎 ${gems}`;
+  if (garageWrap && !gc && !gg) garageWrap.textContent = `COINS ${coins}  ·  GEMS ${gems}`;
 }
 function savePlayerData(d) {
   if(d) {
@@ -11988,12 +12025,12 @@ function refreshGarageAdButton() {
   if (remain > 0) {
     const secs = Math.ceil(remain / 1000);
     btn.disabled = true;
-    btn.textContent = `▶ VIDEO COOLDOWN ${secs}s`;
+    btn.textContent = `VIDEO COOLDOWN ${secs}s`;
     if (hint) hint.textContent = 'Optional reward · earn coins by racing too';
     setTimeout(refreshGarageAdButton, 1000);
   } else {
     btn.disabled = false;
-    btn.textContent = '▶ VIDEO · +50 COINS';
+    btn.textContent = 'VIDEO · +50 COINS';
     if (hint) hint.textContent = 'Optional reward · earn coins by racing too';
   }
 }
@@ -12004,7 +12041,7 @@ function watchAdForCoins() {
     refreshGarageAdButton();
     return;
   }
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ LOADING VIDEO…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'LOADING VIDEO…'; }
   CG.requestRewarded((rewarded) => {
     if (rewarded) {
       const pd = getPlayerData();
@@ -12156,8 +12193,8 @@ function buildGarageContent() {
           <div class="upgrade-bar${stage >= 1 ? ' filled' : ''}"></div>
           <div class="upgrade-bar${stage >= 2 ? ' filled' : ''}"></div>
         </div>
-        <div style="font-size:10px;opacity:.45;margin-top:5px;">R&amp;D 💰${part.researchCost} · FIT 💰${part.implementCost} · TOTAL 💰${totalSpend}</div>
-        ${meta.canAdvance ? `<div style="margin-top:12px;"><button class="btn btn-sm ${afford ? 'btn-gold' : 'btn-pink'}" ${afford ? '' : 'disabled style="opacity:.4"'} onclick="advanceDevelopment('${part.id}')" style="font-size:10px;padding:6px 12px;">${afford ? meta.actionLabel : `NEED 💰${meta.actionCost}`}</button></div>` : `<div style="margin-top:12px;font-family:'Nunito',sans-serif;font-size:10px;color:#4ade80;letter-spacing:.1em;">PACKAGE LIVE</div>`}
+        <div style="font-size:10px;opacity:.45;margin-top:5px;">R&amp;D ${part.researchCost} COINS · FIT ${part.implementCost} COINS · TOTAL ${totalSpend} COINS</div>
+        ${meta.canAdvance ? `<div style="margin-top:12px;"><button class="btn btn-sm ${afford ? 'btn-gold' : 'btn-pink'}" ${afford ? '' : 'disabled style="opacity:.4"'} onclick="advanceDevelopment('${part.id}')" style="font-size:10px;padding:6px 12px;">${afford ? meta.actionLabel : `NEED ${meta.actionCost} COINS`}</button></div>` : `<div style="margin-top:12px;font-family:'Nunito',sans-serif;font-size:10px;color:#4ade80;letter-spacing:.1em;">PACKAGE LIVE</div>`}
       `;
       grid.appendChild(div);
     });
@@ -12258,9 +12295,9 @@ function showSetupScreen(trackIdx) {
   const isTrial = currentMode === 'trial';
   document.getElementById('setup-track-name').textContent = t.name + (isTrial ? ' — TIME TRIAL' : (' — ' + t.difficulty));
   const setupTitle = document.querySelector('#screen-setup .section-title');
-  if(setupTitle) setupTitle.textContent = isTrial ? '⚙ SESSION SETUP' : '⚙ RACE SETUP';
+  if(setupTitle) setupTitle.textContent = isTrial ? 'SESSION SETUP' : 'RACE SETUP';
   const startBtn = document.getElementById('setup-start-btn');
-  if(startBtn) startBtn.textContent = isTrial ? '▶ START SESSION' : '▶ RACE!';
+  if(startBtn) startBtn.textContent = isTrial ? 'START SESSION' : 'RACE!';
 
   // Car setup — three primary visual sliders (maps to legacy customSetup fields)
   const grid = document.getElementById('setup-grid');
@@ -12280,7 +12317,7 @@ function showSetupScreen(trackIdx) {
   grid.innerHTML = `
     <div class="setup-slider-card" data-axis="downforce">
       <div class="setup-slider-head">
-        <span class="setup-slider-icon">⬇️</span>
+        <span class="setup-slider-icon">⬇</span>
         <div>
           <div class="setup-slider-name">DOWNFORCE</div>
           <div class="setup-slider-sub">Cornering load vs top speed</div>
@@ -12293,7 +12330,7 @@ function showSetupScreen(trackIdx) {
     </div>
     <div class="setup-slider-card" data-axis="grip">
       <div class="setup-slider-head">
-        <span class="setup-slider-icon">🛞</span>
+        <span class="setup-slider-icon"></span>
         <div>
           <div class="setup-slider-name">GRIP</div>
           <div class="setup-slider-sub">Mechanical traction &amp; kerb confidence</div>
@@ -12306,7 +12343,7 @@ function showSetupScreen(trackIdx) {
     </div>
     <div class="setup-slider-card" data-axis="brake">
       <div class="setup-slider-head">
-        <span class="setup-slider-icon">🔴</span>
+        <span class="setup-slider-icon"></span>
         <div>
           <div class="setup-slider-name">BRAKE BIAS</div>
           <div class="setup-slider-sub">Front bite vs rear stability</div>
@@ -12366,7 +12403,7 @@ function showSetupScreen(trackIdx) {
   [1,2,3,5,8,10].forEach(n => {
     const b = document.createElement('button');
     b.className = 'lap-opt'+(pd.selectedLaps===n?' sel':'');
-    b.textContent = n + (n===1?' LAP':' LAPS');
+    b.textContent = n + (n===1?'LAP':'LAPS');
     b.onclick = () => {
       const p = getPlayerData(); p.selectedLaps = n; savePlayerData(p);
       lapRow.querySelectorAll('.lap-opt').forEach(x=>x.classList.remove('sel'));
@@ -12453,7 +12490,7 @@ function buildTyreRow() {
     div.className = 'tyre-card'+(pd.tyres===tr.id?' sel':'');
     div.style.opacity = dim ? '0.3' : (wrongWeather ? '0.65' : '1');
     div.style.cursor = dim ? 'not-allowed' : 'pointer';
-    const warnBadge = wrongWeather && !blocked ? `<div style="font-size:9px;color:#f87171;margin-top:2px;">⚠ VERY SLOW</div>` : '';
+    const warnBadge = wrongWeather && !blocked ? `<div style="font-size:9px;color:#f87171;margin-top:2px;"> VERY SLOW</div>` : '';
     const lapLife = currentTrack ? getTyreLapLifespan(currentTrack.id, tr.id) : '?';
     const descText = currentTrack ? `~${lapLife} lap${lapLife===1?'':'s'} on this track` : tr.desc;
     div.innerHTML = `<div style="width:12px;height:12px;border-radius:50%;background:${tr.color};display:inline-block;margin-right:4px;"></div><b style="font-family:Nunito,sans-serif;font-size:11px;">${tr.label}</b><div style="font-size:10px;opacity:.65;margin-top:3px;">${descText}</div>${warnBadge}`;
@@ -12614,7 +12651,7 @@ function unlockTrack(trackId) {
 // ── INIT ────────────────────────────────────────────────
 (function syncPortalTrackCount() {
   const el = document.getElementById('portal-track-count');
-  if(el) el.textContent = TRACKS.length + ' TRACKS';
+  if(el) el.textContent = TRACKS.length + 'TRACKS';
 })();
 function openTrackEditorFromMenu() {
   try { if (typeof initAudio === 'function') initAudio(); } catch (e) {}
@@ -12695,7 +12732,7 @@ function openTrackEditorPassFallback() {
     if (e.key === 'Escape') hidePass();
   });
 })();
-console.log('%cKART BLITZ ⚡ LOADED', 'color:#00f5ff;font-family:Orbitron;font-size:20px;font-weight:bold;');
+console.log('%cKART BLITZ  LOADED', 'color:#00f5ff;font-family:Orbitron;font-size:20px;font-weight:bold;');
 console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
 console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [AI]' : '')).join(' | '));
 </script>
@@ -12722,7 +12759,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     {
       id: 'engine',
       name: 'ENGINE',
-      icon: '⚙️',
+      icon: '',
       accent: '#00f5ff',
       summary: 'Power delivery, combustion efficiency, and straight-line pace.',
       tree: [
@@ -12735,7 +12772,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     {
       id: 'chassis',
       name: 'CHASSIS',
-      icon: '🛞',
+      icon: '',
       accent: '#ffd700',
       summary: 'Mechanical grip, braking stability, and direction change.',
       tree: [
@@ -12748,7 +12785,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     {
       id: 'aero',
       name: 'AERODYNAMICS',
-      icon: '💨',
+      icon: '',
       accent: '#ff6b35',
       summary: 'Drag reduction, loaded grip, and airflow management.',
       tree: [
@@ -12761,7 +12798,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     {
       id: 'tyres',
       name: 'TYRES',
-      icon: '🟨',
+      icon: '',
       accent: '#ffffff',
       summary: 'Tyre life, temperature control, and compound management.',
       tree: [
@@ -12774,7 +12811,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     {
       id: 'ers',
       name: 'ERS',
-      icon: '🔋',
+      icon: '',
       accent: '#7cfcff',
       summary: 'Harvesting, deployment, and battery efficiency.',
       tree: [
@@ -12787,7 +12824,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     {
       id: 'reliability',
       name: 'RELIABILITY',
-      icon: '🛡️',
+      icon: '',
       accent: '#4ade80',
       summary: 'Cooling, fault protection, and component durability.',
       tree: [
@@ -13194,13 +13231,13 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
               const action = state.status === 'failed'
                 ? (canAfford
                     ? `<button class="btn btn-sm btn-orange" onclick="queueRnDProject('${node.id}', true)">REDEVELOP</button>`
-                    : `<div class="rnd-node-foot">NEED 💰${previewCost}</div>`)
+                    : `<div class="rnd-node-foot">NEED COINS ${previewCost}</div>`)
                 : canQueue
                   ? (rnd.queue.length >= RND_QUEUE_LIMIT
                       ? `<div class="rnd-node-foot">QUEUE FULL</div>`
                       : (canAfford
                           ? `<button class="btn btn-sm btn-cyan" onclick="queueRnDProject('${node.id}', false)">QUEUE PROJECT</button>`
-                          : `<div class="rnd-node-foot">NEED 💰${previewCost}</div>`))
+                          : `<div class="rnd-node-foot">NEED COINS ${previewCost}</div>`))
                   : `<div class="rnd-node-foot">DEPENDENCY LOCKED</div>`;
               return `
                 <div class="rnd-node ${badgeClass}">
@@ -13212,9 +13249,9 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
                   <div class="rnd-node-meta">${node.desc}</div>
                   <div class="rnd-node-effects">${fmtEffectLine(node.effects)}</div>
                   <div class="rnd-node-stats">
-                    <span>💰 ${state.lastCost || node.cost}</span>
-                    <span>⏱ ${node.time} RACE${node.time === 1 ? '' : 'S'}</span>
-                    <span>✅ ${state.lastChance || node.chance}%</span>
+                    <span>COINS ${state.lastCost || node.cost}</span>
+                    <span> ${node.time} RACE${node.time === 1 ? '' : 'S'}</span>
+                    <span> ${state.lastChance || node.chance}%</span>
                   </div>
                   <div class="rnd-bar"><div class="rnd-bar-fill" style="width:${progress}%;"></div></div>
                   <div class="rnd-node-action">${action}</div>
@@ -14336,8 +14373,7 @@ window.KartBlitzTrackEditor = (function(){
       card.type = 'button';
       card.className = 'te-pick-card';
       card.innerHTML = '<div class="te-pick-name">' + (t.name || ('TRACK ' + t.id)) + '</div>' +
-        '<div class="te-pick-meta">ID ' + t.id + ' · ' + (t.difficulty || '?') +
-        (t.aiFriendly ? ' · AI READY' : '') + '</div>';
+        '<div class="te-pick-meta">ID ' + t.id + ' · ' + (t.difficulty || '?') + '</div>';
       card.onclick = () => openTrackAt(i);
       grid.appendChild(card);
     });
@@ -14613,7 +14649,7 @@ window.KartBlitzTrackEditor = (function(){
     invalidateTrackBaseCache();
     try {
       const el = document.getElementById('portal-track-count');
-      if (el) el.textContent = TRACKS.length + ' TRACKS';
+      if (el) el.textContent = TRACKS.length + 'TRACKS';
     } catch (e) {}
     setMsg('Applied to game — race to test. Copy/Download to save permanently in TRACKS.');
     refreshExport();
@@ -15528,7 +15564,7 @@ function updateStatus() {
   }
   document.getElementById('te-stNodes').textContent = String(state.waypoints.length);
   document.getElementById('te-nodeCountPill').textContent =
-    state.waypoints.length + ' track · ' + state.racingLine.length + ' AI · ' + state.pitPath.length + ' pit';
+    state.waypoints.length + ' track · ' + state.racingLine.length + 'AI · ' + state.pitPath.length + ' pit';
   document.getElementById('te-stZoom').textContent = Math.round(state.cam.zoom * 100) + '%';
   document.getElementById('te-stLoop').textContent = state.closed ? 'closed' : 'open';
   const rlEl = document.getElementById('te-rlInfo');
@@ -16020,7 +16056,7 @@ function applyImport(parsed) {
   }
   syncUI(); fitEditorView(true); autosave();
   setMsg('Imported ' + state.waypoints.length + ' track nodes' +
-    (state.racingLine.length ? ', ' + state.racingLine.length + ' AI line' : '') +
+    (state.racingLine.length ? ', ' + state.racingLine.length + 'AI line' : '') +
     (state.pitPath.length ? ', ' + state.pitPath.length + ' pit' : ''));
 }
 

@@ -435,9 +435,12 @@ class SimKart {
         const nearP = track.spline[this._nearestSplineIdx || 0];
         this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
         if (this._isCompletelyOff) {
-            this.speed *= Math.pow(0.92, dt * 60);
-            if (Math.abs(this.speed) > 100)
-                this.speed = Math.sign(this.speed) * 100;
+            this.speed *= Math.pow(0.978, dt * 60);
+            const offCap = 100;
+            if (Math.abs(this.speed) > offCap) {
+                const over = Math.abs(this.speed) - offCap;
+                this.speed -= Math.sign(this.speed) * Math.min(over, Math.max(over * 2.6 * dt, 18 * dt));
+            }
             this._penaltyTimer += dt;
             if (this._penaltyTimer >= 3.0) {
                 const spl = track.spline;
