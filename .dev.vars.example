@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local wrangler dev (not committed).
+# Production: use `npx wrangler secret put LEADERBOARD_ADMIN_PASSWORD` instead.
+LEADERBOARD_ADMIN_PASSWORD=kartblitz-admin

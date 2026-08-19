@@ -46,6 +46,7 @@ export type NetKart = {
   lap: number;
   finished: boolean;
   finishTime: number | null;
+  finishOrder: number | null;
   tyreId: string;
   tyreWear: number;
   tyreTemp: number;
@@ -212,7 +213,7 @@ export function encodeState(state: NetState, prev: NetState | null = null): Arra
       ) {
         mask |= 0x02;
       }
-      if (!!k.finished !== !!pk.finished || k.finishTime !== pk.finishTime) mask |= 0x04;
+      if (!!k.finished !== !!pk.finished || k.finishTime !== pk.finishTime || k.finishOrder !== pk.finishOrder) mask |= 0x04;
     } else {
       mask = 0x07;
     }
@@ -255,6 +256,7 @@ export function encodeState(state: NetState, prev: NetState | null = null): Arra
     if (mask & 0x04) {
       v.setFloat32(o, k.finishTime == null ? -1 : k.finishTime, true);
       o += 4;
+      v.setUint8(o++, k.finishOrder == null ? 0 : Math.min(255, k.finishOrder | 0));
     }
   }
 
@@ -310,6 +312,7 @@ export function decodeState(buf: ArrayBuffer | ArrayBufferView, prev: NetState |
     let maxSpeed = pk ? pk.maxSpeed : 0;
     let bestLap: number | null = pk ? pk.bestLap : null;
     let finishTime: number | null = pk ? pk.finishTime : null;
+    let finishOrder: number | null = pk ? pk.finishOrder : null;
 
     if (mask & 0x02) {
       lap = v.getUint8(o++);
@@ -332,6 +335,8 @@ export function decodeState(buf: ArrayBuffer | ArrayBufferView, prev: NetState |
       const ft = v.getFloat32(o, true);
       o += 4;
       finishTime = ft < 0 ? null : ft;
+      const fo = v.getUint8(o++);
+      finishOrder = fo > 0 ? fo : null;
     }
 
     karts.push({
@@ -343,6 +348,7 @@ export function decodeState(buf: ArrayBuffer | ArrayBufferView, prev: NetState |
       lap,
       finished: !!(flags & 8),
       finishTime,
+      finishOrder,
       tyreId,
       tyreWear,
       tyreTemp,

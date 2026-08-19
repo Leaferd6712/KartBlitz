@@ -5,7 +5,7 @@ export const SIM_HZ = 60;
 export const STATE_HZ = 30;
 export const FIXED_DT = 1 / SIM_HZ;
 /** Bump when wire format or bake layout changes. */
-export const ONLINE_PROTOCOL = 3;
+export const ONLINE_PROTOCOL = 4;
 export const TRACK_BAKE_VERSION = 2;
 export const INPUT_HZ = 30;
 /** Physics steps to apply per networked input sample (SIM_HZ / INPUT_HZ). */

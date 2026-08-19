@@ -1,0 +1,23 @@
+# KartBlitz Online Wins Leaderboard (seed data)
+# Edit this file and refresh the leaderboard screen to see changes.
+#
+# Format: USERNAME WINS
+# - USERNAME must be 3-12 letters or numbers (A-Z, 0-9)
+# - WINS must be a non-negative integer
+# - Lines starting with # are ignored
+
+SPEEDKING 127
+DRIFTQUEEN 98
+NITRONINJA 84
+TURBOJACK 71
+SHADOWRACER 55
+TRACKTAMER 41
+LAPLOCK 39
+BOOSTWIZARD 36
+RACEWRAITH 33
+WHEELWHISPER 29
+PITPROPHET 24
+STARTER1 22
+CHRONOCRUSH 18
+REDLINERULER 15
+SUNSETSPRINT 12

@@ -1,6 +1,6 @@
 import { Server, type Connection, type ConnectionContext } from "partyserver";
 import type { Env } from "./env";
-import { getDeviceByToken } from "./leaderboard";
+import { getDeviceByToken, recordOnlineWin } from "./leaderboard";
 import { decodeInput, MSG_INPUT, NET_MAGIC, NET_VERSION } from "./netcodec";
 import {
   FIXED_DT,
@@ -25,6 +25,8 @@ type Player = {
   ready: boolean;
   color: string;
   upgrades: UpgradeStats;
+  /** Optional: set from client hello; used to write online-win increments. */
+  deviceToken?: string;
 };
 
 type LobbySettings = {
@@ -373,6 +375,35 @@ export class KartBlitzRoom extends Server<Env> {
     if (this.raceSim.isFinished()) {
       this._raceEndTimer += elapsed;
       if (this._raceEndTimer > 2800) {
+        // Server-authoritative win recording for online races.
+        // This runs before we broadcast `raceEnded`, so UI can show updated results promptly.
+        const env = doEnv(this);
+        if (env.LEADERBOARD_DB) {
+          try {
+            const winnerKart = this.raceSim.karts
+              .filter((k) => k.finished && k.finishTime != null)
+              .slice()
+              .sort((a, b) => {
+                const ao = a.finishOrder ?? Number.POSITIVE_INFINITY;
+                const bo = b.finishOrder ?? Number.POSITIVE_INFINITY;
+                if (ao !== bo) return ao - bo;
+                const at = a.finishTime ?? Number.POSITIVE_INFINITY;
+                const bt = b.finishTime ?? Number.POSITIVE_INFINITY;
+                if (at !== bt) return at - bt;
+                return (a.id ?? 0) - (b.id ?? 0);
+              })[0];
+
+            const winnerPlayer = winnerKart ? this.players.get(winnerKart.onlineConnId) : undefined;
+            const deviceToken = winnerPlayer?.deviceToken;
+            if (deviceToken) {
+              void recordOnlineWin(env.LEADERBOARD_DB, deviceToken);
+              // Note: do not await. Keep race-end UX responsive; leaderboard updates on refresh.
+            }
+          } catch (e) {
+            console.error("recordOnlineWin failed", e);
+          }
+        }
+
         this.broadcast(
           json({
             type: "raceEnded",
@@ -503,6 +534,8 @@ export class KartBlitzRoom extends Server<Env> {
 
   private async applyHelloProfile(sender: Connection, player: Player, msg: Record<string, unknown>) {
     const color = String(msg.color || "#00f5ff").slice(0, 16);
+    const deviceToken = String(msg.deviceToken || "");
+    if (deviceToken) player.deviceToken = deviceToken;
     let name =
       String(msg.name || "RACER")
         .toUpperCase()
@@ -511,7 +544,6 @@ export class KartBlitzRoom extends Server<Env> {
 
     try {
       const env = doEnv(this);
-      const deviceToken = String(msg.deviceToken || "");
       if (env.LEADERBOARD_DB && deviceToken) {
         const device = await getDeviceByToken(env.LEADERBOARD_DB, deviceToken);
         if (device?.username) {

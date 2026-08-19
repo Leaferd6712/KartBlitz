@@ -13,7 +13,7 @@ const COAST_DECEL_PER_SEC = 25;
 const SIM_HZ = 60;
 const STATE_HZ = 30;
 const FIXED_DT = 1 / SIM_HZ;
-const ONLINE_PROTOCOL = 3;
+const ONLINE_PROTOCOL = 4;
 const TRACK_BAKE_VERSION = 2;
 const INPUT_HZ = 30;
 const STEPS_PER_INPUT = SIM_HZ / INPUT_HZ;
@@ -327,6 +327,7 @@ class SimKart {
         this.bestLap = Infinity;
         this.finished = false;
         this.finishTime = null;
+        this.finishOrder = null;
         this.totalLaps = 3;
         this.tyreId = "med";
         this.tyreWear = 0;
@@ -435,9 +436,12 @@ class SimKart {
         const nearP = track.spline[this._nearestSplineIdx || 0];
         this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
         if (this._isCompletelyOff) {
-            this.speed *= Math.pow(0.92, dt * 60);
-            if (Math.abs(this.speed) > 100)
-                this.speed = Math.sign(this.speed) * 100;
+            this.speed *= Math.pow(0.978, dt * 60);
+            const offCap = 100;
+            if (Math.abs(this.speed) > offCap) {
+                const over = Math.abs(this.speed) - offCap;
+                this.speed -= Math.sign(this.speed) * Math.min(over, Math.max(over * 2.6 * dt, 18 * dt));
+            }
             this._penaltyTimer += dt;
             if (this._penaltyTimer >= 3.0) {
                 const spl = track.spline;
@@ -543,9 +547,14 @@ function stepKart(kart, inp, dt, track, otherKarts, flags = {}) {
             spdLimit = kart.maxSpeed * (1.04 + bestWake * 0.12);
     }
     const hasAnalogDrive = typeof inp.throttle === "number" || typeof inp.brake === "number";
-    const throttleTarget = hasAnalogDrive ? Math.max(0, Math.min(1, inp.throttle || 0)) : inp.up ? 1 : 0;
+    let throttleTarget = hasAnalogDrive ? Math.max(0, Math.min(1, inp.throttle || 0)) : inp.up ? 1 : 0;
     const brakeTarget = hasAnalogDrive ? Math.max(0, Math.min(1, inp.brake || 0)) : inp.down ? 1 : 0;
-    kart._throttleAssist += (throttleTarget - kart._throttleAssist) * (inp.up ? 0.22 : 0.34);
+    const opposingDrive = !hasAnalogDrive && inp.up && inp.down;
+    if (opposingDrive)
+        throttleTarget = 0;
+    kart._throttleAssist += (throttleTarget - kart._throttleAssist) * (inp.up && !opposingDrive ? 0.22 : 0.34);
+    if (opposingDrive)
+        kart._throttleAssist *= 0.4;
     kart._brakeAssist += (brakeTarget - kart._brakeAssist) * (inp.down ? 0.16 : 0.11);
     const throttleInput = Math.max(0, Math.min(1, kart._throttleAssist));
     const brakeInput = Math.max(0, Math.min(1, kart._brakeAssist));
@@ -569,10 +578,10 @@ function stepKart(kart, inp, dt, track, otherKarts, flags = {}) {
         kart._ersPower = Math.max(0, (kart._ersPower || 0) - (1 / 1.15) * dt);
         let regen = 0;
         if (brakeInput > 0.05 && ersSpdAbs > 18) {
-            regen += (0.038 * brakeInput + 0.084 * brakeInput * brakeInput) * (0.45 + ersSpdRatio * 0.55);
+            regen += (0.057 * brakeInput + 0.126 * brakeInput * brakeInput) * (0.45 + ersSpdRatio * 0.55);
         }
         else if (throttleInput < 0.08 && brakeInput < 0.05 && ersSpdAbs > 12) {
-            regen += (throttleInput < 0.02 ? 0.043 : 0.032) * (0.35 + ersSpdRatio * 0.65);
+            regen += (throttleInput < 0.02 ? 0.065 : 0.048) * (0.35 + ersSpdRatio * 0.65);
         }
         if (!ersSteering && throttleInput > 0.55 && ersSpdRatio > 0.58 && brakeInput < 0.05) {
             kart._ersStraightTimer = (kart._ersStraightTimer || 0) + dt;
@@ -581,7 +590,7 @@ function stepKart(kart, inp, dt, track, otherKarts, flags = {}) {
             kart._ersStraightTimer = Math.max(0, (kart._ersStraightTimer || 0) - dt * 2);
         }
         if (kart._ersStraightTimer > 1.0) {
-            regen += 0.014 + Math.min(0.011, (kart._ersStraightTimer - 1.0) * 0.0055);
+            regen += 0.021 + Math.min(0.017, (kart._ersStraightTimer - 1.0) * 0.008);
         }
         if (regen > 0)
             kart.ersCharge = Math.min(1, kart.ersCharge + regen * dt);
@@ -597,7 +606,7 @@ function stepKart(kart, inp, dt, track, otherKarts, flags = {}) {
     if (kart.tyreWear >= 1.0)
         spdLimit = Math.min(spdLimit, 125);
     const ersAccMult = 1 + 0.14 * ersPower;
-    if (throttleInput > 0.02) {
+    if (throttleInput > 0.02 && brakeInput <= 0.02) {
         kart.speed += acc * throttleInput * dt * ersAccMult;
     }
     else if (brakeInput > 0.02) {
@@ -703,6 +712,7 @@ function copyKartState(dst, src) {
     dst.bestLap = src.bestLap;
     dst.finished = src.finished;
     dst.finishTime = src.finishTime;
+    dst.finishOrder = src.finishOrder;
     dst.tyreWear = src.tyreWear;
     dst.tyreTemp = src.tyreTemp;
     dst.ersCharge = src.ersCharge;
@@ -740,6 +750,8 @@ function applyNetPose(kart, snap) {
         kart.finished = !!snap.finished;
     if (snap.finishTime !== undefined)
         kart.finishTime = snap.finishTime;
+    if (snap.finishOrder !== undefined)
+        kart.finishOrder = snap.finishOrder;
     if (typeof snap.tyreWear === "number")
         kart.tyreWear = snap.tyreWear;
     if (typeof snap.tyreTemp === "number")
@@ -823,6 +835,7 @@ class OnlineRaceSim {
         this.inputQueues = new Map();
         this.lastProcessedInput = new Map();
         this.finishedEmitted = false;
+        this._nextFinishOrder = 1;
         this._stateAcc = 0;
         this._prevNet = null;
         this._epochWall = Date.now();
@@ -936,6 +949,9 @@ class OnlineRaceSim {
                         resolveCollisions: false,
                         nowMs: this.simTimeMs,
                     });
+                    if (k.finished && k.finishOrder == null && k.finishTime != null) {
+                        k.finishOrder = this._nextFinishOrder++;
+                    }
                 }
             }
             resolveKartCollisions(this.karts, this.collisionEnabled);
@@ -990,6 +1006,7 @@ class OnlineRaceSim {
             lap: k.lap || 0,
             finished: !!k.finished,
             finishTime: k.finishTime == null ? null : k.finishTime,
+            finishOrder: k.finishOrder == null ? null : k.finishOrder,
             tyreId: k.tyreId || "med",
             tyreWear: k.tyreWear || 0,
             tyreTemp: k.tyreTemp || 0,

@@ -82,6 +82,7 @@ export class OnlineRaceSim {
   /** Highest applied input seq per connection. */
   lastProcessedInput = new Map<string, number>();
   finishedEmitted = false;
+  private _nextFinishOrder = 1;
   private _stateAcc = 0;
   private _prevNet: NetState | null = null;
   /** Wall clock at race construct — snapshot t = epoch + simTimeMs. */
@@ -199,6 +200,9 @@ export class OnlineRaceSim {
             resolveCollisions: false,
             nowMs: this.simTimeMs,
           });
+          if (k.finished && k.finishOrder == null && k.finishTime != null) {
+            k.finishOrder = this._nextFinishOrder++;
+          }
         }
       }
       resolveKartCollisions(this.karts, this.collisionEnabled);
@@ -257,6 +261,7 @@ export class OnlineRaceSim {
       lap: k.lap || 0,
       finished: !!k.finished,
       finishTime: k.finishTime == null ? null : k.finishTime,
+      finishOrder: k.finishOrder == null ? null : k.finishOrder,
       tyreId: k.tyreId || "med",
       tyreWear: k.tyreWear || 0,
       tyreTemp: k.tyreTemp || 0,

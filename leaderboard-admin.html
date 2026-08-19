@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KartBlitz Leaderboard Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --panel: #121820;
+      --border: rgba(0, 245, 255, 0.25);
+      --cyan: #00f5ff;
+      --gold: #ffd700;
+      --orange: #ff6b35;
+      --pink: #ff00cc;
+      --text: #e8eef5;
+      --muted: rgba(255, 255, 255, 0.55);
+      --danger: #ff6b6b;
+      --ok: #6dd46a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Nunito, sans-serif;
+      background: radial-gradient(ellipse at top, #101820 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+    h1, h2, .brand {
+      font-family: Orbitron, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    .login-card, .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+    .login-card { max-width: 420px; margin: 80px auto 0; text-align: center; }
+    .brand { font-size: 1.4rem; color: var(--cyan); margin-bottom: 8px; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    input, select, button {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--text);
+      padding: 10px 12px;
+    }
+    input[type="password"], input[type="text"], input[type="number"] { width: 100%; }
+    input:focus, select:focus { outline: 2px solid rgba(0, 245, 255, 0.35); border-color: var(--cyan); }
+    .btn {
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid var(--cyan);
+      background: rgba(0, 245, 255, 0.12);
+      color: var(--cyan);
+    }
+    .btn:hover { background: rgba(0, 245, 255, 0.22); }
+    .btn-gold { border-color: var(--gold); color: var(--gold); background: rgba(255, 215, 0, 0.1); }
+    .btn-danger { border-color: var(--danger); color: var(--danger); background: rgba(255, 107, 107, 0.08); }
+    .btn-sm { padding: 6px 10px; font-size: 0.75rem; }
+    .err { color: var(--danger); margin-top: 10px; min-height: 1.2em; }
+    .hidden { display: none !important; }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .status {
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-width: 120px;
+      text-align: right;
+    }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--danger); }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .tab {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+    }
+    .tab.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0, 245, 255, 0.1); }
+    .panel { margin-bottom: 20px; }
+    .panel-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .panel-head h2 { margin: 0; font-size: 1rem; color: var(--gold); }
+    .panel-desc { color: var(--muted); font-size: 0.85rem; margin: -6px 0 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 8px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; }
+    th { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    td input { width: 100%; min-width: 70px; padding: 6px 8px; }
+    .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .badge-seed { background: rgba(255, 107, 53, 0.2); color: var(--orange); border: 1px solid rgba(255, 107, 53, 0.35); }
+    .badge-real { background: rgba(109, 212, 106, 0.15); color: var(--ok); border: 1px solid rgba(109, 212, 106, 0.3); }
+    .track-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .track-tab {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .track-tab.active { border-color: var(--pink); color: var(--pink); }
+    .empty { color: var(--muted); padding: 16px 0; text-align: center; }
+    @media (max-width: 720px) {
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tr { margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; }
+      td { border: none; padding: 4px 0; }
+      td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.68rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="login-screen" class="wrap">
+    <div class="login-card">
+      <div class="brand">KartBlitz Admin</div>
+      <div class="sub">Leaderboard editor — password required</div>
+      <input id="login-password" type="password" placeholder="Admin password" autocomplete="current-password">
+      <button id="login-btn" class="btn" style="width:100%;margin-top:12px;">Unlock</button>
+      <div id="login-error" class="err"></div>
+    </div>
+  </div>
+
+  <div id="app-screen" class="wrap hidden">
+    <div class="topbar">
+      <div>
+        <div class="brand">Leaderboard Admin</div>
+        <div class="sub" style="margin:0;">Edits auto-sync to the cloud leaderboard</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div id="sync-status" class="status">Ready</div>
+        <button id="reload-btn" class="btn btn-sm">Reload</button>
+        <button id="logout-btn" class="btn btn-sm btn-danger">Lock</button>
+      </div>
+    </div>
+
+    <div class="tabs" id="main-tabs">
+      <button class="tab active" data-section="online">Online Wins</button>
+      <button class="tab" data-section="trial">Time Trial</button>
+      <button class="tab" data-section="versus">Versus</button>
+    </div>
+
+    <section id="section-online" class="panel">
+      <div class="panel-head">
+        <h2>Online Wins — Global Rankings</h2>
+        <button class="btn btn-sm btn-gold" data-random="online">+ Add random players</button>
+      </div>
+      <p class="panel-desc">Edit win counts for any player. Changes save automatically after you stop typing.</p>
+      <div id="online-table-wrap"></div>
+    </section>
+
+    <section id="section-trial" class="panel hidden">
+      <div class="panel-head">
+        <h2>Time Trial — Best Laps</h2>
+        <button class="btn btn-sm btn-gold" data-random="trial">+ Add random entries</button>
+      </div>
+      <p class="panel-desc">Lap times accept seconds (41.13) or m:ss.mmm (0:41.130).</p>
+      <div class="track-tabs" id="trial-track-tabs"></div>
+      <div id="trial-table-wrap"></div>
+    </section>
+
+    <section id="section-versus" class="panel hidden">
+      <div class="panel-head">
+        <h2>Versus — Best Laps</h2>
+        <button class="btn btn-sm btn-gold" data-random="versus">+ Add random entries</button>
+      </div>
+      <p class="panel-desc">Same format as Time Trial — edits sync to the in-game Versus board.</p>
+      <div class="track-tabs" id="versus-track-tabs"></div>
+      <div id="versus-table-wrap"></div>
+    </section>
+  </div>
+
+<script>
+(function () {
+  const PW_KEY = 'kartblitz_admin_pw';
+  const LB_HOST_DEFAULT = 'kartblitz-online.kartblitz.workers.dev';
+
+  let password = '';
+  let data = null;
+  let activeSection = 'online';
+  let trialTrack = 0;
+  let versusTrack = 0;
+  let saveTimer = null;
+  let loading = false;
+
+  function apiBase() {
+    let host = LB_HOST_DEFAULT;
+    try {
+      const q = new URLSearchParams(location.search).get('lbHost');
+      if (q) host = String(q).replace(/^https?:\/\//, '').replace(/\/$/, '');
+    } catch (e) {}
+    host = host.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const secure = !(host.includes('localhost') || host.includes('127.0.0.1'));
+    return (secure ? 'https://' : 'http://') + host;
+  }
+
+  function setStatus(msg, kind) {
+    const el = document.getElementById('sync-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  async function apiFetch(path, options) {
+    const opts = Object.assign({
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': password
+      }
+    }, options || {});
+    const res = await fetch(apiBase() + path, opts);
+    let body = null;
+    try { body = await res.json(); } catch (e) {}
+    if (!res.ok) {
+      const err = (body && (body.error || body.message)) || ('HTTP ' + res.status);
+      throw new Error(String(err).replace(/_/g, ' '));
+    }
+    return body;
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    try {
+      return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return '—'; }
+  }
+
+  function fmtLap(sec) {
+    if (sec == null || !Number.isFinite(sec)) return '';
+    return Number(sec).toFixed(3);
+  }
+
+  function parseLapInput(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return null;
+    if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
+    const m = s.match(/^(\d+):(\d+(?:\.\d+)?)$/);
+    if (m) return Number(m[1]) * 60 + Number(m[2]);
+    return null;
+  }
+
+  function debouncedSave(fn) {
+    if (saveTimer) clearTimeout(saveTimer);
+    setStatus('Saving…');
+    saveTimer = setTimeout(function () {
+      fn().then(function () {
+        setStatus('Saved', 'ok');
+      }).catch(function (e) {
+        setStatus((e && e.message) || 'Save failed', 'err');
+      });
+    }, 400);
+  }
+
+  function badge(seeded) {
+    return seeded
+      ? '<span class="badge badge-seed">seed</span>'
+      : '<span class="badge badge-real">player</span>';
+  }
+
+  function renderOnlineTable() {
+    const wrap = document.getElementById('online-table-wrap');
+    const rows = (data && data.onlineWins) || [];
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty">No online win entries yet. Add random players or win an online race.</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>#</th><th>User</th><th>Type</th><th>Wins</th><th>Updated</th><th></th></tr></thead><tbody>';
+    rows.forEach(function (r, i) {
+      html += '<tr data-kind="online" data-token="' + r.deviceToken + '">' +
+        '<td data-label="Rank">' + (i + 1) + '</td>' +
+        '<td data-label="Username"><input class="inp-user" value="' + r.username + '"></td>' +
+        '<td data-label="Type">' + badge(r.seeded) + '</td>' +
+        '<td data-label="Wins"><input class="inp-wins" type="number" min="0" step="1" value="' + r.wins + '"></td>' +
+        '<td data-label="Updated">' + fmtDate(r.updatedAt) + '</td>' +
+        '<td data-label="Delete"><button class="btn btn-sm btn-danger btn-del">Delete</button></td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    bindRowHandlers(wrap, 'online');
+  }
+
+  function renderScoreTable(mode, trackId) {
+    const wrapId = mode === 'trial' ? 'trial-table-wrap' : 'versus-table-wrap';
+    const wrap = document.getElementById(wrapId);
+    const bucket = data && data.scores && data.scores[mode] && data.scores[mode][String(trackId)];
+    const rows = bucket || [];
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty">No entries for this track yet.</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>#</th><th>User</th><th>Type</th><th>Best lap (s)</th><th>Total (s)</th><th>Updated</th><th></th></tr></thead><tbody>';
+    rows.forEach(function (r, i) {
+      html += '<tr data-kind="score" data-id="' + r.id + '" data-mode="' + mode + '" data-track="' + trackId + '" data-token="' + r.deviceToken + '">' +
+        '<td data-label="Rank">' + (i + 1) + '</td>' +
+        '<td data-label="Username"><input class="inp-user" value="' + r.username + '"></td>' +
+        '<td data-label="Type">' + badge(r.seeded) + '</td>' +
+        '<td data-label="Best lap"><input class="inp-lap" value="' + fmtLap(r.bestLap) + '"></td>' +
+        '<td data-label="Total"><input class="inp-total" value="' + fmtLap(r.total) + '"></td>' +
+        '<td data-label="Updated">' + fmtDate(r.updatedAt) + '</td>' +
+        '<td data-label="Delete"><button class="btn btn-sm btn-danger btn-del">Delete</button></td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    bindRowHandlers(wrap, 'score');
+  }
+
+  function bindRowHandlers(wrap, kind) {
+    wrap.querySelectorAll('tr').forEach(function (tr) {
+      const del = tr.querySelector('.btn-del');
+      if (del) {
+        del.addEventListener('click', function () {
+          if (!confirm('Delete this entry?')) return;
+          const payload = { kind: tr.dataset.kind };
+          if (tr.dataset.kind === 'online') payload.deviceToken = tr.dataset.token;
+          else {
+            payload.id = Number(tr.dataset.id);
+            payload.mode = tr.dataset.mode;
+            payload.trackId = Number(tr.dataset.track);
+            payload.deviceToken = tr.dataset.token;
+          }
+          setStatus('Deleting…');
+          apiFetch('/api/admin/entry', { method: 'DELETE', body: JSON.stringify(payload) })
+            .then(loadData)
+            .catch(function (e) { setStatus(e.message, 'err'); });
+        });
+      }
+
+      function saveRow() {
+        debouncedSave(function () {
+          if (tr.dataset.kind === 'online') {
+            const wins = Math.floor(Number(tr.querySelector('.inp-wins').value));
+            const username = tr.querySelector('.inp-user').value;
+            return apiFetch('/api/admin/entry', {
+              method: 'PUT',
+              body: JSON.stringify({
+                kind: 'online',
+                deviceToken: tr.dataset.token,
+                username: username,
+                wins: wins
+              })
+            });
+          }
+          const bestLap = parseLapInput(tr.querySelector('.inp-lap').value);
+          const total = parseLapInput(tr.querySelector('.inp-total').value);
+          if (bestLap == null) throw new Error('Invalid lap time');
+          return apiFetch('/api/admin/entry', {
+            method: 'PUT',
+            body: JSON.stringify({
+              kind: 'score',
+              id: Number(tr.dataset.id),
+              deviceToken: tr.dataset.token,
+              mode: tr.dataset.mode,
+              trackId: Number(tr.dataset.track),
+              username: tr.querySelector('.inp-user').value,
+              bestLap: bestLap,
+              total: total != null ? total : bestLap * 3
+            })
+          });
+        });
+      }
+
+      tr.querySelectorAll('input').forEach(function (inp) {
+        inp.addEventListener('change', saveRow);
+        inp.addEventListener('input', saveRow);
+      });
+    });
+  }
+
+  function renderTrackTabs(mode) {
+    const tabsEl = document.getElementById(mode + '-track-tabs');
+    const tracks = (data && data.tracks) || [];
+    const active = mode === 'trial' ? trialTrack : versusTrack;
+    tabsEl.innerHTML = '';
+    tracks.forEach(function (t) {
+      const btn = document.createElement('button');
+      btn.className = 'track-tab' + (t.id === active ? ' active' : '');
+      btn.textContent = t.name;
+      btn.onclick = function () {
+        if (mode === 'trial') trialTrack = t.id;
+        else versusTrack = t.id;
+        renderTrackTabs(mode);
+        renderScoreTable(mode, t.id);
+      };
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  function renderAll() {
+    renderOnlineTable();
+    renderTrackTabs('trial');
+    renderTrackTabs('versus');
+    renderScoreTable('trial', trialTrack);
+    renderScoreTable('versus', versusTrack);
+  }
+
+  function showSection(name) {
+    activeSection = name;
+    document.querySelectorAll('#main-tabs .tab').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.section === name);
+    });
+    document.getElementById('section-online').classList.toggle('hidden', name !== 'online');
+    document.getElementById('section-trial').classList.toggle('hidden', name !== 'trial');
+    document.getElementById('section-versus').classList.toggle('hidden', name !== 'versus');
+  }
+
+  async function loadData() {
+    if (loading) return;
+    loading = true;
+    setStatus('Loading…');
+    try {
+      data = await apiFetch('/api/admin/leaderboard');
+      if (data.tracks && data.tracks.length) {
+        if (!data.tracks.find(function (t) { return t.id === trialTrack; })) trialTrack = data.tracks[0].id;
+        if (!data.tracks.find(function (t) { return t.id === versusTrack; })) versusTrack = data.tracks[0].id;
+      }
+      renderAll();
+      setStatus('Ready', 'ok');
+    } catch (e) {
+      setStatus(e.message, 'err');
+      if (String(e.message).toLowerCase().includes('unauthorized')) logout();
+    } finally {
+      loading = false;
+    }
+  }
+
+  function enterApp() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-screen').classList.remove('hidden');
+    loadData();
+  }
+
+  function logout() {
+    password = '';
+    try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
+    document.getElementById('app-screen').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-error').textContent = '';
+  }
+
+  async function tryLogin(pw) {
+    password = pw;
+    setStatus('Checking…');
+    try {
+      await apiFetch('/api/admin/leaderboard');
+      try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {}
+      enterApp();
+    } catch (e) {
+      password = '';
+      document.getElementById('login-error').textContent = e.message || 'Login failed';
+      throw e;
+    }
+  }
+
+  document.getElementById('login-btn').addEventListener('click', function () {
+    const pw = document.getElementById('login-password').value;
+    document.getElementById('login-error').textContent = '';
+    tryLogin(pw).catch(function () {});
+  });
+
+  document.getElementById('login-password').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', logout);
+  document.getElementById('reload-btn').addEventListener('click', loadData);
+
+  document.querySelectorAll('#main-tabs .tab').forEach(function (btn) {
+    btn.addEventListener('click', function () { showSection(btn.dataset.section); });
+  });
+
+  document.querySelectorAll('[data-random]').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      const kind = btn.dataset.random;
+      const raw = prompt('How many random entries?', '5');
+      if (raw == null) return;
+      const count = Math.max(1, Math.min(25, Math.floor(Number(raw) || 5)));
+      const body = { kind: kind, count: count };
+      if (kind === 'trial') body.trackId = trialTrack;
+      if (kind === 'versus') body.trackId = versusTrack;
+      setStatus('Adding…');
+      try {
+        await apiFetch('/api/admin/random', { method: 'POST', body: JSON.stringify(body) });
+        await loadData();
+        setStatus('Added ' + count, 'ok');
+      } catch (e) {
+        setStatus(e.message, 'err');
+      }
+    });
+  });
+
+  try {
+    const saved = sessionStorage.getItem(PW_KEY);
+    if (saved) {
+      document.getElementById('login-password').value = saved;
+      tryLogin(saved).catch(function () {});
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
