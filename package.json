@@ -8,6 +8,7 @@
     "tracks:export": "node scripts/export-track-bakes.mjs",
     "sim:browser": "node scripts/build-online-sim.mjs",
     "test:sim": "node sim/__tests__/parity.test.mjs",
+    "rl:train": "node scripts/rl-train.mjs",
     "preparty:deploy": "npm run tracks:export && npm run sim:browser && npm run test:sim",
     "deploy:online": "npm run party:deploy",
     "backup:leaderboard": "node scripts/backup-leaderboard.mjs",
