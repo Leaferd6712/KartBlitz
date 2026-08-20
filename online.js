@@ -14,14 +14,10 @@
   var INTERP_MS_MAX = 200;
   var EXTRAP_MS_MAX = 50;
   var SNAP_BUF = 24;
-  var LOCAL_BLEND_MIN = 40;
   var LOCAL_SNAP_ERR = 220;
   var RECON_REPLAY_MAX = 24;
-  var DISP_MAX_PX_PER_SEC = 1200;
-  var DISP_SPEED_MUL = 1.1;
-  var DISP_MAX_RAD_PER_SEC = 8;
-  var DISP_SNAP_ERR = 180;
-  var DISP_SMOOTH = 1;
+  var VIS_OFFSET_TAU = 0.10;
+  var VIS_SNAP_ERR = 200;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
   var ONLINE_PROTOCOL = (global.OnlineSim && global.OnlineSim.ONLINE_PROTOCOL) || 3;
   var TRACK_BAKE_VERSION = (global.OnlineSim && global.OnlineSim.TRACK_BAKE_VERSION) || 2;
@@ -33,20 +29,6 @@
       return new URLSearchParams(location.search).get('netDebug') === '1';
     } catch (e) {
       return false;
-    }
-  }
-
-  function dispSmoothFactor() {
-    try {
-      var q = new URLSearchParams(location.search).get('netSmooth');
-      if (q == null || q === '') return DISP_SMOOTH;
-      var n = Number(q);
-      if (!isFinite(n)) return DISP_SMOOTH;
-      if (n < 0) n = 0;
-      if (n > 1) n = 1;
-      return n;
-    } catch (e) {
-      return DISP_SMOOTH;
     }
   }
 
@@ -696,6 +678,36 @@
     return a + d * u;
   }
 
+  function wrapAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+
+  function zeroVisOff(off) {
+    off.x = 0;
+    off.y = 0;
+    off.a = 0;
+  }
+
+  function applyVisOffToKart(k, off) {
+    if (!k || !off) return;
+    k._visOffX = off.x;
+    k._visOffY = off.y;
+    k._visOffA = off.a;
+  }
+
+  function absorbVisualCorrection(off, k, oldX, oldY, oldA) {
+    if (!off || !k) return;
+    var oldVisX = oldX + (off.x || 0);
+    var oldVisY = oldY + (off.y || 0);
+    var oldVisA = oldA + (off.a || 0);
+    off.x = oldVisX - k.x;
+    off.y = oldVisY - k.y;
+    off.a = wrapAngle(oldVisA - k.angle);
+    applyVisOffToKart(k, off);
+  }
+
   function applyRaceMeta(race, snap, localIdx) {
     if (!snap) return;
     if (snap.phase) race.phase = snap.phase;
@@ -791,23 +803,10 @@
     }
   };
 
-  OnlineSession.prototype.applyVisualOffset = function (k, dt) {
-    var off = this._visOff;
-    if (!off || !k) return;
-    var decay = Math.exp(-(dt || 1 / 60) / VIS_OFFSET_TAU);
-    off.x *= decay;
-    off.y *= decay;
-    off.a *= decay;
-    if (Math.abs(off.x) < 0.15 && Math.abs(off.y) < 0.15 && Math.abs(off.a) < 0.002) {
-      off.x = 0; off.y = 0; off.a = 0;
-    }
-    k.x += off.x;
-    k.y += off.y;
-    k.angle += off.a;
-  };
-
   OnlineSession.prototype.resetDisplayPoses = function (race) {
     this._lastDispErr = 0;
+    if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
+    zeroVisOff(this._visOff);
     if (!race || !race.karts) return;
     var i;
     for (i = 0; i < race.karts.length; i++) {
@@ -816,63 +815,35 @@
       k._dispX = undefined;
       k._dispY = undefined;
       k._dispAngle = undefined;
+      k._visOffX = 0;
+      k._visOffY = 0;
+      k._visOffA = 0;
     }
   };
 
   OnlineSession.prototype.smoothOnlineDisplay = function (race, dt) {
-    if (!race || !race.karts) return;
+    if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
+    var off = this._visOff;
     var stepDt = dt;
     if (!(stepDt > 0) || !isFinite(stepDt)) stepDt = 1 / 60;
     if (stepDt > 0.08) stepDt = 0.08;
-    var blend = dispSmoothFactor();
-    var maxErr = 0;
-    var i;
-    for (i = 0; i < race.karts.length; i++) {
-      var k = race.karts[i];
-      if (!k || !isFinite(k.x) || !isFinite(k.y) || !isFinite(k.angle)) continue;
-      if (!isFinite(k._dispX) || !isFinite(k._dispY) || !isFinite(k._dispAngle)) {
-        k._dispX = k.x;
-        k._dispY = k.y;
-        k._dispAngle = k.angle;
-        continue;
-      }
-      var dx = k.x - k._dispX;
-      var dy = k.y - k._dispY;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > maxErr) maxErr = dist;
-      if (dist > DISP_SNAP_ERR) {
-        k._dispX = k.x;
-        k._dispY = k.y;
-        k._dispAngle = k.angle;
-        continue;
-      }
-      var spd = isFinite(k.speed) ? Math.abs(k.speed) : 0;
-      var maxStep = (DISP_MAX_PX_PER_SEC + spd * DISP_SPEED_MUL) * stepDt;
-      var nx;
-      var ny;
-      if (dist <= maxStep || dist < 0.001) {
-        nx = k.x;
-        ny = k.y;
-      } else {
-        nx = k._dispX + (dx / dist) * maxStep;
-        ny = k._dispY + (dy / dist) * maxStep;
-      }
-      if (blend < 1) {
-        nx = k._dispX + (nx - k._dispX) * blend;
-        ny = k._dispY + (ny - k._dispY) * blend;
-      }
-      k._dispX = nx;
-      k._dispY = ny;
-
-      var dA = k.angle - k._dispAngle;
-      while (dA > Math.PI) dA -= Math.PI * 2;
-      while (dA < -Math.PI) dA += Math.PI * 2;
-      var maxA = DISP_MAX_RAD_PER_SEC * stepDt;
-      var stepA = Math.abs(dA) <= maxA ? dA : (dA > 0 ? maxA : -maxA);
-      if (blend < 1) stepA *= blend;
-      k._dispAngle += stepA;
+    var localIdx = this.localSlot >= 0 ? this.localSlot : 0;
+    var k = race && race.karts ? race.karts[localIdx] : null;
+    var mag = Math.sqrt(off.x * off.x + off.y * off.y);
+    var allowSnap = !race || race.phase !== 'racing';
+    if ((allowSnap && mag > LOCAL_SNAP_ERR) || mag > VIS_SNAP_ERR) {
+      zeroVisOff(off);
+      mag = 0;
+    } else {
+      var decay = Math.exp(-stepDt / VIS_OFFSET_TAU);
+      off.x *= decay;
+      off.y *= decay;
+      off.a *= decay;
+      mag = Math.sqrt(off.x * off.x + off.y * off.y);
+      if (mag < 0.15 && Math.abs(off.a) < 0.002) zeroVisOff(off);
     }
-    this._lastDispErr = maxErr;
+    if (k) applyVisOffToKart(k, off);
+    this._lastDispErr = mag;
   };
 
   OnlineSession.prototype.reconcileLocalKart = function (race, dt) {
@@ -907,7 +878,7 @@
       }
       this._lastReconTick = snapTick;
 
-      var oldX = k.x, oldY = k.y;
+      var oldX = k.x, oldY = k.y, oldA = k.angle;
       Sim.applyNetPose(race._onlineLocalSim, s);
       if (typeof s.tyreTemp === 'number') race._onlineLocalSim.tyreTemp = s.tyreTemp;
       var track = race._onlineSimTrack || null;
@@ -949,13 +920,14 @@
 
       var corrErr = poseError({ x: oldX, y: oldY }, race._onlineLocalSim);
       this._lastCorrErr = corrErr;
+      if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
       applyPose(k, race._onlineLocalSim);
+      absorbVisualCorrection(this._visOff, k, oldX, oldY, oldA);
       k.ersCharge = race._onlineLocalSim.ersCharge;
       k.ersActive = race._onlineLocalSim.ersActive;
       k.drsActive = race._onlineLocalSim.drsActive;
       k.tyreWear = race._onlineLocalSim.tyreWear;
       if (typeof race._onlineLocalSim.tyreTemp === 'number') k.tyreTemp = race._onlineLocalSim.tyreTemp;
-      this._visOff = { x: 0, y: 0, a: 0 };
       this._guestPhase = snap.phase || race.phase;
       return;
     }
@@ -968,8 +940,16 @@
 
     var err = (isFinite(k.x) && isFinite(k.y)) ? poseError(k, s) : Infinity;
     this._lastCorrErr = err;
-    applyPose(k, s);
-    this._visOff = { x: 0, y: 0, a: 0 };
+    if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
+    if (justLaunched) {
+      applyPose(k, s);
+      zeroVisOff(this._visOff);
+      applyVisOffToKart(k, this._visOff);
+    } else {
+      var oldXf = k.x, oldYf = k.y, oldAf = k.angle;
+      applyPose(k, s);
+      absorbVisualCorrection(this._visOff, k, oldXf, oldYf, oldAf);
+    }
     this._guestPhase = snap.phase || race.phase;
   };
 
