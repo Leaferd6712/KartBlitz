@@ -144,8 +144,9 @@ async function serverAvailable() {
   }
 }
 
-function dispDist(k) {
-  return Math.hypot(k.x - k._dispX, k.y - k._dispY);
+function visXY(k, sess) {
+  const off = sess._visOff || { x: 0, y: 0 };
+  return { x: k.x + (off.x || 0), y: k.y + (off.y || 0) };
 }
 
 async function runLiveLobbyFlow(host, guest) {
@@ -204,9 +205,6 @@ function simulateLiveDisplay(sess, Sim) {
       speed: k.speed,
       isOffTrack: false,
       finished: false,
-      _dispX: k.x,
-      _dispY: k.y,
-      _dispAngle: k.angle,
     })),
     _onlineLocalSim: sim.karts[0],
     _onlineSimTrack: cfg.track,
@@ -214,6 +212,7 @@ function simulateLiveDisplay(sess, Sim) {
   };
 
   sess.localSlot = 0;
+  sess._visOff = { x: 0, y: 0, a: 0 };
   const inp = { up: true, throttle: 1, steer: 0.12, down: false, left: false, right: false, ers: false, drs: false, brake: 0 };
 
   let maxDisp = 0;
@@ -227,8 +226,7 @@ function simulateLiveDisplay(sess, Sim) {
     });
 
     const k = race.karts[0];
-    const prevDispX = k._dispX;
-    const prevDispY = k._dispY;
+    const prevVis = visXY(k, sess);
 
     k.x = sim.karts[0].x;
     k.y = sim.karts[0].y;
@@ -236,17 +234,24 @@ function simulateLiveDisplay(sess, Sim) {
     k.speed = sim.karts[0].speed;
 
     if (frame > 0 && frame % 30 === 0) {
+      const oldX = k.x;
+      const oldY = k.y;
+      const oldA = k.angle;
       k.x += 18;
       sim.karts[0].x += 18;
+      const off = sess._visOff;
+      off.x = oldX + off.x - k.x;
+      off.y = oldY + off.y - k.y;
+      off.a = oldA + off.a - k.angle;
     }
 
     sess.smoothOnlineDisplay(race, DT);
-
-    maxFrameJump = Math.max(maxFrameJump, Math.hypot(k._dispX - prevDispX, k._dispY - prevDispY));
-    maxDisp = Math.max(maxDisp, sess._lastDispErr || dispDist(k));
+    const vis = visXY(k, sess);
+    maxFrameJump = Math.max(maxFrameJump, Math.hypot(vis.x - prevVis.x, vis.y - prevVis.y));
+    maxDisp = Math.max(maxDisp, sess._lastDispErr || 0);
   }
 
-  assert.ok(maxDisp <= 55, `simulated live display lag too high: ${maxDisp}px`);
+  assert.ok(maxDisp <= 25, `simulated live display lag too high: ${maxDisp}px`);
   assert.ok(maxFrameJump <= 40, `simulated live display jump too large: ${maxFrameJump}px`);
   console.log(`ok liveDisplaySim maxDisp=${maxDisp.toFixed(1)} maxFrameJump=${maxFrameJump.toFixed(1)}`);
 }

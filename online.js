@@ -16,19 +16,8 @@
   var SNAP_BUF = 24;
   var LOCAL_SNAP_ERR = 220;
   var RECON_REPLAY_MAX = 24;
-  var DISP_MAX_RAD_PER_SEC = 8;
-  var DISP_SNAP_ERR = 180;
-  var DISP_SMOOTH = 1;
-  var PID_KP = 1.4;
-  var PID_KI = 0.35;
-  var PID_KD = 0.12;
-  var PID_I_CLAMP = 18;
-  var PID_BIAS_MAX = 36;
-  var PID_BIAS_PCT = 0.07;
-  var PID_BIAS_FLOOR = 10;
-  var PID_D_CLAMP = 200;
-  var PID_LATERAL_SCALE = 80;
-  var PID_CREEP_SPEED = 28;
+  var VIS_OFFSET_TAU = 0.10;
+  var VIS_SNAP_ERR = 200;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
   var ONLINE_PROTOCOL = (global.OnlineSim && global.OnlineSim.ONLINE_PROTOCOL) || 3;
   var TRACK_BAKE_VERSION = (global.OnlineSim && global.OnlineSim.TRACK_BAKE_VERSION) || 2;
@@ -40,20 +29,6 @@
       return new URLSearchParams(location.search).get('netDebug') === '1';
     } catch (e) {
       return false;
-    }
-  }
-
-  function dispSmoothFactor() {
-    try {
-      var q = new URLSearchParams(location.search).get('netSmooth');
-      if (q == null || q === '') return DISP_SMOOTH;
-      var n = Number(q);
-      if (!isFinite(n)) return DISP_SMOOTH;
-      if (n < 0) n = 0;
-      if (n > 1) n = 1;
-      return n;
-    } catch (e) {
-      return DISP_SMOOTH;
     }
   }
 
@@ -140,6 +115,7 @@
     this._inputHistory = [];
     this._lastProcessedLocal = 0;
     this._lastReconTick = -1;
+    this._visOff = { x: 0, y: 0, a: 0 };
     this._bytesIn = 0;
     this._bytesOut = 0;
     this._bytesWindowStart = 0;
@@ -364,6 +340,7 @@
     this._inputHistory = [];
     this._lastProcessedLocal = 0;
     this._lastReconTick = -1;
+    this._visOff = { x: 0, y: 0, a: 0 };
   };
 
   OnlineSession.prototype.leave = function (silent) {
@@ -701,32 +678,34 @@
     return a + d * u;
   }
 
-  function captureDisplayPose(k) {
-    if (!k || !isFinite(k._dispX) || !isFinite(k._dispY)) return null;
-    return {
-      x: k._dispX,
-      y: k._dispY,
-      a: isFinite(k._dispAngle) ? k._dispAngle : k.angle
-    };
+  function wrapAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
   }
 
-  function restoreDisplayPose(k, disp) {
-    if (!k || !disp) return;
-    k._dispX = disp.x;
-    k._dispY = disp.y;
-    k._dispAngle = disp.a;
-    k._pidPhysX = k.x;
-    k._pidPhysY = k.y;
-    k._pidAlongPrev = undefined;
+  function zeroVisOff(off) {
+    off.x = 0;
+    off.y = 0;
+    off.a = 0;
   }
 
-  function resetKartPid(k) {
-    if (!k) return;
-    k._pidI = 0;
-    k._pidAlongPrev = undefined;
-    k._pidPhysX = k.x;
-    k._pidPhysY = k.y;
-    k._dispSpeed = isFinite(k.speed) ? k.speed : 0;
+  function applyVisOffToKart(k, off) {
+    if (!k || !off) return;
+    k._visOffX = off.x;
+    k._visOffY = off.y;
+    k._visOffA = off.a;
+  }
+
+  function absorbVisualCorrection(off, k, oldX, oldY, oldA) {
+    if (!off || !k) return;
+    var oldVisX = oldX + (off.x || 0);
+    var oldVisY = oldY + (off.y || 0);
+    var oldVisA = oldA + (off.a || 0);
+    off.x = oldVisX - k.x;
+    off.y = oldVisY - k.y;
+    off.a = wrapAngle(oldVisA - k.angle);
+    applyVisOffToKart(k, off);
   }
 
   function applyRaceMeta(race, snap, localIdx) {
@@ -826,6 +805,8 @@
 
   OnlineSession.prototype.resetDisplayPoses = function (race) {
     this._lastDispErr = 0;
+    if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
+    zeroVisOff(this._visOff);
     if (!race || !race.karts) return;
     var i;
     for (i = 0; i < race.karts.length; i++) {
@@ -834,114 +815,35 @@
       k._dispX = undefined;
       k._dispY = undefined;
       k._dispAngle = undefined;
-      k._dispSpeed = undefined;
-      k._pidI = undefined;
-      k._pidAlongPrev = undefined;
-      k._pidPhysX = undefined;
-      k._pidPhysY = undefined;
+      k._visOffX = 0;
+      k._visOffY = 0;
+      k._visOffA = 0;
     }
   };
 
   OnlineSession.prototype.smoothOnlineDisplay = function (race, dt) {
-    if (!race || !race.karts) return;
+    if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
+    var off = this._visOff;
     var stepDt = dt;
     if (!(stepDt > 0) || !isFinite(stepDt)) stepDt = 1 / 60;
     if (stepDt > 0.08) stepDt = 0.08;
-    var blend = dispSmoothFactor();
-    var maxErr = 0;
     var localIdx = this.localSlot >= 0 ? this.localSlot : 0;
-    var allowLocalSnap = race.phase !== 'racing';
-    var i;
-    for (i = 0; i < race.karts.length; i++) {
-      var k = race.karts[i];
-      if (!k || !isFinite(k.x) || !isFinite(k.y) || !isFinite(k.angle)) continue;
-      var isLocal = i === localIdx;
-      if (!isFinite(k._dispX) || !isFinite(k._dispY) || !isFinite(k._dispAngle)) {
-        k._dispX = k.x;
-        k._dispY = k.y;
-        k._dispAngle = k.angle;
-        resetKartPid(k);
-        continue;
-      }
-      var dx = k.x - k._dispX;
-      var dy = k.y - k._dispY;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > maxErr) maxErr = dist;
-
-      var shouldSnap = isLocal
-        ? (allowLocalSnap && dist > LOCAL_SNAP_ERR)
-        : (dist > DISP_SNAP_ERR);
-      if (shouldSnap) {
-        k._dispX = k.x;
-        k._dispY = k.y;
-        k._dispAngle = k.angle;
-        resetKartPid(k);
-        continue;
-      }
-
-      var ang = k._dispAngle;
-      var hx = Math.cos(ang);
-      var hy = Math.sin(ang);
-      var along = dx * hx + dy * hy;
-      var lateral = -dx * hy + dy * hx;
-
-      if (!isFinite(k._pidI)) k._pidI = 0;
-      var dAlong = 0;
-      if (isFinite(k._pidAlongPrev)) {
-        dAlong = (along - k._pidAlongPrev) / stepDt;
-        if (dAlong > PID_D_CLAMP) dAlong = PID_D_CLAMP;
-        if (dAlong < -PID_D_CLAMP) dAlong = -PID_D_CLAMP;
-      }
-      k._pidAlongPrev = along;
-      k._pidI += along * stepDt;
-      if (k._pidI > PID_I_CLAMP) k._pidI = PID_I_CLAMP;
-      if (k._pidI < -PID_I_CLAMP) k._pidI = -PID_I_CLAMP;
-
-      var bias = PID_KP * along + PID_KI * k._pidI + PID_KD * dAlong;
-      var absSpd = isFinite(k.speed) ? Math.abs(k.speed) : 0;
-      var cap = PID_BIAS_PCT * absSpd + PID_BIAS_FLOOR;
-      if (cap > PID_BIAS_MAX) cap = PID_BIAS_MAX;
-      if (bias > cap) bias = cap;
-      if (bias < -cap) bias = -cap;
-      if (blend < 1) bias *= blend;
-
-      if (absSpd < 12 && dist > 8) {
-        var creep = along > 0 ? PID_CREEP_SPEED : -PID_CREEP_SPEED;
-        if (Math.abs(along) < 8) creep = along * 3;
-        if (blend < 1) creep *= blend;
-        bias += creep;
-      }
-
-      if (!isFinite(k._pidPhysX) || !isFinite(k._pidPhysY)) {
-        k._pidPhysX = k.x;
-        k._pidPhysY = k.y;
-      }
-      var physDx = k.x - k._pidPhysX;
-      var physDy = k.y - k._pidPhysY;
-      k._pidPhysX = k.x;
-      k._pidPhysY = k.y;
-      var physDist = Math.sqrt(physDx * physDx + physDy * physDy);
-      var maxCopy = (absSpd + 40) * stepDt;
-      if (physDist <= maxCopy) {
-        k._dispX += physDx;
-        k._dispY += physDy;
-      }
-
-      k._dispSpeed = (isFinite(k.speed) ? k.speed : 0) + bias;
-      k._dispX += hx * bias * stepDt;
-      k._dispY += hy * bias * stepDt;
-
-      var nudge = Math.atan2(lateral, PID_LATERAL_SCALE);
-      var targetA = k.angle + nudge * 0.35;
-      var dA = targetA - k._dispAngle;
-      while (dA > Math.PI) dA -= Math.PI * 2;
-      while (dA < -Math.PI) dA += Math.PI * 2;
-      var maxA = DISP_MAX_RAD_PER_SEC * stepDt;
-      var stepA = Math.abs(dA) <= maxA ? dA : (dA > 0 ? maxA : -maxA);
-      if (blend < 1) stepA *= blend;
-      k._dispAngle += stepA;
+    var k = race && race.karts ? race.karts[localIdx] : null;
+    var mag = Math.sqrt(off.x * off.x + off.y * off.y);
+    var allowSnap = !race || race.phase !== 'racing';
+    if ((allowSnap && mag > LOCAL_SNAP_ERR) || mag > VIS_SNAP_ERR) {
+      zeroVisOff(off);
+      mag = 0;
+    } else {
+      var decay = Math.exp(-stepDt / VIS_OFFSET_TAU);
+      off.x *= decay;
+      off.y *= decay;
+      off.a *= decay;
+      mag = Math.sqrt(off.x * off.x + off.y * off.y);
+      if (mag < 0.15 && Math.abs(off.a) < 0.002) zeroVisOff(off);
     }
-    this._lastDispErr = maxErr;
+    if (k) applyVisOffToKart(k, off);
+    this._lastDispErr = mag;
   };
 
   OnlineSession.prototype.reconcileLocalKart = function (race, dt) {
@@ -976,7 +878,7 @@
       }
       this._lastReconTick = snapTick;
 
-      var oldX = k.x, oldY = k.y;
+      var oldX = k.x, oldY = k.y, oldA = k.angle;
       Sim.applyNetPose(race._onlineLocalSim, s);
       if (typeof s.tyreTemp === 'number') race._onlineLocalSim.tyreTemp = s.tyreTemp;
       var track = race._onlineSimTrack || null;
@@ -1018,9 +920,9 @@
 
       var corrErr = poseError({ x: oldX, y: oldY }, race._onlineLocalSim);
       this._lastCorrErr = corrErr;
-      var keepDisp = captureDisplayPose(k);
+      if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
       applyPose(k, race._onlineLocalSim);
-      restoreDisplayPose(k, keepDisp);
+      absorbVisualCorrection(this._visOff, k, oldX, oldY, oldA);
       k.ersCharge = race._onlineLocalSim.ersCharge;
       k.ersActive = race._onlineLocalSim.ersActive;
       k.drsActive = race._onlineLocalSim.drsActive;
@@ -1038,9 +940,16 @@
 
     var err = (isFinite(k.x) && isFinite(k.y)) ? poseError(k, s) : Infinity;
     this._lastCorrErr = err;
-    var keepDispFallback = captureDisplayPose(k);
-    applyPose(k, s);
-    restoreDisplayPose(k, keepDispFallback);
+    if (!this._visOff) this._visOff = { x: 0, y: 0, a: 0 };
+    if (justLaunched) {
+      applyPose(k, s);
+      zeroVisOff(this._visOff);
+      applyVisOffToKart(k, this._visOff);
+    } else {
+      var oldXf = k.x, oldYf = k.y, oldAf = k.angle;
+      applyPose(k, s);
+      absorbVisualCorrection(this._visOff, k, oldXf, oldYf, oldAf);
+    }
     this._guestPhase = snap.phase || race.phase;
   };
 

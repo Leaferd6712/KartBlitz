@@ -1559,12 +1559,11 @@ body::after{
 <div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
   <div id="patch-notes-card">
     <h2 id="patch-notes-title">PATCH NOTES</h2>
-    <div class="patch-date">AUGUST 19</div>
+    <div class="patch-date">AUGUST 20</div>
     <ul>
-      <li>Visual Bugs are currently being fixed and will be fixed soon.</li>
-      <li>Online mode lag will be fixed soon.</li>
-      <li>Leaderboard is still active.</li>
-      <li>Revamp will be in September</li>
+      <li>Game will be updated in September 11-18</li>
+      <li>Further changes introduced</li>
+      <li>Leaderboard is open</li>
     </ul>
     <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
   </div>
@@ -6408,12 +6407,16 @@ function makeAIInput(track, difficulty, aiIndex, opts) {
 
 // ── GHOST KART RENDERER ─────────────────────────────────
 function kartVisPose(k) {
-  if(typeof race !== 'undefined' && race && race.mode === 'online' && k && isFinite(k._dispX) && isFinite(k._dispY)) {
-    return {
-      x: k._dispX,
-      y: k._dispY,
-      angle: isFinite(k._dispAngle) ? k._dispAngle : k.angle
-    };
+  if(typeof race !== 'undefined' && race && race.mode === 'online' && k) {
+    const localIdx = (typeof onlineCameraIndex === 'function') ? onlineCameraIndex() : 0;
+    const isLocal = race.karts && race.karts[localIdx] === k;
+    if(isLocal && isFinite(k._visOffX) && isFinite(k._visOffY)) {
+      return {
+        x: k.x + k._visOffX,
+        y: k.y + k._visOffY,
+        angle: k.angle + (isFinite(k._visOffA) ? k._visOffA : 0)
+      };
+    }
   }
   return { x: k.x, y: k.y, angle: k.angle };
 }

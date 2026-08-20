@@ -1,5 +1,5 @@
 /**
- * Regression tests for PIDF visual-speed display catch-up.
+ * Visual offset decay: local sprite = physics + visOff; remotes use interpolated pose.
  */
 import fs from "fs";
 import path from "path";
@@ -39,6 +39,7 @@ function loadSession() {
   assert.ok(sandbox.OnlineNet, "OnlineNet missing");
   const sess = sandbox.OnlineNet.session;
   sess.localSlot = 0;
+  sess._guestPhase = "racing";
   return sess;
 }
 
@@ -49,128 +50,94 @@ function makeRace(phase = "racing") {
     angle: 0,
     speed: 180,
     isOffTrack: false,
-    _dispX: 100,
-    _dispY: 200,
-    _dispAngle: 0,
   };
   return { phase, karts: [k] };
 }
 
-function dispDist(k) {
-  return Math.hypot(k.x - k._dispX, k.y - k._dispY);
+function visXY(k, sess) {
+  const off = sess._visOff || { x: 0, y: 0 };
+  return { x: k.x + (off.x || 0), y: k.y + (off.y || 0) };
 }
 
-function captureDisplayPose(k) {
-  if (!k || !Number.isFinite(k._dispX) || !Number.isFinite(k._dispY)) return null;
-  return {
-    x: k._dispX,
-    y: k._dispY,
-    a: Number.isFinite(k._dispAngle) ? k._dispAngle : k.angle,
+function visDist(k, sess) {
+  const v = visXY(k, sess);
+  return Math.hypot(k.x - v.x, k.y - v.y);
+}
+
+function testOffsetHoldsOnCorrection(sess) {
+  const race = makeRace("racing");
+  const k = race.karts[0];
+  sess.latestState = {
+    tick: 1,
+    phase: "racing",
+    karts: [{ x: 150, y: 200, angle: 0, speed: 180 }],
   };
-}
-
-function restoreDisplayPose(k, disp) {
-  if (!k || !disp) return;
-  k._dispX = disp.x;
-  k._dispY = disp.y;
-  k._dispAngle = disp.a;
-  k._pidPhysX = k.x;
-  k._pidPhysY = k.y;
-  k._pidAlongPrev = undefined;
-}
-
-function applyPose(k, pose) {
-  k.x = pose.x;
-  k.y = pose.y;
-  k.angle = pose.angle;
-  if (pose.speed != null) k.speed = pose.speed;
-}
-
-function smooth(sess, race, dt = DT) {
-  sess.smoothOnlineDisplay(race, dt);
-}
-
-function testCorrectionGlides(sess) {
-  const race = makeRace("racing");
-  const k = race.karts[0];
-  k.x = 160;
-  const prevDispX = k._dispX;
-  const prevDispY = k._dispY;
+  sess._lastReconTick = -1;
+  sess._visOff = { x: 0, y: 0, a: 0 };
   const speedBefore = k.speed;
-  smooth(sess, race);
-  const frameDelta = k._dispX - prevDispX;
-  assert.strictEqual(k.speed, speedBefore, "physics speed must not change");
-  assert.ok(frameDelta > 0, "display should move forward along heading toward physics");
-  assert.ok(frameDelta < 25, `single-frame glide too large: ${frameDelta}px`);
-  assert.ok(Math.abs(k._dispY - prevDispY) < 0.5, "display should not slide sideways");
-  assert.notStrictEqual(k._dispX, k.x, "display should not instantly snap to physics");
-  console.log("ok correctionGlides");
+  sess.reconcileLocalKart(race, DT);
+  assert.strictEqual(k.x, 150, "physics snapped to server pose");
+  assert.strictEqual(k.speed, speedBefore, "physics speed unchanged by visual offset");
+  const vis = visXY(k, sess);
+  assert.ok(Math.abs(vis.x - 100) < 0.01, `visual X should hold at 100, got ${vis.x}`);
+  assert.ok(Math.abs(vis.y - 200) < 0.01, `visual Y should hold at 200, got ${vis.y}`);
+  console.log("ok offsetHoldsOnCorrection");
 }
 
-function testConvergesAlongPath(sess) {
+function testDecaysIn100ms(sess) {
   const race = makeRace("racing");
-  const k = race.karts[0];
-  k.x = 140;
-  const startErr = dispDist(k);
-  for (let i = 0; i < 30; i++) smooth(sess, race);
-  const midErr = dispDist(k);
-  assert.ok(midErr < startErr - 4, `0.5s should reduce along-error (start=${startErr}, mid=${midErr})`);
-  for (let i = 0; i < 150; i++) smooth(sess, race);
-  assert.ok(dispDist(k) < 6, `along-error should mostly close, err=${dispDist(k)}`);
-  console.log("ok convergesAlongPath");
+  sess._visOff = { x: 40, y: 0, a: 0 };
+  for (let i = 0; i < 6; i++) sess.smoothOnlineDisplay(race, DT);
+  const mag = visDist(race.karts[0], sess);
+  assert.ok(mag < 20, `offset should decay in ~100ms, mag=${mag}`);
+  assert.ok(mag > 8, `offset should not vanish in one tick, mag=${mag}`);
+  console.log("ok decaysIn100ms");
 }
 
-function testNoMidRaceSnapAt180(sess) {
+function testNoMidRaceSnap(sess) {
   const race = makeRace("racing");
   const k = race.karts[0];
-  k.x = 250;
-  const prevDispX = k._dispX;
-  smooth(sess, race);
-  const frameDelta = Math.abs(k._dispX - prevDispX);
-  assert.ok(frameDelta < 149, `mid-race snap detected: jumped ${frameDelta}px in one frame`);
-  assert.notStrictEqual(k._dispX, k.x, "150px error should glide, not snap during racing");
-  console.log("ok noMidRaceSnapAt180");
+  sess._visOff = { x: -150, y: 0, a: 0 };
+  applyVis(k, sess);
+  const visBefore = visXY(k, sess);
+  sess.smoothOnlineDisplay(race, DT);
+  const visAfter = visXY(k, sess);
+  const jump = Math.hypot(visAfter.x - visBefore.x, visAfter.y - visBefore.y);
+  assert.ok(jump < 40, `mid-race visual jump too large: ${jump}px`);
+  assert.ok(visDist(k, sess) > 100, "150px correction should not snap away in one frame");
+  console.log("ok noMidRaceSnap");
+}
+
+function testLaunchSnapAllowed(sess) {
+  const race = makeRace("countdown");
+  sess._visOff = { x: 250, y: 0, a: 0 };
+  sess.smoothOnlineDisplay(race, DT);
+  assert.ok(Math.abs(sess._visOff.x) < 0.01, "launch/countdown should snap large offset");
+  console.log("ok launchSnapAllowed");
 }
 
 function testSpeedUntouched(sess) {
   const race = makeRace("racing");
   const k = race.karts[0];
-  k.x = 140;
+  sess._visOff = { x: -40, y: 0, a: 0 };
   const startSpeed = k.speed;
-  for (let i = 0; i < 30; i++) smooth(sess, race);
-  assert.strictEqual(k.speed, startSpeed, "k.speed must stay 180 after PIDF catch-up");
-  assert.ok(isFinite(k._dispSpeed), "visual speed should be tracked separately");
+  for (let i = 0; i < 30; i++) sess.smoothOnlineDisplay(race, DT);
+  assert.strictEqual(k.speed, startSpeed, "k.speed must stay unchanged");
   console.log("ok speedUntouched");
 }
 
-function testLaunchSnapAllowed(sess) {
-  const race = makeRace("countdown");
-  const k = race.karts[0];
-  k.x = 350;
-  smooth(sess, race);
-  assert.strictEqual(k._dispX, k.x, "launch/countdown should allow hard snap on large error");
-  assert.strictEqual(k._dispY, k.y);
-  console.log("ok launchSnapAllowed");
-}
-
-function testReconcilePreservesDisplay(sess) {
-  const race = makeRace("racing");
-  const k = race.karts[0];
-  const keepDisp = captureDisplayPose(k);
-  applyPose(k, { x: 150, y: 200, angle: 0, speed: 180 });
-  restoreDisplayPose(k, keepDisp);
-  assert.strictEqual(k._dispX, 100, "display X preserved after reconcile-style physics snap");
-  assert.strictEqual(k._dispY, 200, "display Y preserved after reconcile-style physics snap");
-  assert.strictEqual(k.x, 150, "physics updated to server pose");
-  console.log("ok reconcilePreservesDisplay");
+function applyVis(k, sess) {
+  const off = sess._visOff;
+  k._visOffX = off.x;
+  k._visOffY = off.y;
+  k._visOffA = off.a;
 }
 
 const sess = loadSession();
-testCorrectionGlides(sess);
-testConvergesAlongPath(sess);
-testNoMidRaceSnapAt180(sess);
-testSpeedUntouched(sess);
+testOffsetHoldsOnCorrection(sess);
+testDecaysIn100ms(sess);
+testNoMidRaceSnap(sess);
 testLaunchSnapAllowed(sess);
-testReconcilePreservesDisplay(sess);
+testSpeedUntouched(sess);
 
-console.log("All display smooth tests passed.");
+console.log("All display offset tests passed.");
