@@ -16,6 +16,9 @@
   var SNAP_BUF = 24;
   var LOCAL_BLEND_MIN = 40;
   var LOCAL_SNAP_ERR = 220;
+  var LOCAL_CATCHUP_SEC = 0.12;
+  var MAX_LOCAL_LAG = 28;
+  var LOCAL_LAG_CLOSE_SEC = 0.06;
   var RECON_REPLAY_MAX = 24;
   var DISP_MAX_PX_PER_SEC = 1200;
   var DISP_SPEED_MUL = 1.1;
@@ -133,7 +136,6 @@
     this._inputHistory = [];
     this._lastProcessedLocal = 0;
     this._lastReconTick = -1;
-    this._visOff = { x: 0, y: 0, a: 0 };
     this._bytesIn = 0;
     this._bytesOut = 0;
     this._bytesWindowStart = 0;
@@ -358,7 +360,6 @@
     this._inputHistory = [];
     this._lastProcessedLocal = 0;
     this._lastReconTick = -1;
-    this._visOff = { x: 0, y: 0, a: 0 };
   };
 
   OnlineSession.prototype.leave = function (silent) {
@@ -696,6 +697,22 @@
     return a + d * u;
   }
 
+  function captureDisplayPose(k) {
+    if (!k || !isFinite(k._dispX) || !isFinite(k._dispY)) return null;
+    return {
+      x: k._dispX,
+      y: k._dispY,
+      a: isFinite(k._dispAngle) ? k._dispAngle : k.angle
+    };
+  }
+
+  function restoreDisplayPose(k, disp) {
+    if (!k || !disp) return;
+    k._dispX = disp.x;
+    k._dispY = disp.y;
+    k._dispAngle = disp.a;
+  }
+
   function applyRaceMeta(race, snap, localIdx) {
     if (!snap) return;
     if (snap.phase) race.phase = snap.phase;
@@ -791,21 +808,6 @@
     }
   };
 
-  OnlineSession.prototype.applyVisualOffset = function (k, dt) {
-    var off = this._visOff;
-    if (!off || !k) return;
-    var decay = Math.exp(-(dt || 1 / 60) / VIS_OFFSET_TAU);
-    off.x *= decay;
-    off.y *= decay;
-    off.a *= decay;
-    if (Math.abs(off.x) < 0.15 && Math.abs(off.y) < 0.15 && Math.abs(off.a) < 0.002) {
-      off.x = 0; off.y = 0; off.a = 0;
-    }
-    k.x += off.x;
-    k.y += off.y;
-    k.angle += off.a;
-  };
-
   OnlineSession.prototype.resetDisplayPoses = function (race) {
     this._lastDispErr = 0;
     if (!race || !race.karts) return;
@@ -826,10 +828,13 @@
     if (stepDt > 0.08) stepDt = 0.08;
     var blend = dispSmoothFactor();
     var maxErr = 0;
+    var localIdx = this.localSlot >= 0 ? this.localSlot : 0;
+    var allowLocalSnap = race.phase !== 'racing';
     var i;
     for (i = 0; i < race.karts.length; i++) {
       var k = race.karts[i];
       if (!k || !isFinite(k.x) || !isFinite(k.y) || !isFinite(k.angle)) continue;
+      var isLocal = i === localIdx;
       if (!isFinite(k._dispX) || !isFinite(k._dispY) || !isFinite(k._dispAngle)) {
         k._dispX = k.x;
         k._dispY = k.y;
@@ -840,7 +845,14 @@
       var dy = k.y - k._dispY;
       var dist = Math.sqrt(dx * dx + dy * dy);
       if (dist > maxErr) maxErr = dist;
-      if (dist > DISP_SNAP_ERR) {
+      if (isLocal) {
+        if (allowLocalSnap && dist > LOCAL_SNAP_ERR) {
+          k._dispX = k.x;
+          k._dispY = k.y;
+          k._dispAngle = k.angle;
+          continue;
+        }
+      } else if (dist > DISP_SNAP_ERR) {
         k._dispX = k.x;
         k._dispY = k.y;
         k._dispAngle = k.angle;
@@ -848,6 +860,21 @@
       }
       var spd = isFinite(k.speed) ? Math.abs(k.speed) : 0;
       var maxStep = (DISP_MAX_PX_PER_SEC + spd * DISP_SPEED_MUL) * stepDt;
+      if (isLocal) {
+        if (dist > LOCAL_BLEND_MIN) {
+          maxStep = Math.max(maxStep, (dist / LOCAL_CATCHUP_SEC) * stepDt);
+        }
+        if (dist > MAX_LOCAL_LAG) {
+          var excess = dist - MAX_LOCAL_LAG;
+          maxStep = Math.max(maxStep, (excess / LOCAL_LAG_CLOSE_SEC) * stepDt);
+        }
+        if (k.isOffTrack && dist > 8) {
+          maxStep = Math.max(maxStep, (dist / 0.08) * stepDt);
+        }
+        if (!allowLocalSnap && dist > LOCAL_SNAP_ERR) {
+          maxStep = Math.max(maxStep, (dist / 0.15) * stepDt);
+        }
+      }
       var nx;
       var ny;
       if (dist <= maxStep || dist < 0.001) {
@@ -868,6 +895,9 @@
       while (dA > Math.PI) dA -= Math.PI * 2;
       while (dA < -Math.PI) dA += Math.PI * 2;
       var maxA = DISP_MAX_RAD_PER_SEC * stepDt;
+      if (isLocal && dist > LOCAL_BLEND_MIN) {
+        maxA = Math.max(maxA, (Math.abs(dA) / LOCAL_CATCHUP_SEC) * stepDt);
+      }
       var stepA = Math.abs(dA) <= maxA ? dA : (dA > 0 ? maxA : -maxA);
       if (blend < 1) stepA *= blend;
       k._dispAngle += stepA;
@@ -949,13 +979,14 @@
 
       var corrErr = poseError({ x: oldX, y: oldY }, race._onlineLocalSim);
       this._lastCorrErr = corrErr;
+      var keepDisp = captureDisplayPose(k);
       applyPose(k, race._onlineLocalSim);
+      restoreDisplayPose(k, keepDisp);
       k.ersCharge = race._onlineLocalSim.ersCharge;
       k.ersActive = race._onlineLocalSim.ersActive;
       k.drsActive = race._onlineLocalSim.drsActive;
       k.tyreWear = race._onlineLocalSim.tyreWear;
       if (typeof race._onlineLocalSim.tyreTemp === 'number') k.tyreTemp = race._onlineLocalSim.tyreTemp;
-      this._visOff = { x: 0, y: 0, a: 0 };
       this._guestPhase = snap.phase || race.phase;
       return;
     }
@@ -968,8 +999,9 @@
 
     var err = (isFinite(k.x) && isFinite(k.y)) ? poseError(k, s) : Infinity;
     this._lastCorrErr = err;
+    var keepDispFallback = captureDisplayPose(k);
     applyPose(k, s);
-    this._visOff = { x: 0, y: 0, a: 0 };
+    restoreDisplayPose(k, keepDispFallback);
     this._guestPhase = snap.phase || race.phase;
   };
 

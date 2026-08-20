@@ -432,7 +432,7 @@ class SimKart {
     handleOffTrackPenalty(dt, track) {
         if (this.finished)
             return;
-        const strictHw = track.trackWidth / 2 + 10;
+        const strictHw = track.trackWidth / 2 + 18;
         const nearP = track.spline[this._nearestSplineIdx || 0];
         this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
         if (this._isCompletelyOff) {
@@ -557,8 +557,7 @@ function stepKart(kart, inp, dt, track, otherKarts, flags = {}) {
         kart._throttleAssist *= 0.4;
     kart._brakeAssist += (brakeTarget - kart._brakeAssist) * (inp.down ? 0.16 : 0.11);
     const throttleInput = Math.max(0, Math.min(1, kart._throttleAssist));
-    const keyboardBrakeCap = !hasAnalogDrive && inp.down ? 0.5 : 1;
-    const brakeInput = Math.max(0, Math.min(keyboardBrakeCap, kart._brakeAssist));
+    const brakeInput = Math.max(0, Math.min(1, kart._brakeAssist));
     if (flags.resolveCollisions !== false && flags.contact !== false) {
         resolveKartCollisions(otherKarts, true, maxSpd);
     }

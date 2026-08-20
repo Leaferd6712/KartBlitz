@@ -206,7 +206,7 @@ export class SimKart {
 
   handleOffTrackPenalty(dt: number, track: BakedTrack) {
     if (this.finished) return;
-    const strictHw = track.trackWidth / 2 + 10;
+    const strictHw = track.trackWidth / 2 + 18;
     const nearP = track.spline[this._nearestSplineIdx || 0];
     this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
     if (this._isCompletelyOff) {

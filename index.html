@@ -4186,7 +4186,7 @@ class Kart {
     // off track penalty - 3 seconds to get back or u get reset
     if (!this.isAI && !this.finished) {
       // Strict threshold — just track half-width + small car-body margin (no generous buffer)
-      const strictHw = trackData.trackWidth / 2 + 10;
+      const strictHw = trackData.trackWidth / 2 + 18;
       const nearP    = trackData.spline[this._nearestSplineIdx || 0];
       // Suppress off-track penalty when the kart is inside the pit lane
       let nearPitLane = false;
