@@ -14,17 +14,21 @@
   var INTERP_MS_MAX = 200;
   var EXTRAP_MS_MAX = 50;
   var SNAP_BUF = 24;
-  var LOCAL_BLEND_MIN = 22;
   var LOCAL_SNAP_ERR = 220;
-  var LOCAL_CATCHUP_SEC = 0.08;
-  var MAX_LOCAL_LAG = 14;
-  var LOCAL_LAG_CLOSE_SEC = 0.04;
   var RECON_REPLAY_MAX = 24;
-  var DISP_MAX_PX_PER_SEC = 1200;
-  var DISP_SPEED_MUL = 1.1;
   var DISP_MAX_RAD_PER_SEC = 8;
   var DISP_SNAP_ERR = 180;
   var DISP_SMOOTH = 1;
+  var PID_KP = 1.4;
+  var PID_KI = 0.35;
+  var PID_KD = 0.12;
+  var PID_I_CLAMP = 18;
+  var PID_BIAS_MAX = 36;
+  var PID_BIAS_PCT = 0.07;
+  var PID_BIAS_FLOOR = 10;
+  var PID_D_CLAMP = 200;
+  var PID_LATERAL_SCALE = 80;
+  var PID_CREEP_SPEED = 28;
   var PRODUCTION_HOST = 'kartblitz-online.kartblitz.workers.dev';
   var ONLINE_PROTOCOL = (global.OnlineSim && global.OnlineSim.ONLINE_PROTOCOL) || 3;
   var TRACK_BAKE_VERSION = (global.OnlineSim && global.OnlineSim.TRACK_BAKE_VERSION) || 2;
@@ -711,6 +715,18 @@
     k._dispX = disp.x;
     k._dispY = disp.y;
     k._dispAngle = disp.a;
+    k._pidPhysX = k.x;
+    k._pidPhysY = k.y;
+    k._pidAlongPrev = undefined;
+  }
+
+  function resetKartPid(k) {
+    if (!k) return;
+    k._pidI = 0;
+    k._pidAlongPrev = undefined;
+    k._pidPhysX = k.x;
+    k._pidPhysY = k.y;
+    k._dispSpeed = isFinite(k.speed) ? k.speed : 0;
   }
 
   function applyRaceMeta(race, snap, localIdx) {
@@ -818,6 +834,11 @@
       k._dispX = undefined;
       k._dispY = undefined;
       k._dispAngle = undefined;
+      k._dispSpeed = undefined;
+      k._pidI = undefined;
+      k._pidAlongPrev = undefined;
+      k._pidPhysX = undefined;
+      k._pidPhysY = undefined;
     }
   };
 
@@ -839,65 +860,83 @@
         k._dispX = k.x;
         k._dispY = k.y;
         k._dispAngle = k.angle;
+        resetKartPid(k);
         continue;
       }
       var dx = k.x - k._dispX;
       var dy = k.y - k._dispY;
       var dist = Math.sqrt(dx * dx + dy * dy);
       if (dist > maxErr) maxErr = dist;
-      if (isLocal) {
-        if (allowLocalSnap && dist > LOCAL_SNAP_ERR) {
-          k._dispX = k.x;
-          k._dispY = k.y;
-          k._dispAngle = k.angle;
-          continue;
-        }
-      } else if (dist > DISP_SNAP_ERR) {
+
+      var shouldSnap = isLocal
+        ? (allowLocalSnap && dist > LOCAL_SNAP_ERR)
+        : (dist > DISP_SNAP_ERR);
+      if (shouldSnap) {
         k._dispX = k.x;
         k._dispY = k.y;
         k._dispAngle = k.angle;
+        resetKartPid(k);
         continue;
       }
-      var spd = isFinite(k.speed) ? Math.abs(k.speed) : 0;
-      var maxStep = (DISP_MAX_PX_PER_SEC + spd * DISP_SPEED_MUL) * stepDt;
-      if (isLocal) {
-        if (dist > LOCAL_BLEND_MIN) {
-          maxStep = Math.max(maxStep, (dist / LOCAL_CATCHUP_SEC) * stepDt);
-        }
-        if (dist > MAX_LOCAL_LAG) {
-          var excess = dist - MAX_LOCAL_LAG;
-          maxStep = Math.max(maxStep, (excess / LOCAL_LAG_CLOSE_SEC) * stepDt);
-        }
-        if (k.isOffTrack && dist > 4) {
-          maxStep = Math.max(maxStep, (dist / 0.03) * stepDt);
-        }
-        if (!allowLocalSnap && dist > LOCAL_SNAP_ERR) {
-          maxStep = Math.max(maxStep, (dist / 0.15) * stepDt);
-        }
-      }
-      var nx;
-      var ny;
-      if (dist <= maxStep || dist < 0.001) {
-        nx = k.x;
-        ny = k.y;
-      } else {
-        nx = k._dispX + (dx / dist) * maxStep;
-        ny = k._dispY + (dy / dist) * maxStep;
-      }
-      if (blend < 1) {
-        nx = k._dispX + (nx - k._dispX) * blend;
-        ny = k._dispY + (ny - k._dispY) * blend;
-      }
-      k._dispX = nx;
-      k._dispY = ny;
 
-      var dA = k.angle - k._dispAngle;
+      var ang = k._dispAngle;
+      var hx = Math.cos(ang);
+      var hy = Math.sin(ang);
+      var along = dx * hx + dy * hy;
+      var lateral = -dx * hy + dy * hx;
+
+      if (!isFinite(k._pidI)) k._pidI = 0;
+      var dAlong = 0;
+      if (isFinite(k._pidAlongPrev)) {
+        dAlong = (along - k._pidAlongPrev) / stepDt;
+        if (dAlong > PID_D_CLAMP) dAlong = PID_D_CLAMP;
+        if (dAlong < -PID_D_CLAMP) dAlong = -PID_D_CLAMP;
+      }
+      k._pidAlongPrev = along;
+      k._pidI += along * stepDt;
+      if (k._pidI > PID_I_CLAMP) k._pidI = PID_I_CLAMP;
+      if (k._pidI < -PID_I_CLAMP) k._pidI = -PID_I_CLAMP;
+
+      var bias = PID_KP * along + PID_KI * k._pidI + PID_KD * dAlong;
+      var absSpd = isFinite(k.speed) ? Math.abs(k.speed) : 0;
+      var cap = PID_BIAS_PCT * absSpd + PID_BIAS_FLOOR;
+      if (cap > PID_BIAS_MAX) cap = PID_BIAS_MAX;
+      if (bias > cap) bias = cap;
+      if (bias < -cap) bias = -cap;
+      if (blend < 1) bias *= blend;
+
+      if (absSpd < 12 && dist > 8) {
+        var creep = along > 0 ? PID_CREEP_SPEED : -PID_CREEP_SPEED;
+        if (Math.abs(along) < 8) creep = along * 3;
+        if (blend < 1) creep *= blend;
+        bias += creep;
+      }
+
+      if (!isFinite(k._pidPhysX) || !isFinite(k._pidPhysY)) {
+        k._pidPhysX = k.x;
+        k._pidPhysY = k.y;
+      }
+      var physDx = k.x - k._pidPhysX;
+      var physDy = k.y - k._pidPhysY;
+      k._pidPhysX = k.x;
+      k._pidPhysY = k.y;
+      var physDist = Math.sqrt(physDx * physDx + physDy * physDy);
+      var maxCopy = (absSpd + 40) * stepDt;
+      if (physDist <= maxCopy) {
+        k._dispX += physDx;
+        k._dispY += physDy;
+      }
+
+      k._dispSpeed = (isFinite(k.speed) ? k.speed : 0) + bias;
+      k._dispX += hx * bias * stepDt;
+      k._dispY += hy * bias * stepDt;
+
+      var nudge = Math.atan2(lateral, PID_LATERAL_SCALE);
+      var targetA = k.angle + nudge * 0.35;
+      var dA = targetA - k._dispAngle;
       while (dA > Math.PI) dA -= Math.PI * 2;
       while (dA < -Math.PI) dA += Math.PI * 2;
       var maxA = DISP_MAX_RAD_PER_SEC * stepDt;
-      if (isLocal && dist > LOCAL_BLEND_MIN) {
-        maxA = Math.max(maxA, (Math.abs(dA) / LOCAL_CATCHUP_SEC) * stepDt);
-      }
       var stepA = Math.abs(dA) <= maxA ? dA : (dA > 0 ? maxA : -maxA);
       if (blend < 1) stepA *= blend;
       k._dispAngle += stepA;

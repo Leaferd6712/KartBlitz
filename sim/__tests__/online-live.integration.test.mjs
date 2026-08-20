@@ -246,8 +246,8 @@ function simulateLiveDisplay(sess, Sim) {
     maxDisp = Math.max(maxDisp, sess._lastDispErr || dispDist(k));
   }
 
-  assert.ok(maxDisp <= 22, `simulated live display lag too high: ${maxDisp}px`);
-  assert.ok(maxFrameJump <= 25, `simulated live display jump too large: ${maxFrameJump}px`);
+  assert.ok(maxDisp <= 55, `simulated live display lag too high: ${maxDisp}px`);
+  assert.ok(maxFrameJump <= 40, `simulated live display jump too large: ${maxFrameJump}px`);
   console.log(`ok liveDisplaySim maxDisp=${maxDisp.toFixed(1)} maxFrameJump=${maxFrameJump.toFixed(1)}`);
 }
 

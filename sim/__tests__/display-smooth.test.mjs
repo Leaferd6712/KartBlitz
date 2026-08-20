@@ -1,5 +1,5 @@
 /**
- * Regression tests for online display smoothing (smoothOnlineDisplay / reconcile).
+ * Regression tests for PIDF visual-speed display catch-up.
  */
 import fs from "fs";
 import path from "path";
@@ -74,6 +74,9 @@ function restoreDisplayPose(k, disp) {
   k._dispX = disp.x;
   k._dispY = disp.y;
   k._dispAngle = disp.a;
+  k._pidPhysX = k.x;
+  k._pidPhysY = k.y;
+  k._pidAlongPrev = undefined;
 }
 
 function applyPose(k, pose) {
@@ -92,21 +95,29 @@ function testCorrectionGlides(sess) {
   const k = race.karts[0];
   k.x = 160;
   const prevDispX = k._dispX;
+  const prevDispY = k._dispY;
+  const speedBefore = k.speed;
   smooth(sess, race);
-  const frameDelta = Math.abs(k._dispX - prevDispX);
-  assert.ok(frameDelta > 0, "display should move toward corrected physics");
+  const frameDelta = k._dispX - prevDispX;
+  assert.strictEqual(k.speed, speedBefore, "physics speed must not change");
+  assert.ok(frameDelta > 0, "display should move forward along heading toward physics");
   assert.ok(frameDelta < 25, `single-frame glide too large: ${frameDelta}px`);
+  assert.ok(Math.abs(k._dispY - prevDispY) < 0.5, "display should not slide sideways");
   assert.notStrictEqual(k._dispX, k.x, "display should not instantly snap to physics");
   console.log("ok correctionGlides");
 }
 
-function testConvergesWithin150ms(sess) {
+function testConvergesAlongPath(sess) {
   const race = makeRace("racing");
   const k = race.karts[0];
-  k.x = 160;
-  for (let i = 0; i < 10; i++) smooth(sess, race);
-  assert.ok(dispDist(k) < 2, `display should converge within 150ms, err=${dispDist(k)}`);
-  console.log("ok convergesWithin150ms");
+  k.x = 140;
+  const startErr = dispDist(k);
+  for (let i = 0; i < 30; i++) smooth(sess, race);
+  const midErr = dispDist(k);
+  assert.ok(midErr < startErr - 4, `0.5s should reduce along-error (start=${startErr}, mid=${midErr})`);
+  for (let i = 0; i < 150; i++) smooth(sess, race);
+  assert.ok(dispDist(k) < 6, `along-error should mostly close, err=${dispDist(k)}`);
+  console.log("ok convergesAlongPath");
 }
 
 function testNoMidRaceSnapAt180(sess) {
@@ -121,34 +132,15 @@ function testNoMidRaceSnapAt180(sess) {
   console.log("ok noMidRaceSnapAt180");
 }
 
-function testLagCapEnforced(sess) {
+function testSpeedUntouched(sess) {
   const race = makeRace("racing");
   const k = race.karts[0];
   k.x = 140;
-  for (let i = 0; i < 15; i++) smooth(sess, race);
-  assert.ok(sess._lastDispErr <= 16, `display lag should settle under cap: ${sess._lastDispErr}px`);
-  assert.ok(dispDist(k) <= 16, `display distance should be under cap: ${dispDist(k)}px`);
-  console.log("ok lagCapEnforced");
-}
-
-function testOffTrackBoost(sess) {
-  const raceOff = makeRace("racing");
-  const raceOn = makeRace("racing");
-  const kOff = raceOff.karts[0];
-  const kOn = raceOn.karts[0];
-  kOff.speed = 0;
-  kOn.speed = 0;
-  kOff.isOffTrack = true;
-  kOff.x = 200;
-  kOn.x = 200;
-
-  smooth(sess, raceOff);
-  smooth(sess, raceOn);
-
-  const errOff = dispDist(kOff);
-  const errOn = dispDist(kOn);
-  assert.ok(errOff < errOn, `off-track should catch up faster after 1 frame (off=${errOff}, on=${errOn})`);
-  console.log("ok offTrackBoost");
+  const startSpeed = k.speed;
+  for (let i = 0; i < 30; i++) smooth(sess, race);
+  assert.strictEqual(k.speed, startSpeed, "k.speed must stay 180 after PIDF catch-up");
+  assert.ok(isFinite(k._dispSpeed), "visual speed should be tracked separately");
+  console.log("ok speedUntouched");
 }
 
 function testLaunchSnapAllowed(sess) {
@@ -175,10 +167,9 @@ function testReconcilePreservesDisplay(sess) {
 
 const sess = loadSession();
 testCorrectionGlides(sess);
-testConvergesWithin150ms(sess);
+testConvergesAlongPath(sess);
 testNoMidRaceSnapAt180(sess);
-testLagCapEnforced(sess);
-testOffTrackBoost(sess);
+testSpeedUntouched(sess);
 testLaunchSnapAllowed(sess);
 testReconcilePreservesDisplay(sess);
 
