@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-20T06:36:51.036Z
-Registered devices: 4
-Saved scores: 443
+Generated (UTC): 2026-08-20T11:57:07.132Z
+Registered devices: 5
+Saved scores: 445
 Saved online wins: 5
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
@@ -14,8 +14,9 @@ REGISTERED USERNAMES
 USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
 LEAFERD         2026-08-18T10:21:09.992Z  2026-08-20T00:42:09.659Z
 AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-20T00:45:00.411Z
-SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-20T00:28:55.475Z
+SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-20T10:39:05.812Z
 JAN             2026-08-20T00:29:04.489Z  2026-08-20T00:29:04.652Z
+SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-20T11:45:13.058Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
@@ -294,6 +295,7 @@ trial     3       HURRICANE PASS          SPEED4202     0:54.541    2:47.079    
 trial     3       HURRICANE PASS          DRIFT8698     0:55.332    2:46.475    -         2026-08-20T00:34:38.906Z
 trial     3       HURRICANE PASS          WHEEL8283     0:55.894    2:48.894    -         2026-08-20T00:34:34.296Z
 trial     3       HURRICANE PASS          TURBO2463     0:55.934    2:47.854    -         2026-08-20T00:34:34.296Z
+trial     4       RIVIERA GP              SCOOPDOG      0:44.347    0:44.347    -         2026-08-20T11:45:13.058Z
 trial     4       RIVIERA GP              DRIFT6796     0:54.202    2:44.004    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              LAP1142       0:54.419    2:44.836    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              POLE4106      0:54.749    2:46.688    -         2026-08-20T00:34:43.256Z
@@ -320,9 +322,10 @@ trial     4       RIVIERA GP              LAP1983       1:00.111    3:03.288    
 trial     4       RIVIERA GP              SPEED3102     1:00.816    3:03.330    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              SPEED5258     1:01.202    3:05.169    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              RACER8097     1:01.738    3:06.446    -         2026-08-20T00:34:43.256Z
+trial     5       TITAN LOOP              SCOOPDOG      0:39.383    2:54.039    -         2026-08-20T11:40:23.786Z
 trial     5       TITAN LOOP              LEAFERD       0:39.597    0:39.597    -         2026-08-18T23:08:54.278Z
+trial     5       TITAN LOOP              SCOOPDOG      0:39.683    4:26.978    -         2026-08-18T23:09:51.132Z
 trial     5       TITAN LOOP              AAAAAAAAAAAA  0:39.863    1:27.894    -         2026-08-18T23:08:59.486Z
-trial     5       TITAN LOOP              SCOOPDOG      0:40.697    1:27.543    -         2026-08-18T23:09:51.132Z
 trial     5       TITAN LOOP              WHEEL4295     0:43.878    3:00.991    -         2026-08-19T07:24:23.580Z
 trial     5       TITAN LOOP              TURBO2228     0:43.976    3:05.288    -         2026-08-19T07:24:23.580Z
 trial     5       TITAN LOOP              SPEED8348     0:44.023    3:12.661    -         2026-08-19T07:24:23.580Z
@@ -480,9 +483,9 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-20T06:36:51.036Z",
-  "deviceCount": 4,
-  "scoreCount": 443,
+  "generatedAt": "2026-08-20T11:57:07.132Z",
+  "deviceCount": 5,
+  "scoreCount": 445,
   "onlineWinCount": 5,
   "devices": [
     {
@@ -498,12 +501,17 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "username": "SCOOPDOG",
       "registeredAt": "2026-08-18T23:09:51.022Z",
-      "lastSeenAt": "2026-08-20T00:28:55.475Z"
+      "lastSeenAt": "2026-08-20T10:39:05.812Z"
     },
     {
       "username": "JAN",
       "registeredAt": "2026-08-20T00:29:04.489Z",
       "lastSeenAt": "2026-08-20T00:29:04.652Z"
+    },
+    {
+      "username": "SCOOPDOG",
+      "registeredAt": "2026-08-20T11:40:23.168Z",
+      "lastSeenAt": "2026-08-20T11:45:13.058Z"
     }
   ],
   "scores": [
@@ -4060,6 +4068,19 @@ MACHINE-READABLE JSON (for restore / import)
       "mode": "trial",
       "trackId": 4,
       "trackName": "RIVIERA GP",
+      "username": "SCOOPDOG",
+      "bestLap": 44.3475,
+      "bestLapText": "0:44.347",
+      "total": 44.3475,
+      "totalText": "0:44.347",
+      "winner": null,
+      "createdAt": "2026-08-20T11:45:13.058Z",
+      "updatedAt": "2026-08-20T11:45:13.058Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 4,
+      "trackName": "RIVIERA GP",
       "username": "DRIFT6796",
       "bestLap": 54.2021559185723,
       "bestLapText": "0:54.202",
@@ -4398,6 +4419,19 @@ MACHINE-READABLE JSON (for restore / import)
       "mode": "trial",
       "trackId": 5,
       "trackName": "TITAN LOOP",
+      "username": "SCOOPDOG",
+      "bestLap": 39.3825,
+      "bestLapText": "0:39.383",
+      "total": 174.039,
+      "totalText": "2:54.039",
+      "winner": null,
+      "createdAt": "2026-08-20T11:40:23.786Z",
+      "updatedAt": "2026-08-20T11:42:26.505Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
       "username": "LEAFERD",
       "bestLap": 39.59709999999963,
       "bestLapText": "0:39.597",
@@ -4411,6 +4445,19 @@ MACHINE-READABLE JSON (for restore / import)
       "mode": "trial",
       "trackId": 5,
       "trackName": "TITAN LOOP",
+      "username": "SCOOPDOG",
+      "bestLap": 39.68259999999404,
+      "bestLapText": "0:39.683",
+      "total": 266.978400000006,
+      "totalText": "4:26.978",
+      "winner": null,
+      "createdAt": "2026-08-18T23:09:51.132Z",
+      "updatedAt": "2026-08-20T10:38:22.897Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
       "username": "AAAAAAAAAAAA",
       "bestLap": 39.863,
       "bestLapText": "0:39.863",
@@ -4419,19 +4466,6 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-18T23:08:59.486Z",
       "updatedAt": "2026-08-20T00:38:07.903Z"
-    },
-    {
-      "mode": "trial",
-      "trackId": 5,
-      "trackName": "TITAN LOOP",
-      "username": "SCOOPDOG",
-      "bestLap": 40.69719999999553,
-      "bestLapText": "0:40.697",
-      "total": 87.54309999999404,
-      "totalText": "1:27.543",
-      "winner": null,
-      "createdAt": "2026-08-18T23:09:51.132Z",
-      "updatedAt": "2026-08-19T22:10:32.790Z"
     },
     {
       "mode": "trial",
