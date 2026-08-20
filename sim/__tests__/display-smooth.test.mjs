@@ -126,8 +126,8 @@ function testLagCapEnforced(sess) {
   const k = race.karts[0];
   k.x = 140;
   for (let i = 0; i < 15; i++) smooth(sess, race);
-  assert.ok(sess._lastDispErr <= 30, `display lag should settle under cap: ${sess._lastDispErr}px`);
-  assert.ok(dispDist(k) <= 30, `display distance should be under cap: ${dispDist(k)}px`);
+  assert.ok(sess._lastDispErr <= 16, `display lag should settle under cap: ${sess._lastDispErr}px`);
+  assert.ok(dispDist(k) <= 16, `display distance should be under cap: ${dispDist(k)}px`);
   console.log("ok lagCapEnforced");
 }
 

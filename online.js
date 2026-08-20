@@ -14,11 +14,11 @@
   var INTERP_MS_MAX = 200;
   var EXTRAP_MS_MAX = 50;
   var SNAP_BUF = 24;
-  var LOCAL_BLEND_MIN = 40;
+  var LOCAL_BLEND_MIN = 22;
   var LOCAL_SNAP_ERR = 220;
-  var LOCAL_CATCHUP_SEC = 0.12;
-  var MAX_LOCAL_LAG = 28;
-  var LOCAL_LAG_CLOSE_SEC = 0.06;
+  var LOCAL_CATCHUP_SEC = 0.08;
+  var MAX_LOCAL_LAG = 14;
+  var LOCAL_LAG_CLOSE_SEC = 0.04;
   var RECON_REPLAY_MAX = 24;
   var DISP_MAX_PX_PER_SEC = 1200;
   var DISP_SPEED_MUL = 1.1;
@@ -868,8 +868,8 @@
           var excess = dist - MAX_LOCAL_LAG;
           maxStep = Math.max(maxStep, (excess / LOCAL_LAG_CLOSE_SEC) * stepDt);
         }
-        if (k.isOffTrack && dist > 8) {
-          maxStep = Math.max(maxStep, (dist / 0.08) * stepDt);
+        if (k.isOffTrack && dist > 4) {
+          maxStep = Math.max(maxStep, (dist / 0.03) * stepDt);
         }
         if (!allowLocalSnap && dist > LOCAL_SNAP_ERR) {
           maxStep = Math.max(maxStep, (dist / 0.15) * stepDt);
