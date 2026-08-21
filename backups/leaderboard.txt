@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-20T18:31:32.055Z
+Generated (UTC): 2026-08-21T00:59:49.900Z
 Registered devices: 5
-Saved scores: 445
+Saved scores: 448
 Saved online wins: 5
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
@@ -12,11 +12,11 @@ Use this if D1 data is lost and you need to refer back to previous records.
 REGISTERED USERNAMES
 ------------------------------------------------------------------------------
 USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
-LEAFERD         2026-08-18T10:21:09.992Z  2026-08-20T00:42:09.659Z
-AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-20T00:45:00.411Z
+LEAFERD         2026-08-18T10:21:09.992Z  2026-08-21T00:44:01.766Z
+AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-21T00:46:00.219Z
 SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-20T10:39:05.812Z
 JAN             2026-08-20T00:29:04.489Z  2026-08-20T00:29:04.652Z
-SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-20T11:45:13.058Z
+SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-21T00:47:43.266Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
@@ -264,6 +264,7 @@ trial     2       BLUE BAY RUN            BOOST7104     0:47.361    2:23.974    
 trial     2       BLUE BAY RUN            RACER256      0:47.493    2:24.892    -         2026-08-20T00:34:15.621Z
 trial     2       BLUE BAY RUN            POLE4127      0:47.619    2:23.116    -         2026-08-20T00:34:10.965Z
 trial     2       BLUE BAY RUN            POLE8028      0:47.983    2:27.318    -         2026-08-20T00:34:13.346Z
+trial     3       HURRICANE PASS          LEAFERD       0:37.082    0:37.082    -         2026-08-21T00:44:01.766Z
 trial     3       HURRICANE PASS          DRIFT4471     0:48.069    2:24.275    -         2026-08-20T00:34:34.296Z
 trial     3       HURRICANE PASS          TURBO2260     0:48.706    2:26.464    -         2026-08-20T00:34:38.906Z
 trial     3       HURRICANE PASS          BOOST4797     0:48.742    2:27.204    -         2026-08-20T00:34:34.296Z
@@ -322,10 +323,10 @@ trial     4       RIVIERA GP              LAP1983       1:00.111    3:03.288    
 trial     4       RIVIERA GP              SPEED3102     1:00.816    3:03.330    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              SPEED5258     1:01.202    3:05.169    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              RACER8097     1:01.738    3:06.446    -         2026-08-20T00:34:43.256Z
-trial     5       TITAN LOOP              SCOOPDOG      0:39.383    2:54.039    -         2026-08-20T11:40:23.786Z
-trial     5       TITAN LOOP              LEAFERD       0:39.597    0:39.597    -         2026-08-18T23:08:54.278Z
+trial     5       TITAN LOOP              SCOOPDOG      0:37.182    2:04.076    -         2026-08-20T11:40:23.786Z
+trial     5       TITAN LOOP              LEAFERD       0:37.481    3:14.802    -         2026-08-18T23:08:54.278Z
+trial     5       TITAN LOOP              AAAAAAAAAAAA  0:37.630    2:04.859    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              SCOOPDOG      0:39.683    4:26.978    -         2026-08-18T23:09:51.132Z
-trial     5       TITAN LOOP              AAAAAAAAAAAA  0:39.863    1:27.894    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              WHEEL4295     0:43.878    3:00.991    -         2026-08-19T07:24:23.580Z
 trial     5       TITAN LOOP              TURBO2228     0:43.976    3:05.288    -         2026-08-19T07:24:23.580Z
 trial     5       TITAN LOOP              SPEED8348     0:44.023    3:12.661    -         2026-08-19T07:24:23.580Z
@@ -359,7 +360,9 @@ trial     5       TITAN LOOP              SPEED4330     1:06.401    3:20.452    
 trial     5       TITAN LOOP              BOOST8266     1:06.523    3:20.061    -         2026-08-19T22:10:48.527Z
 trial     5       TITAN LOOP              WHEEL2454     1:06.716    3:20.370    -         2026-08-19T22:10:48.527Z
 trial     5       TITAN LOOP              LAP2864       1:06.817    3:22.447    -         2026-08-19T22:10:48.527Z
+trial     6       AMBER HIGHWAY           SCOOPDOG      0:51.344    1:43.955    -         2026-08-21T00:46:51.933Z
 trial     6       AMBER HIGHWAY           GRID6904      0:53.072    2:40.330    -         2026-08-20T00:34:52.852Z
+trial     6       AMBER HIGHWAY           AAAAAAAAAAAA  0:54.614    0:54.614    -         2026-08-21T00:46:00.219Z
 trial     6       AMBER HIGHWAY           TURBO4486     0:54.868    2:45.475    -         2026-08-20T00:34:52.852Z
 trial     6       AMBER HIGHWAY           LAP4975       0:55.288    2:49.677    -         2026-08-20T00:34:52.852Z
 trial     6       AMBER HIGHWAY           SPEED7890     0:56.115    2:48.944    -         2026-08-20T00:34:52.852Z
@@ -483,20 +486,20 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-20T18:31:32.055Z",
+  "generatedAt": "2026-08-21T00:59:49.900Z",
   "deviceCount": 5,
-  "scoreCount": 445,
+  "scoreCount": 448,
   "onlineWinCount": 5,
   "devices": [
     {
       "username": "LEAFERD",
       "registeredAt": "2026-08-18T10:21:09.992Z",
-      "lastSeenAt": "2026-08-20T00:42:09.659Z"
+      "lastSeenAt": "2026-08-21T00:44:01.766Z"
     },
     {
       "username": "AAAAAAAAAAAA",
       "registeredAt": "2026-08-18T23:08:59.310Z",
-      "lastSeenAt": "2026-08-20T00:45:00.411Z"
+      "lastSeenAt": "2026-08-21T00:46:00.219Z"
     },
     {
       "username": "SCOOPDOG",
@@ -511,7 +514,7 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "username": "SCOOPDOG",
       "registeredAt": "2026-08-20T11:40:23.168Z",
-      "lastSeenAt": "2026-08-20T11:45:13.058Z"
+      "lastSeenAt": "2026-08-21T00:47:43.266Z"
     }
   ],
   "scores": [
@@ -3665,6 +3668,19 @@ MACHINE-READABLE JSON (for restore / import)
       "mode": "trial",
       "trackId": 3,
       "trackName": "HURRICANE PASS",
+      "username": "LEAFERD",
+      "bestLap": 37.082,
+      "bestLapText": "0:37.082",
+      "total": 37.082,
+      "totalText": "0:37.082",
+      "winner": null,
+      "createdAt": "2026-08-21T00:44:01.766Z",
+      "updatedAt": "2026-08-21T00:44:01.766Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 3,
+      "trackName": "HURRICANE PASS",
       "username": "DRIFT4471",
       "bestLap": 48.068912623316066,
       "bestLapText": "0:48.069",
@@ -4420,26 +4436,39 @@ MACHINE-READABLE JSON (for restore / import)
       "trackId": 5,
       "trackName": "TITAN LOOP",
       "username": "SCOOPDOG",
-      "bestLap": 39.3825,
-      "bestLapText": "0:39.383",
-      "total": 174.039,
-      "totalText": "2:54.039",
+      "bestLap": 37.18189999997616,
+      "bestLapText": "0:37.182",
+      "total": 124.07589999997617,
+      "totalText": "2:04.076",
       "winner": null,
       "createdAt": "2026-08-20T11:40:23.786Z",
-      "updatedAt": "2026-08-20T11:42:26.505Z"
+      "updatedAt": "2026-08-21T00:39:22.286Z"
     },
     {
       "mode": "trial",
       "trackId": 5,
       "trackName": "TITAN LOOP",
       "username": "LEAFERD",
-      "bestLap": 39.59709999999963,
-      "bestLapText": "0:39.597",
-      "total": 39.59709999999963,
-      "totalText": "0:39.597",
+      "bestLap": 37.480699999988076,
+      "bestLapText": "0:37.481",
+      "total": 194.8021999999881,
+      "totalText": "3:14.802",
       "winner": null,
       "createdAt": "2026-08-18T23:08:54.278Z",
-      "updatedAt": "2026-08-20T00:42:09.659Z"
+      "updatedAt": "2026-08-21T00:36:57.550Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
+      "username": "AAAAAAAAAAAA",
+      "bestLap": 37.62960000002384,
+      "bestLapText": "0:37.630",
+      "total": 124.85870000004769,
+      "totalText": "2:04.859",
+      "winner": null,
+      "createdAt": "2026-08-18T23:08:59.486Z",
+      "updatedAt": "2026-08-21T00:35:16.345Z"
     },
     {
       "mode": "trial",
@@ -4453,19 +4482,6 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-18T23:09:51.132Z",
       "updatedAt": "2026-08-20T10:38:22.897Z"
-    },
-    {
-      "mode": "trial",
-      "trackId": 5,
-      "trackName": "TITAN LOOP",
-      "username": "AAAAAAAAAAAA",
-      "bestLap": 39.863,
-      "bestLapText": "0:39.863",
-      "total": 87.89369999998809,
-      "totalText": "1:27.894",
-      "winner": null,
-      "createdAt": "2026-08-18T23:08:59.486Z",
-      "updatedAt": "2026-08-20T00:38:07.903Z"
     },
     {
       "mode": "trial",
@@ -4900,6 +4916,19 @@ MACHINE-READABLE JSON (for restore / import)
       "mode": "trial",
       "trackId": 6,
       "trackName": "AMBER HIGHWAY",
+      "username": "SCOOPDOG",
+      "bestLap": 51.34440000000596,
+      "bestLapText": "0:51.344",
+      "total": 103.95480000001191,
+      "totalText": "1:43.955",
+      "winner": null,
+      "createdAt": "2026-08-21T00:46:51.933Z",
+      "updatedAt": "2026-08-21T00:47:43.266Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 6,
+      "trackName": "AMBER HIGHWAY",
       "username": "GRID6904",
       "bestLap": 53.0719837849556,
       "bestLapText": "0:53.072",
@@ -4908,6 +4937,19 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-20T00:34:52.852Z",
       "updatedAt": "2026-08-20T00:34:52.852Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 6,
+      "trackName": "AMBER HIGHWAY",
+      "username": "AAAAAAAAAAAA",
+      "bestLap": 54.614,
+      "bestLapText": "0:54.614",
+      "total": 54.614,
+      "totalText": "0:54.614",
+      "winner": null,
+      "createdAt": "2026-08-21T00:46:00.219Z",
+      "updatedAt": "2026-08-21T00:46:00.219Z"
     },
     {
       "mode": "trial",
