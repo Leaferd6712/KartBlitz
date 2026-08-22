@@ -1,5 +1,5 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-21T18:29:24.230Z
+Generated (UTC): 2026-08-22T00:56:14.992Z
 Registered devices: 5
 Saved scores: 448
 Saved online wins: 5
@@ -16,7 +16,7 @@ LEAFERD         2026-08-18T10:21:09.992Z  2026-08-21T00:44:01.766Z
 AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-21T00:46:00.219Z
 SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-20T10:39:05.812Z
 JAN             2026-08-20T00:29:04.489Z  2026-08-20T00:29:04.652Z
-SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-21T00:47:43.266Z
+SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-22T00:48:09.056Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
@@ -323,7 +323,7 @@ trial     4       RIVIERA GP              LAP1983       1:00.111    3:03.288    
 trial     4       RIVIERA GP              SPEED3102     1:00.816    3:03.330    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              SPEED5258     1:01.202    3:05.169    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              RACER8097     1:01.738    3:06.446    -         2026-08-20T00:34:43.256Z
-trial     5       TITAN LOOP              SCOOPDOG      0:37.182    2:04.076    -         2026-08-20T11:40:23.786Z
+trial     5       TITAN LOOP              SCOOPDOG      0:36.700    2:39.176    -         2026-08-20T11:40:23.786Z
 trial     5       TITAN LOOP              LEAFERD       0:37.481    3:14.802    -         2026-08-18T23:08:54.278Z
 trial     5       TITAN LOOP              AAAAAAAAAAAA  0:37.630    2:04.859    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              SCOOPDOG      0:39.683    4:26.978    -         2026-08-18T23:09:51.132Z
@@ -486,7 +486,7 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-21T18:29:24.230Z",
+  "generatedAt": "2026-08-22T00:56:14.992Z",
   "deviceCount": 5,
   "scoreCount": 448,
   "onlineWinCount": 5,
@@ -514,7 +514,7 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "username": "SCOOPDOG",
       "registeredAt": "2026-08-20T11:40:23.168Z",
-      "lastSeenAt": "2026-08-21T00:47:43.266Z"
+      "lastSeenAt": "2026-08-22T00:48:09.056Z"
     }
   ],
   "scores": [
@@ -4436,13 +4436,13 @@ MACHINE-READABLE JSON (for restore / import)
       "trackId": 5,
       "trackName": "TITAN LOOP",
       "username": "SCOOPDOG",
-      "bestLap": 37.18189999997616,
-      "bestLapText": "0:37.182",
-      "total": 124.07589999997617,
-      "totalText": "2:04.076",
+      "bestLap": 36.7,
+      "bestLapText": "0:36.700",
+      "total": 159.17649999999998,
+      "totalText": "2:39.176",
       "winner": null,
       "createdAt": "2026-08-20T11:40:23.786Z",
-      "updatedAt": "2026-08-21T00:39:22.286Z"
+      "updatedAt": "2026-08-21T23:03:57.949Z"
     },
     {
       "mode": "trial",
