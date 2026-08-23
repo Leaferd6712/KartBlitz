@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-23T06:32:19.099Z
-Registered devices: 6
-Saved scores: 449
+Generated (UTC): 2026-08-23T12:29:08.564Z
+Registered devices: 7
+Saved scores: 454
 Saved online wins: 5
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
@@ -13,11 +13,12 @@ REGISTERED USERNAMES
 ------------------------------------------------------------------------------
 USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
 LEAFERD         2026-08-18T10:21:09.992Z  2026-08-21T00:44:01.766Z
-AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-21T00:46:00.219Z
+AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-23T07:45:58.595Z
 SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-20T10:39:05.812Z
 JAN             2026-08-20T00:29:04.489Z  2026-08-20T00:29:04.652Z
 SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-22T00:48:09.056Z
 NOTHECKER       2026-08-23T02:26:25.773Z  2026-08-23T02:43:27.435Z
+NOTHECKER       2026-08-23T08:00:25.629Z  2026-08-23T08:22:40.129Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
@@ -25,6 +26,8 @@ SCORES (best lap first within each mode/track)
 MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
 trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.432    0:24.432    -         2026-08-18T10:21:10.193Z
 trial     0       SUNSET SPEEDWAY         SCOOPDOG      0:25.106    0:25.106    -         2026-08-20T00:20:17.123Z
+trial     0       SUNSET SPEEDWAY         NOTHECKER     0:25.156    0:25.156    -         2026-08-23T08:19:38.636Z
+trial     0       SUNSET SPEEDWAY         AAAAAAAAAAAA  0:27.462    0:55.811    -         2026-08-23T07:44:34.425Z
 trial     0       SUNSET SPEEDWAY         LAP4900       0:38.058    1:57.018    -         2026-08-20T00:33:54.996Z
 trial     0       SUNSET SPEEDWAY         TURBO6850     0:38.108    1:55.459    -         2026-08-20T00:33:45.010Z
 trial     0       SUNSET SPEEDWAY         GRID8686      0:38.152    1:55.717    -         2026-08-20T00:33:47.796Z
@@ -150,6 +153,7 @@ trial     0       SUNSET SPEEDWAY         WHEEL3563     0:45.662    2:17.478    
 trial     0       SUNSET SPEEDWAY         LAP336        0:45.674    2:19.624    -         2026-08-20T00:33:53.353Z
 trial     0       SUNSET SPEEDWAY         NITRO2046     0:45.735    2:19.868    -         2026-08-20T00:33:21.836Z
 trial     0       SUNSET SPEEDWAY         WHEEL575      0:45.857    2:19.907    -         2026-08-20T00:33:45.010Z
+trial     1       MEADOW PARK             AAAAAAAAAAAA  0:22.464    1:59.320    -         2026-08-23T07:39:08.296Z
 trial     1       MEADOW PARK             LEAFERD       0:22.682    0:22.682    -         2026-08-19T03:11:43.047Z
 trial     1       MEADOW PARK             POLE2657      0:34.038    1:44.691    -         2026-08-20T00:34:04.765Z
 trial     1       MEADOW PARK             RACER2928     0:34.137    1:46.386    -         2026-08-20T00:34:08.112Z
@@ -324,6 +328,7 @@ trial     4       RIVIERA GP              LAP1983       1:00.111    3:03.288    
 trial     4       RIVIERA GP              SPEED3102     1:00.816    3:03.330    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              SPEED5258     1:01.202    3:05.169    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              RACER8097     1:01.738    3:06.446    -         2026-08-20T00:34:43.256Z
+trial     5       TITAN LOOP              NOTHECKER     0:35.651    3:08.581    -         2026-08-23T08:00:26.275Z
 trial     5       TITAN LOOP              SCOOPDOG      0:36.700    2:39.176    -         2026-08-20T11:40:23.786Z
 trial     5       TITAN LOOP              NOTHECKER     0:36.752    3:36.973    -         2026-08-23T02:26:26.462Z
 trial     5       TITAN LOOP              LEAFERD       0:37.481    3:14.802    -         2026-08-18T23:08:54.278Z
@@ -376,6 +381,7 @@ trial     6       AMBER HIGHWAY           WHEEL1202     0:57.900    2:57.484    
 trial     6       AMBER HIGHWAY           SPEED8379     0:57.961    2:54.404    -         2026-08-20T00:34:52.852Z
 trial     7       NEON CITY GP            TURBO7312     1:06.516    3:20.776    -         2026-08-20T00:34:55.963Z
 trial     7       NEON CITY GP            POLE1410      1:07.103    3:22.004    -         2026-08-20T00:34:55.963Z
+trial     7       NEON CITY GP            NOTHECKER     1:09.070    1:09.070    -         2026-08-23T08:22:40.129Z
 versus    0       SUNSET SPEEDWAY         BOOST3656     0:38.262    1:55.032    -         2026-08-20T00:35:09.723Z
 versus    0       SUNSET SPEEDWAY         RACER5442     0:38.530    1:59.103    -         2026-08-20T00:35:09.723Z
 versus    0       SUNSET SPEEDWAY         WHEEL8061     0:38.802    1:58.824    -         2026-08-20T00:35:09.723Z
@@ -488,9 +494,9 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-23T06:32:19.099Z",
-  "deviceCount": 6,
-  "scoreCount": 449,
+  "generatedAt": "2026-08-23T12:29:08.564Z",
+  "deviceCount": 7,
+  "scoreCount": 454,
   "onlineWinCount": 5,
   "devices": [
     {
@@ -501,7 +507,7 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "username": "AAAAAAAAAAAA",
       "registeredAt": "2026-08-18T23:08:59.310Z",
-      "lastSeenAt": "2026-08-21T00:46:00.219Z"
+      "lastSeenAt": "2026-08-23T07:45:58.595Z"
     },
     {
       "username": "SCOOPDOG",
@@ -522,6 +528,11 @@ MACHINE-READABLE JSON (for restore / import)
       "username": "NOTHECKER",
       "registeredAt": "2026-08-23T02:26:25.773Z",
       "lastSeenAt": "2026-08-23T02:43:27.435Z"
+    },
+    {
+      "username": "NOTHECKER",
+      "registeredAt": "2026-08-23T08:00:25.629Z",
+      "lastSeenAt": "2026-08-23T08:22:40.129Z"
     }
   ],
   "scores": [
@@ -550,6 +561,32 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-20T00:20:17.123Z",
       "updatedAt": "2026-08-20T00:20:17.123Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 0,
+      "trackName": "SUNSET SPEEDWAY",
+      "username": "NOTHECKER",
+      "bestLap": 25.155599999999627,
+      "bestLapText": "0:25.156",
+      "total": 25.155599999999627,
+      "totalText": "0:25.156",
+      "winner": null,
+      "createdAt": "2026-08-23T08:19:38.636Z",
+      "updatedAt": "2026-08-23T08:19:38.636Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 0,
+      "trackName": "SUNSET SPEEDWAY",
+      "username": "AAAAAAAAAAAA",
+      "bestLap": 27.4625,
+      "bestLapText": "0:27.462",
+      "total": 55.81089999997616,
+      "totalText": "0:55.811",
+      "winner": null,
+      "createdAt": "2026-08-23T07:44:34.425Z",
+      "updatedAt": "2026-08-23T07:45:01.821Z"
     },
     {
       "mode": "trial",
@@ -2175,6 +2212,19 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-20T00:33:45.010Z",
       "updatedAt": "2026-08-20T00:33:45.010Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 1,
+      "trackName": "MEADOW PARK",
+      "username": "AAAAAAAAAAAA",
+      "bestLap": 22.463899999976157,
+      "bestLapText": "0:22.464",
+      "total": 119.32039999997616,
+      "totalText": "1:59.320",
+      "winner": null,
+      "createdAt": "2026-08-23T07:39:08.296Z",
+      "updatedAt": "2026-08-23T07:40:39.933Z"
     },
     {
       "mode": "trial",
@@ -4442,6 +4492,19 @@ MACHINE-READABLE JSON (for restore / import)
       "mode": "trial",
       "trackId": 5,
       "trackName": "TITAN LOOP",
+      "username": "NOTHECKER",
+      "bestLap": 35.650700000000185,
+      "bestLapText": "0:35.651",
+      "total": 188.58060000000148,
+      "totalText": "3:08.581",
+      "winner": null,
+      "createdAt": "2026-08-23T08:00:26.275Z",
+      "updatedAt": "2026-08-23T08:04:12.084Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
       "username": "SCOOPDOG",
       "bestLap": 36.7,
       "bestLapText": "0:36.700",
@@ -5113,6 +5176,19 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-20T00:34:55.963Z",
       "updatedAt": "2026-08-20T00:34:55.963Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 7,
+      "trackName": "NEON CITY GP",
+      "username": "NOTHECKER",
+      "bestLap": 69.07040000000038,
+      "bestLapText": "1:09.070",
+      "total": 69.07040000000038,
+      "totalText": "1:09.070",
+      "winner": null,
+      "createdAt": "2026-08-23T08:22:40.129Z",
+      "updatedAt": "2026-08-23T08:22:40.129Z"
     },
     {
       "mode": "versus",
