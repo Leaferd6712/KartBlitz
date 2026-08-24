@@ -1,5 +1,5 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-24T00:59:04.304Z
+Generated (UTC): 2026-08-24T06:45:59.623Z
 Registered devices: 7
 Saved scores: 454
 Saved online wins: 5
@@ -18,7 +18,7 @@ SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-20T10:39:05.812Z
 JAN             2026-08-20T00:29:04.489Z  2026-08-20T00:29:04.652Z
 SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-22T00:48:09.056Z
 NOTHECKER       2026-08-23T02:26:25.773Z  2026-08-23T02:43:27.435Z
-NOTHECKER       2026-08-23T08:00:25.629Z  2026-08-23T08:22:40.129Z
+NOTHECKER       2026-08-23T08:00:25.629Z  2026-08-24T03:26:36.189Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
@@ -494,7 +494,7 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-24T00:59:04.304Z",
+  "generatedAt": "2026-08-24T06:45:59.623Z",
   "deviceCount": 7,
   "scoreCount": 454,
   "onlineWinCount": 5,
@@ -532,7 +532,7 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "username": "NOTHECKER",
       "registeredAt": "2026-08-23T08:00:25.629Z",
-      "lastSeenAt": "2026-08-23T08:22:40.129Z"
+      "lastSeenAt": "2026-08-24T03:26:36.189Z"
     }
   ],
   "scores": [
