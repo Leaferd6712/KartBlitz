@@ -1,5 +1,5 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-08-27T21:37:40.521Z
+Generated (UTC): 2026-08-28T08:40:24.445Z
 Registered devices: 8
 Saved scores: 453
 Saved online wins: 4
@@ -13,7 +13,7 @@ REGISTERED USERNAMES
 ------------------------------------------------------------------------------
 USERNAME        REGISTERED (UTC)          LAST SEEN (UTC)
 LEAFERD         2026-08-18T10:21:09.992Z  2026-08-27T00:48:01.698Z
-AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-27T00:47:36.122Z
+AAAAAAAAAAAA    2026-08-18T23:08:59.310Z  2026-08-28T00:49:00.419Z
 SCOOPDOG        2026-08-18T23:09:51.022Z  2026-08-20T10:39:05.812Z
 JAN             2026-08-20T00:29:04.489Z  2026-08-20T00:29:04.652Z
 SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-22T00:48:09.056Z
@@ -329,10 +329,10 @@ trial     4       RIVIERA GP              LAP1983       1:00.111    3:03.288    
 trial     4       RIVIERA GP              SPEED3102     1:00.816    3:03.330    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              SPEED5258     1:01.202    3:05.169    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              RACER8097     1:01.738    3:06.446    -         2026-08-20T00:34:43.256Z
+trial     5       TITAN LOOP              AAAAAAAAAAAA  0:32.331    0:32.331    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              NOTHECKER     0:35.651    3:08.581    -         2026-08-23T08:00:26.275Z
 trial     5       TITAN LOOP              SCOOPDOG      0:36.700    2:39.176    -         2026-08-20T11:40:23.786Z
 trial     5       TITAN LOOP              LEAFERD       0:37.031    0:37.031    -         2026-08-18T23:08:54.278Z
-trial     5       TITAN LOOP              AAAAAAAAAAAA  0:37.630    2:04.859    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              SAMTHEMAN     0:39.731    2:20.920    -         2026-08-27T00:33:42.549Z
 trial     5       TITAN LOOP              WHEEL4295     0:43.878    3:00.991    -         2026-08-19T07:24:23.580Z
 trial     5       TITAN LOOP              TURBO2228     0:43.976    3:05.288    -         2026-08-19T07:24:23.580Z
@@ -493,7 +493,7 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-08-27T21:37:40.521Z",
+  "generatedAt": "2026-08-28T08:40:24.445Z",
   "deviceCount": 8,
   "scoreCount": 453,
   "onlineWinCount": 4,
@@ -506,7 +506,7 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "username": "AAAAAAAAAAAA",
       "registeredAt": "2026-08-18T23:08:59.310Z",
-      "lastSeenAt": "2026-08-27T00:47:36.122Z"
+      "lastSeenAt": "2026-08-28T00:49:00.419Z"
     },
     {
       "username": "SCOOPDOG",
@@ -4496,6 +4496,19 @@ MACHINE-READABLE JSON (for restore / import)
       "mode": "trial",
       "trackId": 5,
       "trackName": "TITAN LOOP",
+      "username": "AAAAAAAAAAAA",
+      "bestLap": 32.3315,
+      "bestLapText": "0:32.331",
+      "total": 32.3315,
+      "totalText": "0:32.331",
+      "winner": null,
+      "createdAt": "2026-08-18T23:08:59.486Z",
+      "updatedAt": "2026-08-28T00:49:00.419Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
       "username": "NOTHECKER",
       "bestLap": 35.650700000000185,
       "bestLapText": "0:35.651",
@@ -4530,19 +4543,6 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-18T23:08:54.278Z",
       "updatedAt": "2026-08-27T00:26:38.114Z"
-    },
-    {
-      "mode": "trial",
-      "trackId": 5,
-      "trackName": "TITAN LOOP",
-      "username": "AAAAAAAAAAAA",
-      "bestLap": 37.62960000002384,
-      "bestLapText": "0:37.630",
-      "total": 124.85870000004769,
-      "totalText": "2:04.859",
-      "winner": null,
-      "createdAt": "2026-08-18T23:08:59.486Z",
-      "updatedAt": "2026-08-21T00:35:16.345Z"
     },
     {
       "mode": "trial",
