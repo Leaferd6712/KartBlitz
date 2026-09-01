@@ -1,5 +1,5 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-09-01T10:58:45.817Z
+Generated (UTC): 2026-09-01T15:57:42.613Z
 Registered devices: 8
 Saved scores: 457
 Saved online wins: 4
@@ -497,7 +497,7 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-09-01T10:58:45.817Z",
+  "generatedAt": "2026-09-01T15:57:42.613Z",
   "deviceCount": 8,
   "scoreCount": 457,
   "onlineWinCount": 4,
