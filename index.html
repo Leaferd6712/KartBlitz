@@ -416,11 +416,13 @@ body{
 .pit-ui-actions{display:flex;justify-content:center;margin-top:16px;}
 .pit-ui-actions .btn{max-width:100%;}
 /* ── DEVICE PROMPT ──────────────────────────────── */
-#device-prompt{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(40,35,70,0.96);border:3px solid rgba(255,255,255,0.4);border-radius:22px;padding:36px 56px;z-index:200;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;text-align:center;max-width:520px;width:520px;}
-#device-prompt h2{color:#fff;margin:0 0 12px;font-size:18px;letter-spacing:.06em;font-weight:900;}
-#device-prompt p{opacity:.8;margin:0 0 24px;font-size:13px;line-height:1.8;font-family:'Nunito',sans-serif;word-wrap:break-word;}
-#device-prompt .dp-btns{display:flex;gap:16px;justify-content:center;}
-#device-prompt .dp-btns .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.04em;white-space:nowrap;}
+#device-prompt{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;}
+#device-prompt.open{display:flex;}
+#device-prompt .device-prompt-card{background:rgba(40,35,70,0.96);border:3px solid rgba(255,255,255,0.4);border-radius:22px;padding:36px 56px;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;text-align:center;max-width:520px;width:min(520px,92vw);}
+#device-prompt .device-prompt-card h2{color:#fff;margin:0 0 12px;font-size:18px;letter-spacing:.06em;font-weight:900;}
+#device-prompt .device-prompt-card p{opacity:.8;margin:0 0 24px;font-size:13px;line-height:1.8;font-family:'Nunito',sans-serif;word-wrap:break-word;}
+#device-prompt .device-prompt-card .dp-btns{display:flex;gap:16px;justify-content:center;}
+#device-prompt .device-prompt-card .dp-btns .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.04em;white-space:nowrap;}
 #patch-notes-overlay{display:none;position:fixed;inset:0;z-index:205;align-items:center;justify-content:center;background:rgba(60,50,110,0.7);padding:20px;box-sizing:border-box;backdrop-filter:blur(6px);}
 #patch-notes-overlay.open{display:flex;}
 #lb-auto-register-overlay{display:none;position:fixed;inset:0;z-index:210;align-items:center;justify-content:center;background:rgba(20,16,40,0.82);padding:20px;box-sizing:border-box;backdrop-filter:blur(8px);}
@@ -1381,7 +1383,7 @@ body::after{
 <!-- TRACK SELECT -->
 <div id="screen-track" class="screen hidden">
   <div class="scanlines"></div>
-  <button class="back-btn" onclick="showScreen('mode')">← BACK</button>
+  <button class="back-btn" onclick="goBackFromTrack()">← BACK</button>
   <div class="section-title">SELECT TRACK</div>
   <div class="section-sub" id="track-mode-label">CHOOSE YOUR CIRCUIT</div>
   <div class="track-grid" id="track-grid"></div>
@@ -1390,6 +1392,7 @@ body::after{
 <!-- QUALIFYING RESULTS -->
 <div id="screen-quali-results" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
+  <button class="back-btn" onclick="returnToMainMenu()">← BACK</button>
   <div class="section-title"> QUALIFYING RESULTS</div>
   <div class="section-sub" id="quali-results-sub">STARTING GRID</div>
   <div class="results-wrap" id="quali-results-wrap"></div>
@@ -1403,6 +1406,7 @@ body::after{
 <!-- RESULTS -->
 <div id="screen-results" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
+  <button class="back-btn" onclick="returnToMainMenu()">← BACK</button>
   <div class="section-title" id="results-title">RACE COMPLETE</div>
   <div class="results-wrap" id="results-wrap"></div>
   <div id="coins-earned-display"></div>
@@ -1554,16 +1558,20 @@ body::after{
 
 <!-- DEVICE PROMPT -->
 <div id="device-prompt">
-  <h2>CHOOSE YOUR CONTROLS</h2>
-  <p>Use keyboard, or enable on-screen touch controls?</p>
-  <div class="dp-btns">
-    <button class="btn btn-cyan" onclick="setDeviceMode(true)">TOUCH CONTROLS</button>
-    <button class="btn btn-orange" onclick="setDeviceMode(false)">KEYBOARD ONLY</button>
+  <button class="back-btn" type="button" onclick="setDeviceMode(false)">← BACK</button>
+  <div class="device-prompt-card">
+    <h2>CHOOSE YOUR CONTROLS</h2>
+    <p>Use keyboard, or enable on-screen touch controls?</p>
+    <div class="dp-btns">
+      <button class="btn btn-cyan" onclick="setDeviceMode(true)">TOUCH CONTROLS</button>
+      <button class="btn btn-orange" onclick="setDeviceMode(false)">KEYBOARD ONLY</button>
+    </div>
   </div>
 </div>
 
 <!-- PATCH NOTES (once per page load) -->
 <div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
+  <button class="back-btn" type="button" onclick="dismissPatchNotes()">← BACK</button>
   <div id="patch-notes-card">
     <h2 id="patch-notes-title">PATCH NOTES</h2>
     <div class="patch-date">AUGUST 20</div>
@@ -1577,6 +1585,7 @@ body::after{
 </div>
 
 <div id="lb-auto-register-overlay" role="dialog" aria-labelledby="lb-auto-register-title">
+  <button class="back-btn" type="button" onclick="dismissAutoRegister()">← BACK</button>
   <div id="lb-auto-register-card">
     <h3 id="lb-auto-register-title">SAVE TO LEADERBOARD</h3>
     <p>Choose a username once for this device. Every lap you finish will auto-save to the cloud leaderboard.</p>
@@ -1642,6 +1651,7 @@ body::after{
 
 <!-- PAUSE MENU -->
 <div id="pause-overlay">
+  <button class="back-btn" type="button" onclick="resumeGame()">← BACK</button>
   <div class="pause-title">PAUSED</div>
   <div class="pause-btns">
     <button class="btn btn-cyan" onclick="resumeGame()">RESUME</button>
@@ -1661,6 +1671,7 @@ body::after{
 
 <!-- TRACK EDITOR PASSCODE -->
 <div id="te-pass-modal" aria-hidden="true">
+  <button class="back-btn" type="button" id="te-pass-back">← BACK</button>
   <h2>AUTHOR ACCESS</h2>
   <p>ENTER PASSCODE TO OPEN TRACK EDITOR</p>
   <input type="password" id="te-pass-input" autocomplete="off" placeholder="••••••••" />
@@ -1681,6 +1692,7 @@ body::after{
 
 <!-- TRACK EDITOR WORKSPACE -->
 <div id="screen-te-editor" aria-hidden="true">
+  <button class="back-btn" type="button" id="te-editor-back">← BACK</button>
   <div class="app">
     <header class="topbar">
       <h1>KARTBLITZ TRACK EDITOR</h1>
@@ -2177,7 +2189,7 @@ function dismissPatchNotes() {
     if(body) body.textContent = preferTouch
       ? 'Enable on-screen joysticks? You can switch anytime in Settings.'
       : 'Use keyboard, or enable on-screen joysticks? You can switch anytime in Settings.';
-    document.getElementById('device-prompt').style.display = 'block';
+    document.getElementById('device-prompt').classList.add('open');
   }
 })();
 document.addEventListener('keydown', e => {
@@ -9599,6 +9611,13 @@ let raceQualiEnabled = false;
 let raceQualiSessionMin = 4;
 let raceQualiLaps = 3;
 
+function goBackFromTrack() {
+  initAudio();
+  playUIClick();
+  if (currentMode === 'trial') showScreen('menu');
+  else showScreen('mode');
+}
+
 function selectMode(m) {
   currentMode = m;
   initAudio();
@@ -10238,7 +10257,7 @@ function resetTouchDrive(player) {
 function setDeviceMode(isMobile) {
   touchMode = !!isMobile;
   const prompt = document.getElementById('device-prompt');
-  if(prompt) prompt.style.display = 'none';
+  if(prompt) prompt.classList.remove('open');
   try { localStorage.setItem('kartblitz_devicemode', isMobile ? 'touch' : 'keyboard'); } catch(e){}
   if(isMobile) setupTouchControls();
   else if(touchState) {
@@ -11208,7 +11227,7 @@ document.addEventListener('keydown', e => {
     const menus=['mode','track','results','save','leaderboard','garage','setup','controls','quali-results'];
     const active = menus.find(m=>!document.getElementById('screen-'+m).classList.contains('hidden'));
     if(active==='mode') showScreen('menu');
-    else if(active==='track') showScreen('mode');
+    else if(active==='track') goBackFromTrack();
     else if(active==='results') showScreen('menu');
     else if(active==='save') showScreen('results');
     else if(active==='leaderboard' || active==='garage' || active==='controls' || active==='quali-results') showScreen('menu');
@@ -12961,9 +12980,11 @@ function openTrackEditorPassFallback() {
   }
   const ok = document.getElementById('te-pass-ok');
   const cancel = document.getElementById('te-pass-cancel');
+  const passBack = document.getElementById('te-pass-back');
   const inp = document.getElementById('te-pass-input');
   if (ok) ok.addEventListener('click', tryPass);
   if (cancel) cancel.addEventListener('click', hidePass);
+  if (passBack) passBack.addEventListener('click', hidePass);
   if (inp) inp.addEventListener('keydown', e => {
     if (e.key === 'Enter') tryPass();
     if (e.key === 'Escape') hidePass();
@@ -14949,6 +14970,8 @@ window.KartBlitzTrackEditor = (function(){
     if (btnApply) btnApply.onclick = () => applyToGame();
     const btnBack = $('te-btnBackPicker');
     if (btnBack) btnBack.onclick = () => { showEditor(false); showPicker(true); };
+    const editorBack = $('te-editor-back');
+    if (editorBack) editorBack.onclick = () => { showEditor(false); showPicker(true); };
     const btnClose = $('te-btnCloseEditor');
     if (btnClose) btnClose.onclick = () => closeAll();
 
@@ -14961,9 +14984,11 @@ window.KartBlitzTrackEditor = (function(){
   function bindPassUi() {
     const ok = $('te-pass-ok');
     const cancel = $('te-pass-cancel');
+    const passBack = $('te-pass-back');
     const inp = $('te-pass-input');
     if (ok) ok.onclick = tryPass;
     if (cancel) cancel.onclick = () => showPassModal(false);
+    if (passBack) passBack.onclick = () => showPassModal(false);
     if (inp) inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') tryPass();
       if (e.key === 'Escape') showPassModal(false);
