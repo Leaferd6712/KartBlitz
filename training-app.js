@@ -1,20 +1,46 @@
 /**
  * KartBlitz ML Training Lab — interactive tools (record, review, evaluate).
+ * Plain script (no ES modules) so training.html works when opened locally.
  */
-import {
-  ACTIONS,
-  N_ACT,
-  N_OBS,
-  precomputeCurvature,
-  observe,
-  actionToInput,
-  inputsToAction,
-  makeKart,
-  progressAlong,
-} from "./sim/rl/env.mjs";
+(function () {
+  function showBootError(msg) {
+    const host = document.getElementById("lab-doc-body");
+    if (host) {
+      host.innerHTML =
+        "<h2>Training lab could not start</h2><p>" +
+        msg +
+        "</p><p>From the project folder run:<br><code>npm run sim:browser</code><br>Then open <code>training.html</code> again (double-click or use <code>npm run training</code>).</p>";
+    }
+    const statusEl = document.getElementById("lab-status");
+    if (statusEl) statusEl.textContent = msg;
+  }
 
-const Sim = globalThis.OnlineSim;
-if (!Sim) throw new Error("Load online-sim.js before training-app.js");
+  const Env = window.KartBlitzTrainingEnv;
+  if (!Env) {
+    window.initTrainingLab = function () {
+      showBootError("env-browser.js failed to load. Keep the sim/rl/ folder next to training.html.");
+    };
+    return;
+  }
+
+  const {
+    ACTIONS,
+    N_ACT,
+    N_OBS,
+    precomputeCurvature,
+    observe,
+    inputsToAction,
+    makeKart,
+    progressAlong,
+  } = Env;
+
+  const Sim = globalThis.OnlineSim;
+  if (!Sim) {
+    window.initTrainingLab = function () {
+      showBootError("online-sim.js failed to load. Run: npm run sim:browser");
+    };
+    return;
+  }
 
 const DT = Sim.FIXED_DT;
 const keys = { up: false, down: false, left: false, right: false };
@@ -391,7 +417,7 @@ function bindTools() {
   });
 }
 
-export function showSection(id) {
+function showSection(id) {
   state.section = id;
   document.querySelectorAll(".lab-panel").forEach((el) => {
     el.classList.toggle("hidden", el.dataset.section !== id);
@@ -423,15 +449,14 @@ export function showSection(id) {
   }
 }
 
-import { DOC_SECTIONS, allNavItems } from "./training-docs.js";
+const Docs = window.TrainingLabDocs;
+const DOC_BY_ID = new Map(Docs.DOC_SECTIONS.map((d) => [d.id, d]));
 
-const DOC_BY_ID = new Map(DOC_SECTIONS.map((d) => [d.id, d]));
-
-export function initTrainingLab() {
+function initTrainingLab() {
   bindTools();
   const nav = document.getElementById("lab-nav");
   if (nav) {
-    for (const item of allNavItems()) {
+    for (const item of Docs.allNavItems()) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "lab-nav-item";
@@ -457,4 +482,6 @@ export function initTrainingLab() {
   setStatus("Ready — open Getting Started or Record Demo");
 }
 
-export { loadPolicyJson, policyForward, actionToInput, observe, precomputeCurvature, ACTIONS, N_ACT, N_OBS };
+window.initTrainingLab = initTrainingLab;
+window.showTrainingSection = showSection;
+})();

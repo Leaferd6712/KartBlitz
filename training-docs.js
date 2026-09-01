@@ -1,7 +1,7 @@
 /**
  * Full training manual content for training.html (single docs source of truth).
  */
-export const DOC_SECTIONS = [
+const DOC_SECTIONS = [
   {
     id: "getting-started",
     title: "Getting Started",
@@ -20,6 +20,13 @@ export const DOC_SECTIONS = [
 npm install
 npm run tracks:export
 npm run sim:browser</code></pre>
+<h2>Open the training lab</h2>
+<p>You do <strong>not</strong> need GitHub. Open locally in either way:</p>
+<ul>
+  <li><strong>Double-click</strong> <code>training.html</code> in the KartBlitz folder (works after the fix — no ES modules required)</li>
+  <li>Or run <code>npm run training</code> and open <a href="http://localhost:8080/training.html">http://localhost:8080/training.html</a></li>
+</ul>
+<p>If the page is blank, run <code>npm run sim:browser</code> first — <code>online-sim.js</code> must exist beside <code>training.html</code>.</p>
 <h2>Folder layout</h2>
 <pre><code>KartBlitz/
   training.html          ← you are here (tools + full manual)
@@ -313,12 +320,14 @@ npm run rl:train -- --eval --load sim/rl/policy.json --track 0</code></pre>
   },
 ];
 
-export const TOOL_SECTIONS = [
+const TOOL_SECTIONS = [
   { id: "tool-record", title: "Record Demo" },
   { id: "tool-review", title: "Review Demos" },
   { id: "tool-eval", title: "Evaluate Policy" },
 ];
 
-export function allNavItems() {
+function allNavItems() {
   return [...TOOL_SECTIONS, ...DOC_SECTIONS];
 }
+
+window.TrainingLabDocs = { DOC_SECTIONS, TOOL_SECTIONS, allNavItems };

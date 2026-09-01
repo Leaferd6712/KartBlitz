@@ -169,15 +169,21 @@
       </div>
 
       <div id="lab-doc-wrap">
-        <article id="lab-doc-body"></article>
+        <article id="lab-doc-body"><p style="opacity:.7;">Loading training lab…</p></article>
       </div>
     </main>
   </div>
 
   <script src="online-sim.js"></script>
-  <script type="module">
-    import { initTrainingLab } from "./training-app.js";
-    initTrainingLab();
+  <script src="sim/rl/env-browser.js"></script>
+  <script src="training-docs.js"></script>
+  <script src="training-app.js"></script>
+  <script>
+    if (window.initTrainingLab) window.initTrainingLab();
+    else {
+      var el = document.getElementById('lab-doc-body');
+      if (el) el.innerHTML = '<h2>Training lab could not start</h2><p>Scripts failed to load. Open this page from the KartBlitz folder (same level as online-sim.js).</p>';
+    }
   </script>
 </body>
 </html>
