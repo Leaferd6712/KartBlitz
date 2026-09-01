@@ -3646,9 +3646,8 @@ class Kart {
     this._drsPrevKey = false;   // for toggle edge detection
     this._drsToggled = false;   // toggle-mode state
     this._nearestSplineIdx = 0; // cached nearest spline point index
-    // AI flag — off-track penalty only applies to human drivers
     this.isAI = false;
-    // Off-track penalty tracking (human only)
+    // Off-track reset timer (human drivers only)
     this._offTrackTimer       = 0;   // seconds spent continuously off-track
     this._offTrackEntrySpeed  = 0;   // speed at the moment they left the track
     this._isCompletelyOff     = false; // strict boundary flag (player only)
@@ -3730,7 +3729,7 @@ class Kart {
     }
     // Surface-specific off-track physics: each track has a unique offTrackMult
     const surfMult = (trackData && trackData.surface) ? trackData.surface.offTrackMult : 1.0;
-    const applyOffTrackSlowdown = this.isOffTrack && !this.isAI;
+    const applyOffTrackSlowdown = this.isOffTrack;
     const maxSpd = applyOffTrackSlowdown ? (this.offTrackMaxSpd * surfMult) : this.maxSpeed;
     const acc = applyOffTrackSlowdown ? (this.offTrackAccel * surfMult) : this.accel;
 
@@ -4182,8 +4181,8 @@ class Kart {
     // Off-track check
     this.isOffTrack = !this.onTrack(trackData);
 
-    // off track penalty - 3 seconds to get back or u get reset
-    if (!this.isAI && !this.finished) {
+    // Off-track slowdown for all drivers; 3s track-limit reset for human drivers only
+    if (!this.finished) {
       // Strict threshold — just track half-width + small car-body margin (no generous buffer)
       const strictHw = trackData.trackWidth / 2 + 18;
       const nearP    = trackData.spline[this._nearestSplineIdx || 0];
@@ -4207,26 +4206,28 @@ class Kart {
           this.speed -= Math.sign(this.speed) * Math.min(over, Math.max(over * 2.6 * dt, 18 * dt));
         }
 
-        if (this._penaltyTimer === 0) {
-          // First frame of going completely off — impact sound + sparks
-          spawnSpark(this.x, this.y);
-          try { playCollision(0.45); } catch(e){}
-        }
-        this._penaltyTimer += dt;
+        if (!this.isAI) {
+          if (this._penaltyTimer === 0) {
+            // First frame of going completely off — impact sound + sparks
+            spawnSpark(this.x, this.y);
+            try { playCollision(0.45); } catch(e){}
+          }
+          this._penaltyTimer += dt;
 
-        if (this._penaltyTimer >= 3.0) {
-          // Reset to nearest on-track point, facing forward
-          const spl = trackData.spline;
-          const ni  = this._nearestSplineIdx || 0;
-          this.x    = spl[ni].x;
-          this.y    = spl[ni].y;
-          const tang = splineTangent(spl, ni);
-          this.angle = Math.atan2(tang.y, tang.x);
-          this.speed = 0;
-          this._penaltyTimer    = 0;
-          this._isCompletelyOff = false;
-          this.flashTimer = 2.2;
-          this.rankFlash  = 'TRACK LIMIT — RESET!';
+          if (this._penaltyTimer >= 3.0) {
+            // Reset to nearest on-track point, facing forward
+            const spl = trackData.spline;
+            const ni  = this._nearestSplineIdx || 0;
+            this.x    = spl[ni].x;
+            this.y    = spl[ni].y;
+            const tang = splineTangent(spl, ni);
+            this.angle = Math.atan2(tang.y, tang.x);
+            this.speed = 0;
+            this._penaltyTimer    = 0;
+            this._isCompletelyOff = false;
+            this.flashTimer = 2.2;
+            this.rankFlash  = 'TRACK LIMIT — RESET!';
+          }
         }
       } else {
         this._penaltyTimer    = 0;
