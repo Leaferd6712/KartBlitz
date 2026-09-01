@@ -12,26 +12,20 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { spawnSync } from "child_process";
-import vm from "vm";
+import {
+  ACTIONS,
+  N_ACT,
+  N_OBS,
+  precomputeCurvature,
+  observe,
+  progressAlong,
+  actionToInput,
+  makeKart,
+  computeStepReward,
+} from "../sim/rl/env.mjs";
+import { loadOnlineSim, root } from "../sim/rl/load-sim.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.join(__dirname, "..");
-const simJs = path.join(root, "online-sim.js");
-
-const ACTIONS = [
-  { name: "thr-L", up: true, down: false, left: true, right: false },
-  { name: "thr", up: true, down: false, left: false, right: false },
-  { name: "thr-R", up: true, down: false, left: false, right: true },
-  { name: "coast-L", up: false, down: false, left: true, right: false },
-  { name: "coast", up: false, down: false, left: false, right: false },
-  { name: "coast-R", up: false, down: false, left: false, right: true },
-  { name: "brk-L", up: false, down: true, left: true, right: false },
-  { name: "brk", up: false, down: true, left: false, right: false },
-  { name: "brk-R", up: false, down: true, left: false, right: true },
-];
-const N_ACT = ACTIONS.length;
-const N_OBS = 10;
 
 function parseArgs(argv) {
   const a = {
@@ -67,124 +61,12 @@ function parseArgs(argv) {
   return a;
 }
 
-function ensureBundle() {
-  if (fs.existsSync(simJs)) return;
-  const r = spawnSync(process.execPath, [path.join(root, "scripts/build-online-sim.mjs")], {
-    cwd: root,
-    encoding: "utf8",
-  });
-  if (r.status !== 0) {
-    console.error(r.stderr || r.stdout);
-    throw new Error("sim:browser build failed");
-  }
-}
-
-function loadOnlineSim() {
-  ensureBundle();
-  const code = fs.readFileSync(simJs, "utf8");
-  const sandbox = { console, Math, Date, ArrayBuffer, Uint8Array, DataView, Float32Array, Int32Array };
-  sandbox.globalThis = sandbox;
-  sandbox.window = sandbox;
-  sandbox.OnlineCodec = { encodeState() { return new ArrayBuffer(0); } };
-  vm.runInNewContext(code, sandbox, { filename: "online-sim.js" });
-  if (!sandbox.OnlineSim) throw new Error("OnlineSim global missing");
-  return sandbox.OnlineSim;
-}
-
-function rng(seed) {
+function mulberry32(seed) {
   let s = seed >>> 0;
   return () => {
     s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
     return s / 4294967296;
   };
-}
-
-function mulberry32(seed) {
-  return rng(seed);
-}
-
-function wrapPi(a) {
-  while (a > Math.PI) a -= Math.PI * 2;
-  while (a < -Math.PI) a += Math.PI * 2;
-  return a;
-}
-
-function idxAhead(track, startIdx, dist) {
-  const { cum, totalLen } = track;
-  const n = track.spline.length;
-  let target = cum[startIdx] + dist;
-  if (target >= totalLen) target -= totalLen;
-  const lo0 = target < cum[startIdx] ? 0 : startIdx;
-  let lo = lo0, hi = n - 1;
-  while (lo < hi - 1) {
-    const mid = (lo + hi) >> 1;
-    if (cum[mid] <= target) lo = mid;
-    else hi = mid;
-  }
-  return lo;
-}
-
-function precomputeCurvature(track) {
-  const spl = track.spline;
-  const n = spl.length;
-  const curv = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const p = spl[(i - 5 + n) % n], c = spl[i], nx = spl[(i + 5) % n];
-    const dx1 = c.x - p.x, dy1 = c.y - p.y;
-    const dx2 = nx.x - c.x, dy2 = nx.y - c.y;
-    const l1 = Math.hypot(dx1, dy1) || 1, l2 = Math.hypot(dx2, dy2) || 1;
-    curv[i] = Math.abs((dx1 / l1) * (dy2 / l2) - (dy1 / l1) * (dx2 / l2));
-  }
-  return curv;
-}
-
-function observe(kart, track, curv) {
-  const spl = track.spline;
-  const n = spl.length;
-  const idx = ((kart._nearestSplineIdx || 0) % n + n) % n;
-  const p = spl[idx];
-  const nxt = spl[(idx + 1) % n];
-  const tx = nxt.x - p.x, ty = nxt.y - p.y;
-  const tlen = Math.hypot(tx, ty) || 1;
-  const tangX = tx / tlen, tangY = ty / tlen;
-  const halfW = track.trackWidth * 0.5;
-  const lat = (kart.x - p.x) * -tangY + (kart.y - p.y) * tangX;
-  const head = wrapPi(kart.angle - Math.atan2(tangY, tangX));
-  const i40 = idxAhead(track, idx, 40);
-  const i80 = idxAhead(track, idx, 80);
-  const i160 = idxAhead(track, idx, 160);
-  const maxSpd = kart.maxSpeed || 200;
-  return [
-    Math.max(-1, Math.min(1, kart.speed / Math.max(1, maxSpd))),
-    Math.max(-1.5, Math.min(1.5, lat / Math.max(1, halfW))),
-    Math.sin(head),
-    Math.cos(head),
-    Math.max(0, Math.min(1, curv[idx] * 4)),
-    Math.max(0, Math.min(1, curv[i40] * 4)),
-    Math.max(0, Math.min(1, curv[i80] * 4)),
-    Math.max(0, Math.min(1, curv[i160] * 4)),
-    kart.isOffTrack ? 1 : 0,
-    (track.cum[idx] || 0) / Math.max(1, track.totalLen),
-  ];
-}
-
-function progressAlong(kart, track) {
-  const idx = kart._nearestSplineIdx || 0;
-  const lap = kart.lap || 0;
-  return lap * track.totalLen + (track.cum[idx] || 0);
-}
-
-function toInput(actionIdx, Sim) {
-  const a = ACTIONS[actionIdx];
-  const inp = Sim.emptyInput();
-  inp.up = a.up;
-  inp.down = a.down;
-  inp.left = a.left;
-  inp.right = a.right;
-  inp.throttle = a.up ? 1 : 0;
-  inp.brake = a.down ? 1 : 0;
-  inp.steer = a.left ? -1 : a.right ? 1 : 0;
-  return inp;
 }
 
 function softmaxLogits(logits) {
@@ -230,7 +112,6 @@ function argmax(probs) {
 function newPolicy() {
   const W = new Float64Array(N_ACT * N_OBS);
   const b = new Float64Array(N_ACT);
-  // Bias toward throttle-straight so the first episodes actually move.
   b[1] = 1.4;
   return { W, b };
 }
@@ -241,14 +122,21 @@ function clonePolicy(p) {
 
 function savePolicy(p, outPath, meta) {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, JSON.stringify({
-    nObs: N_OBS,
-    nAct: N_ACT,
-    actions: ACTIONS.map((a) => a.name),
-    W: Array.from(p.W),
-    b: Array.from(p.b),
-    meta,
-  }, null, 2));
+  fs.writeFileSync(
+    outPath,
+    JSON.stringify(
+      {
+        nObs: N_OBS,
+        nAct: N_ACT,
+        actions: ACTIONS.map((a) => a.name),
+        W: Array.from(p.W),
+        b: Array.from(p.b),
+        meta,
+      },
+      null,
+      2
+    )
+  );
 }
 
 function loadPolicy(file) {
@@ -256,20 +144,7 @@ function loadPolicy(file) {
   if (j.nObs !== N_OBS || j.nAct !== N_ACT) {
     throw new Error(`policy shape mismatch: got ${j.nObs}x${j.nAct}, need ${N_OBS}x${N_ACT}`);
   }
-  return { W: Float64Array.from(j.W), b: Float64Array.from(j.b) };
-}
-
-function makeKart(Sim, track) {
-  return Sim.createKart({
-    id: 0,
-    x: track.startPos.x,
-    y: track.startPos.y,
-    angle: track.startAngle,
-    weather: "dry",
-    tyreId: "med",
-    totalLaps: 1,
-    upgrades: Sim.defaultUpgrades(),
-  });
+  return { W: Float64Array.from(j.W), b: Float64Array.from(j.b), meta: j.meta || {} };
 }
 
 function runEpisode(Sim, track, curv, policy, opts) {
@@ -278,7 +153,8 @@ function runEpisode(Sim, track, curv, policy, opts) {
   const others = [];
   let lastProg = progressAlong(kart, track);
   let stuck = 0;
-  let lastX = kart.x, lastY = kart.y;
+  let lastX = kart.x;
+  let lastY = kart.y;
   let rewardSum = 0;
   let offSteps = 0;
   const obsHist = [];
@@ -298,8 +174,12 @@ function runEpisode(Sim, track, curv, policy, opts) {
       action = actHist[actHist.length - 1];
     }
 
-    const inp = toInput(action, Sim);
-    Sim.stepKart(kart, inp, dt, track, others, { contact: false, nowMs: step * dt * 1000, resolveCollisions: false });
+    const inp = actionToInput(action, Sim);
+    Sim.stepKart(kart, inp, dt, track, others, {
+      contact: false,
+      nowMs: step * dt * 1000,
+      resolveCollisions: false,
+    });
 
     const prog = progressAlong(kart, track);
     let dProg = prog - lastProg;
@@ -315,12 +195,7 @@ function runEpisode(Sim, track, curv, policy, opts) {
 
     if (kart.isOffTrack) offSteps++;
 
-    let r = dProg * 0.035 - 0.012;
-    if (kart.isOffTrack) r -= 0.35;
-    if (kart._isCompletelyOff) r -= 0.55;
-    const headingCos = obs[3];
-    if (headingCos < 0) r -= 0.08;
-    if (kart.finished || (kart.lap || 0) >= 1) r += 8;
+    const r = computeStepReward(kart, track, obs, dProg, moved, dt);
 
     if (step % skip === 0) {
       obsHist.push(obs);
@@ -371,7 +246,6 @@ function trainStep(policy, ep, lr, entropyCoef, baseline) {
     const obs = ep.obsHist[t];
     const a = ep.actHist[t];
     const p = ep.probHist[t];
-    // ∇ log π(a|s) = 1[a] − π ; extra −π term is a cheap entropy bonus
     for (let k = 0; k < N_ACT; k++) {
       const logpi = (k === a ? 1 : 0) - p[k];
       const g = adv * logpi - entropyCoef * p[k];
@@ -398,16 +272,28 @@ function main() {
   let policy = args.load ? loadPolicy(args.load) : newPolicy();
 
   if (args.eval) {
-    const ep = runEpisode(Sim, track, curv, policy, { dt, maxSteps, skip: args.skip, greedy: true, rand });
-    console.log(JSON.stringify({
-      track: args.track,
-      progress: Math.round(ep.progress),
-      lapFrac: ep.progress / track.totalLen,
-      reward: +ep.reward.toFixed(2),
-      offFrac: +ep.offFrac.toFixed(3),
-      finished: ep.finished,
-      totalLen: Math.round(track.totalLen),
-    }, null, 2));
+    const ep = runEpisode(Sim, track, curv, policy, {
+      dt,
+      maxSteps,
+      skip: args.skip,
+      greedy: true,
+      rand,
+    });
+    console.log(
+      JSON.stringify(
+        {
+          track: args.track,
+          progress: Math.round(ep.progress),
+          lapFrac: ep.progress / track.totalLen,
+          reward: +ep.reward.toFixed(2),
+          offFrac: +ep.offFrac.toFixed(3),
+          finished: ep.finished,
+          totalLen: Math.round(track.totalLen),
+        },
+        null,
+        2
+      )
+    );
     return;
   }
 
@@ -418,12 +304,19 @@ function main() {
   let bestProg = -Infinity;
   let bestPolicy = clonePolicy(policy);
   const t0 = Date.now();
-  let windowR = 0, windowP = 0, windowOff = 0, windowN = 0;
+  let windowR = 0;
+  let windowP = 0;
+  let windowOff = 0;
+  let windowN = 0;
   let stepsDone = 0;
 
   for (let ep = 1; ep <= args.episodes; ep++) {
     const roll = runEpisode(Sim, track, curv, policy, {
-      dt, maxSteps, skip: args.skip, greedy: false, rand,
+      dt,
+      maxSteps,
+      skip: args.skip,
+      greedy: false,
+      rand,
     });
     roll.gamma = args.gamma;
     stepsDone += maxSteps;
@@ -445,11 +338,11 @@ function main() {
       const sps = stepsDone / Math.max(0.001, elapsed);
       console.log(
         `ep ${String(ep).padStart(5)}  ` +
-        `R ${ (windowR / windowN).toFixed(1).padStart(7) }  ` +
-        `prog ${ Math.round(windowP / windowN).toString().padStart(6) }/${Math.round(track.totalLen)}  ` +
-        `off ${(windowOff / windowN).toFixed(2)}  ` +
-        `best ${Math.round(bestProg)}  ` +
-        `${sps.toFixed(0)} steps/s`
+          `R ${(windowR / windowN).toFixed(1).padStart(7)}  ` +
+          `prog ${Math.round(windowP / windowN).toString().padStart(6)}/${Math.round(track.totalLen)}  ` +
+          `off ${(windowOff / windowN).toFixed(2)}  ` +
+          `best ${Math.round(bestProg)}  ` +
+          `${sps.toFixed(0)} steps/s`
       );
       windowR = windowP = windowOff = windowN = 0;
       savePolicy(bestPolicy, args.out, {
@@ -462,7 +355,9 @@ function main() {
   }
 
   console.log(`Saved best policy (${Math.round(bestProg)} progress) → ${args.out}`);
-  console.log(`Eval greedy: npm run rl:train -- --eval --load ${path.relative(root, args.out).replace(/\\/g, "/")} --track ${args.track}`);
+  console.log(
+    `Eval greedy: npm run rl:train -- --eval --load ${path.relative(root, args.out).replace(/\\/g, "/")} --track ${args.track}`
+  );
 }
 
 main();

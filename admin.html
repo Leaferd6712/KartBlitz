@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KartBlitz Leaderboard Admin</title>
+  <title>KartBlitz Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
@@ -150,13 +150,70 @@
         margin-bottom: 2px;
       }
     }
+/* ── Embedded Track Editor ── */
+#te-pass-modal{display:none;position:fixed;inset:0;z-index:360;background:rgba(60,50,110,0.94);align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:'Nunito',sans-serif;backdrop-filter:blur(8px);}
+#te-pass-modal.open{display:flex;}
+#te-pass-modal h2{color:#3dd6c6;margin:0;font-size:16px;letter-spacing:.12em;}
+#te-pass-modal p{opacity:.6;margin:0;font-size:11px;letter-spacing:.06em;}
+#te-pass-modal input{background:#0d141c;border:1px solid #2a3a4c;border-radius:8px;padding:10px 14px;color:#e8eef6;font-size:14px;width:min(280px,80vw);text-align:center;letter-spacing:.15em;}
+#te-pass-modal .te-pass-err{color:#ef4444;font-size:11px;min-height:16px;}
+#te-pass-modal .te-pass-btns{display:flex;gap:10px;}
+#screen-te-picker{display:none;position:fixed;inset:0;z-index:350;background:#050510;overflow:auto;padding:40px 24px 60px;flex-direction:column;align-items:center;}
+#screen-te-picker.open{display:flex;}
+#screen-te-picker .te-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;width:min(960px,100%);margin-top:20px;}
+#screen-te-picker .te-pick-card{background:rgba(20,27,36,0.95);border:1px solid #2a3a4c;border-radius:10px;padding:16px;cursor:pointer;text-align:left;color:#e8eef6;font-family:'Nunito',sans-serif;}
+#screen-te-picker .te-pick-card:hover{border-color:#3dd6c6;}
+#screen-te-picker .te-pick-card .te-pick-name{font-size:13px;letter-spacing:.08em;color:#3dd6c6;margin-bottom:6px;}
+#screen-te-picker .te-pick-card .te-pick-meta{font-size:10px;opacity:.55;letter-spacing:.06em;}
+#screen-te-picker .te-pick-add{border-style:dashed;color:#ff9500;text-align:center;}
+#screen-te-editor{display:none;position:fixed;inset:0;z-index:355;background:#0c1118;color:#e8eef6;font-family:"Segoe UI",system-ui,sans-serif;--bg:#0c1118;--panel:#141b24;--panel2:#1a2430;--border:#2a3a4c;--text:#e8eef6;--muted:#8fa3b8;--accent:#3dd6c6;--accent2:#ff9500;--danger:#ef4444;--warn:#f59e0b;--ok:#22c55e;--grid:rgba(255,255,255,0.06);--font:"Segoe UI",system-ui,sans-serif;--mono:"Consolas","Cascadia Mono",monospace;}
+#screen-te-editor.open{display:flex;flex-direction:column;}
+#screen-te-editor *{box-sizing:border-box;}
+#screen-te-editor button,#screen-te-editor input,#screen-te-editor select,#screen-te-editor textarea{font:inherit;color:inherit;}
+#screen-te-editor button{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;cursor:pointer;}
+#screen-te-editor button:hover{border-color:var(--accent);}
+#screen-te-editor button.active{background:#1e3a36;border-color:var(--accent);color:var(--accent);}
+#screen-te-editor button.danger:hover{border-color:var(--danger);color:var(--danger);}
+#screen-te-editor input[type="text"],#screen-te-editor input[type="number"],#screen-te-editor select,#screen-te-editor textarea{background:#0d141c;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:100%;}
+#screen-te-editor textarea{min-height:110px;resize:vertical;font-family:var(--mono);font-size:12px;}
+#screen-te-editor label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+#screen-te-editor .field{margin-bottom:10px;}
+#screen-te-editor .row{display:flex;gap:8px;}
+#screen-te-editor .row>*{flex:1;}
+#screen-te-editor .app{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(280px,320px);grid-template-rows:48px minmax(0,1fr) 28px;height:100%;width:100%;min-height:0;flex:1;}
+#screen-te-editor .topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--border);}
+#screen-te-editor .topbar h1{font-size:14px;margin:0;letter-spacing:0.04em;color:var(--accent);}
+#screen-te-editor .topbar .hint{color:var(--muted);font-size:12px;flex:1;}
+#screen-te-editor .toolbar{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;gap:6px;padding:8px;align-items:stretch;min-height:0;overflow:auto;}
+#screen-te-editor .toolbar button{padding:8px 4px;font-size:11px;line-height:1.2;}
+#screen-te-editor .toolbar .sep{height:1px;background:var(--border);margin:4px 0;}
+#screen-te-editor .canvas-wrap{position:relative;background:#080c12;overflow:hidden;min-width:0;min-height:0;}
+#screen-te-editor #te-canvas{display:block;width:100%;height:100%;cursor:crosshair;}
+#screen-te-editor .side{background:var(--panel);border-left:1px solid var(--border);overflow:auto;padding:10px 12px 24px;min-height:0;}
+#screen-te-editor .side h2{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+#screen-te-editor .side h2:first-child{margin-top:0;}
+#screen-te-editor .toggle-row{display:flex;flex-wrap:wrap;gap:8px 12px;font-size:12px;margin-bottom:8px;}
+#screen-te-editor .toggle-row label{display:flex;align-items:center;gap:5px;color:var(--text);margin:0;cursor:pointer;}
+#screen-te-editor .status{grid-column:1/-1;background:#0a1016;border-top:1px solid var(--border);display:flex;align-items:center;gap:18px;padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+#screen-te-editor .status strong{color:var(--text);font-weight:600;}
+#screen-te-editor .btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+#screen-te-editor .btn-row button{flex:1;min-width:70px;font-size:12px;}
+#screen-te-editor .note{font-size:11px;color:var(--muted);line-height:1.4;margin:6px 0 10px;}
+#screen-te-editor .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1e3a36;color:var(--accent);font-size:11px;}
+#screen-te-editor .te-apply-row{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+#screen-te-editor .te-apply-row button{background:#1e3a36;border-color:#3dd6c6;color:#3dd6c6;font-weight:600;}
+    .admin-te-launch { text-align: center; padding: 32px 16px; }
+    .admin-te-launch p { color: var(--muted); max-width: 520px; margin: 0 auto 16px; line-height: 1.5; }
+    #screen-te-picker .section-title { font-family: Orbitron, sans-serif; letter-spacing: 0.08em; color: var(--cyan); font-size: 1.1rem; }
+    #screen-te-picker .section-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+    .back-btn { position: fixed; top: 12px; left: 12px; z-index: 400; cursor: pointer; font: inherit; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid var(--border); background: var(--panel); color: var(--cyan); border-radius: 8px; padding: 8px 12px; }
   </style>
 </head>
 <body>
   <div id="login-screen" class="wrap">
     <div class="login-card">
       <div class="brand">KartBlitz Admin</div>
-      <div class="sub">Leaderboard editor — password required</div>
+      <div class="sub">Leaderboard & track editor — password required</div>
       <input id="login-password" type="password" placeholder="Admin password" autocomplete="current-password">
       <button id="login-btn" class="btn" style="width:100%;margin-top:12px;">Unlock</button>
       <div id="login-error" class="err"></div>
@@ -166,8 +223,8 @@
   <div id="app-screen" class="wrap hidden">
     <div class="topbar">
       <div>
-        <div class="brand">Leaderboard Admin</div>
-        <div class="sub" style="margin:0;">Edits auto-sync to the cloud leaderboard</div>
+        <div class="brand">KartBlitz Admin</div>
+        <div class="sub" style="margin:0;">Leaderboard edits sync to cloud · Track edits export to tracks-shared.js</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <div id="sync-status" class="status">Ready</div>
@@ -180,6 +237,7 @@
       <button class="tab active" data-section="online">Online Wins</button>
       <button class="tab" data-section="trial">Time Trial</button>
       <button class="tab" data-section="versus">Versus</button>
+      <button class="tab" data-section="tracks">Track Editor</button>
     </div>
 
     <section id="section-online" class="panel">
@@ -210,7 +268,181 @@
       <div class="track-tabs" id="versus-track-tabs"></div>
       <div id="versus-table-wrap"></div>
     </section>
+
+    <section id="section-tracks" class="panel hidden">
+      <div class="panel-head">
+        <h2>Track Editor</h2>
+        <button type="button" class="btn btn-sm btn-gold" id="open-track-editor-btn">Open editor</button>
+      </div>
+      <p class="panel-desc">Edit circuit layouts, pit lanes, checkpoints, and DRS zones. Export changes and paste into <code>tracks-shared.js</code> in the repo to ship permanently.</p>
+      <div class="admin-te-launch">
+        <p id="admin-track-count">Tracks load from tracks-shared.js when the editor opens.</p>
+      </div>
+    </section>
   </div>
+
+<!-- TRACK EDITOR (fullscreen overlays) -->
+<!-- TRACK EDITOR PICKER -->
+<div id="screen-te-picker" aria-hidden="true">
+  <button class="back-btn" type="button" id="te-picker-back">← BACK</button>
+  <div class="section-title" style="margin-top:20px;">TRACK EDITOR</div>
+  <div class="section-sub">CLICK A TRACK TO EDIT · OR ADD A NEW CIRCUIT</div>
+  <div class="te-picker-grid" id="te-picker-grid"></div>
+</div>
+
+<!-- TRACK EDITOR WORKSPACE -->
+<div id="screen-te-editor" aria-hidden="true">
+  <button class="back-btn" type="button" id="te-editor-back">← BACK</button>
+  <div class="app">
+    <header class="topbar">
+      <h1>KARTBLITZ TRACK EDITOR</h1>
+      <span class="hint">Edit tracks here · Copy/Download export and paste into tracks-shared.js to ship permanently.</span>
+      <span class="pill" id="te-nodeCountPill">0 nodes</span>
+      <div class="te-apply-row">
+        <button type="button" id="te-btnApplyGame" title="Apply to loaded TRACKS">Apply</button>
+        <button type="button" id="te-btnBackPicker">Tracks</button>
+        <button type="button" id="te-btnCloseEditor">Close</button>
+      </div>
+    </header>
+  <aside class="toolbar" id="te-toolbar">
+    <button type="button" data-tool="select" class="active" title="Select (V)">Select</button>
+    <button type="button" data-tool="move" title="Move (G)">Move</button>
+    <button type="button" data-tool="add" title="Add node (A)">Add</button>
+    <button type="button" data-tool="insert" title="Insert on segment (I)">Insert</button>
+    <button type="button" data-tool="delete" class="danger" title="Delete (Del)">Delete</button>
+    <div class="sep"></div>
+    <button type="button" id="te-btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+    <button type="button" id="te-btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+    <div class="sep"></div>
+    <button type="button" id="te-btnCenter" title="Center view">Center</button>
+    <button type="button" id="te-btnResetCam" title="Reset camera">Reset</button>
+    <button type="button" id="te-btnCloseLoop" title="Toggle closed loop">Loop</button>
+    <div class="sep"></div>
+    <button type="button" id="te-btnLayerTrack" class="active" title="Edit track waypoints">Track</button>
+    <button type="button" id="te-btnLayerAI" title="Edit AI racing line">AI Line</button>
+    <button type="button" id="te-btnLayerPit" title="Edit pit lane path">Pit</button>
+  </aside>
+  <div class="canvas-wrap">
+    <canvas id="te-canvas"></canvas>
+  </div>
+  <aside class="side">
+    <h2>Selected Node</h2>
+    <div class="note" id="te-selInfo">None selected</div>
+    <div class="row">
+      <div class="field"><label>Index</label><input type="number" id="te-inpIdx" disabled /></div>
+      <div class="field"><label>X</label><input type="number" id="te-inpX" step="1" /></div>
+      <div class="field"><label>Y</label><input type="number" id="te-inpY" step="1" /></div>
+    </div>
+    <div class="btn-row">
+      <button type="button" id="te-btnApplyXY">Apply XY</button>
+      <button type="button" id="te-btnDeleteSel" class="danger">Delete</button>
+    </div>
+    <h2>Brake Tag (track nodes)</h2>
+    <div class="note">0 = none · 1 light · 2 · 3 medium · 4 · 5 max. Game stretches each tag into an approach zone. Keys: 0–5</div>
+    <div class="btn-row">
+      <button type="button" id="te-btnBrake0" title="No brake (0)">0</button>
+      <button type="button" id="te-btnBrake1" title="Brake 1">1</button>
+      <button type="button" id="te-btnBrake2" title="Brake 2">2</button>
+      <button type="button" id="te-btnBrake3" title="Brake 3">3</button>
+      <button type="button" id="te-btnBrake4" title="Brake 4">4</button>
+      <button type="button" id="te-btnBrake5" title="Brake 5">5</button>
+    </div>
+    <div class="note" id="te-brakeInfo">Select track node(s) to set brake tags</div>
+    <h2>View</h2>
+    <div class="toggle-row">
+      <label><input type="checkbox" id="te-togGrid" checked /> Grid</label>
+      <label><input type="checkbox" id="te-togSnap" /> Snap</label>
+      <label><input type="checkbox" id="te-togNodes" checked /> Nodes</label>
+      <label><input type="checkbox" id="te-togLine" checked /> Authored line</label>
+      <label><input type="checkbox" id="te-togRace" checked /> Track ribbon</label>
+      <label><input type="checkbox" id="te-togAILine" checked /> AI racing line</label>
+      <label><input type="checkbox" id="te-togRemap" /> Remap preview</label>
+      <label><input type="checkbox" id="te-togPit" checked /> Pit path</label>
+      <label><input type="checkbox" id="te-togDir" checked /> Direction</label>
+      <label><input type="checkbox" id="te-togCp" checked /> CP / DRS</label>
+    </div>
+    <div class="field"><label>Grid size</label><input type="number" id="te-inpGrid" value="100" min="10" step="10" /></div>
+    <h2>AI Racing Line</h2>
+    <div class="note">Optional path AI prefers. Nodes are curve control points (Catmull-Rom) — place a few through each corner for a smooth outside→apex→outside line. Omit to keep default AI behaviour.</div>
+    <div class="btn-row">
+      <button type="button" id="te-btnCopyRL">Copy from centerline</button>
+      <button type="button" id="te-btnClearRL" class="danger">Clear</button>
+    </div>
+    <div class="note" id="te-rlInfo">No AI racing line</div>
+    <h2>Track Meta</h2>
+    <div class="field"><label>Name</label><input type="text" id="te-metaName" value="MY CIRCUIT" /></div>
+    <div class="row">
+      <div class="field">
+        <label>Difficulty</label>
+        <select id="te-metaDiff">
+          <option value="EASY">EASY</option>
+          <option value="MEDIUM" selected>MEDIUM</option>
+          <option value="HARD">HARD</option>
+        </select>
+      </div>
+      <div class="field"><label>Track width</label><input type="number" id="te-metaWidth" value="120" /></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Laps</label><input type="number" id="te-metaLaps" value="3" /></div>
+      <div class="field"><label>Target lap (s)</label><input type="number" id="te-metaTarget" value="60" /></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Start X</label><input type="number" id="te-startX" value="1200" /></div>
+      <div class="field"><label>Start Y</label><input type="number" id="te-startY" value="5200" /></div>
+    </div>
+    <div class="field"><label>Start angle (rad)</label><input type="number" id="te-startAngle" value="0" step="0.01" /></div>
+    <div class="field"><label>cpFracs (comma)</label><input type="text" id="te-cpFracs" value="0.0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90" /></div>
+    <div class="field"><label>S/F gate half-width (checkered length; blank = auto)</label><input type="number" id="te-sfGateHalfWidth" value="" min="1" step="1" placeholder="auto (trackWidth×0.7)" /></div>
+    <div class="note">Drag the green S/F handle on the canvas to move the line (also moves start). Drag the gate end squares to lengthen the checkered line into the pit.</div>
+    <div class="field"><label>drsFracs (e.g. 0.02-0.12; 0.50-0.60)</label><input type="text" id="te-drsFracs" value="0.02-0.12; 0.50-0.60" /></div>
+    <div class="row">
+      <div class="field"><label>Pit width</label><input type="number" id="te-pitWidth" value="56" min="20" step="1" /></div>
+    </div>
+    <div class="field"><label>Pit path JSON</label><textarea id="te-pitPath">[{"x":900,"y":5200},{"x":900,"y":5020},{"x":1600,"y":5020},{"x":2300,"y":5020},{"x":2300,"y":5200}]</textarea></div>
+    <div class="note">Or switch to the Pit layer and drag/add/insert/delete pit nodes like track waypoints.</div>
+    <h2>Import</h2>
+    <div class="note">Selecting a track fills this box with that track's layout JSON, then loads it automatically (same as paste + Import Text).</div>
+    <textarea id="te-importArea" placeholder='Paste track JSON / waypoints here, then Import Text'></textarea>
+    <div class="btn-row">
+      <button type="button" id="te-btnImport">Import Text</button>
+      <button type="button" id="te-btnImportFile">Import File</button>
+    </div>
+    <input type="file" id="te-fileImport" accept=".json,.csv,.txt,.js,.kbtrack.json" hidden />
+    <h2>Export</h2>
+    <div class="field">
+      <label>Format</label>
+      <select id="te-exportFmt">
+        <option value="tracks">Game TRACKS object</option>
+        <option value="waypoints-js">JS waypoints array</option>
+        <option value="json">JSON waypoints</option>
+        <option value="csv">CSV</option>
+        <option value="text">Plain text</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button type="button" id="te-btnCopy">Copy</button>
+      <button type="button" id="te-btnDownload">Download</button>
+    </div>
+    <textarea id="te-exportArea" readonly></textarea>
+    <h2>Project</h2>
+    <div class="note">Saves editor project files (.kbtrack.json). Use Apply then Copy/Download to paste into tracks-shared.js for a permanent save.</div>
+    <div class="btn-row">
+      <button type="button" id="te-btnSaveProj">Save Project</button>
+      <button type="button" id="te-btnLoadProj">Load Project</button>
+      <button type="button" id="te-btnNew">New Track</button>
+    </div>
+    <input type="file" id="te-fileProject" accept=".json,.kbtrack.json" hidden />
+  </aside>
+  <footer class="status">
+    <span>Cursor <strong id="te-stCursor">—</strong></span>
+    <span>Selected <strong id="te-stSel">—</strong></span>
+    <span>Nodes <strong id="te-stNodes">0</strong></span>
+    <span>Zoom <strong id="te-stZoom">100%</strong></span>
+    <span>Loop <strong id="te-stLoop">closed</strong></span>
+    <span id="te-stMsg"></span>
+  </footer>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -445,6 +677,7 @@
     document.getElementById('section-online').classList.toggle('hidden', name !== 'online');
     document.getElementById('section-trial').classList.toggle('hidden', name !== 'trial');
     document.getElementById('section-versus').classList.toggle('hidden', name !== 'versus');
+    document.getElementById('section-tracks').classList.toggle('hidden', name !== 'tracks');
   }
 
   async function loadData() {
@@ -539,7 +772,35 @@
       tryLogin(saved).catch(function () {});
     }
   } catch (e) {}
+
+  window.onTrackEditorClose = function () {
+    if (window.KartBlitzTrackEditor) KartBlitzTrackEditor.setUnlocked(true);
+    showSection('tracks');
+  };
+  window.onTrackEditorApply = function () {
+    return 'Applied to loaded tracks — Copy/Download export and paste into tracks-shared.js to ship permanently.';
+  };
+  function openTrackEditorPanel() {
+    if (!window.KartBlitzTrackEditor) {
+      alert('Track editor failed to load.');
+      return;
+    }
+    KartBlitzTrackEditor.setUnlocked(true);
+    KartBlitzTrackEditor.openPicker();
+    const countEl = document.getElementById('admin-track-count');
+    if (countEl && typeof TRACKS !== 'undefined') {
+      countEl.textContent = TRACKS.length + ' tracks loaded from tracks-shared.js. Use Copy/Download after Apply.';
+    }
+  }
+  document.getElementById('open-track-editor-btn').addEventListener('click', openTrackEditorPanel);
+  document.querySelectorAll('#main-tabs .tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (btn.dataset.section === 'tracks') setTimeout(openTrackEditorPanel, 0);
+    });
+  });
 })();
 </script>
+<script src="tracks-shared.js"></script>
+<script src="track-editor.js"></script>
 </body>
 </html>

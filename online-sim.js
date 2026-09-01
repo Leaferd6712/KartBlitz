@@ -413,7 +413,18 @@ class SimKart {
             }
         }
         this._nearestSplineIdx = bestIdx;
-        return bestDist < hw;
+        if (bestDist < hw)
+            return true;
+        if (td.pitLane && td.pitLane.path) {
+            const pitHw = (td.pitLane.width || 60) / 2 + 28;
+            const path = td.pitLane.path;
+            for (let i = 0; i < path.length - 1; i++) {
+                if (distToSeg(this.x, this.y, path[i].x, path[i].y, path[i + 1].x, path[i + 1].y) < pitHw) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     inDrsZone(td) {
         if (!td.drsZones || !td.drsZones.length)
@@ -434,7 +445,18 @@ class SimKart {
             return;
         const strictHw = track.trackWidth / 2 + 18;
         const nearP = track.spline[this._nearestSplineIdx || 0];
-        this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
+        let nearPitLane = false;
+        if (track.pitLane && track.pitLane.path) {
+            const pitHw = (track.pitLane.width || 60) / 2 + 28;
+            const plPath = track.pitLane.path;
+            for (let i = 0; i < plPath.length - 1; i++) {
+                if (distToSeg(this.x, this.y, plPath[i].x, plPath[i].y, plPath[i + 1].x, plPath[i + 1].y) < pitHw) {
+                    nearPitLane = true;
+                    break;
+                }
+            }
+        }
+        this._isCompletelyOff = !nearPitLane && Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
         if (this._isCompletelyOff) {
             this.speed *= Math.pow(0.978, dt * 60);
             const offCap = 100;
@@ -727,6 +749,7 @@ function copyKartState(dst, src) {
     dst._throttleAssist = src._throttleAssist;
     dst._brakeAssist = src._brakeAssist;
     dst._penaltyTimer = src._penaltyTimer;
+    dst._isCompletelyOff = src._isCompletelyOff;
     dst.maxSpeed = src.maxSpeed;
     dst.accel = src.accel;
     dst.turnRate = src.turnRate;

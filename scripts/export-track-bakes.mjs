@@ -1,5 +1,5 @@
 /**
- * Extract TRACKS waypoints from index.html (or KartBlitz.html) and bake splines/checkpoints
+ * Extract TRACKS waypoints from tracks-shared.js (or index.html fallback) and bake splines/checkpoints
  * into sim/tracks/bakes.json for Durable Object authority.
  *
  * Usage: node scripts/export-track-bakes.mjs
@@ -10,10 +10,12 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
+const tracksSharedPath = path.join(root, "tracks-shared.js");
 const htmlCandidates = ["index.html", "KartBlitz.html"].map((name) => path.join(root, name));
 const htmlPath = htmlCandidates.find((p) => fs.existsSync(p));
-if (!htmlPath) {
-  throw new Error("Could not find index.html or KartBlitz.html in " + root);
+const sourcePath = fs.existsSync(tracksSharedPath) ? tracksSharedPath : htmlPath;
+if (!sourcePath) {
+  throw new Error("Could not find tracks-shared.js or index.html in " + root);
 }
 const outPath = path.join(root, "sim", "tracks", "bakes.json");
 
@@ -161,7 +163,7 @@ function extractTracks(html) {
   return tracks;
 }
 
-const html = fs.readFileSync(htmlPath, "utf8");
+const html = fs.readFileSync(sourcePath, "utf8");
 const rawTracks = extractTracks(html);
 const out = { version: 2, tracks: {} };
 for (const raw of rawTracks) {

@@ -374,11 +374,16 @@
 
   OnlineSession.prototype.startRace = function () {
     if (!this.isHost()) return;
-    this.send({
+    var payload = {
       type: 'startRace',
       settings: this.settings,
       protocol: ONLINE_PROTOCOL
-    });
+    };
+    if (typeof global.getOnlineTrackBake === 'function') {
+      var bake = global.getOnlineTrackBake(this.settings.trackId | 0);
+      if (bake) payload.trackBake = bake;
+    }
+    this.send(payload);
   };
 
   OnlineSession.prototype.notifyRaceEnded = function () {
@@ -621,6 +626,18 @@
     }
     if (this._inputAcc > inputStep) this._inputAcc = 0;
   };
+
+  function syncOnlineOffTrackFromSim(k, sim) {
+    if (!k || !sim) return;
+    if (typeof global.syncOnlineOffTrackFromSim === 'function') {
+      global.syncOnlineOffTrackFromSim(k, sim);
+      return;
+    }
+    k.isOffTrack = !!sim.isOffTrack;
+    k._penaltyTimer = sim._penaltyTimer || 0;
+    k._isCompletelyOff = !!sim._isCompletelyOff;
+    if (typeof sim._nearestSplineIdx === 'number') k._nearestSplineIdx = sim._nearestSplineIdx;
+  }
 
   function copyGameplayFields(k, s, isLocal) {
     if (typeof s.lap === 'number') k.lap = s.lap;
@@ -928,6 +945,7 @@
       k.drsActive = race._onlineLocalSim.drsActive;
       k.tyreWear = race._onlineLocalSim.tyreWear;
       if (typeof race._onlineLocalSim.tyreTemp === 'number') k.tyreTemp = race._onlineLocalSim.tyreTemp;
+      syncOnlineOffTrackFromSim(k, race._onlineLocalSim);
       this._guestPhase = snap.phase || race.phase;
       return;
     }
