@@ -1,5 +1,5 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-09-04T02:42:32.970Z
+Generated (UTC): 2026-09-04T03:22:04.478Z
 Registered devices: 8
 Saved scores: 457
 Saved online wins: 4
@@ -25,7 +25,7 @@ SAMTHEMAN       2026-08-27T00:33:42.441Z  2026-08-27T00:35:12.794Z
 SCORES (best lap first within each mode/track)
 ------------------------------------------------------------------------------
 MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
-trial     0       SUNSET SPEEDWAY         AAAAAAAAAAAA  0:20.183    0:20.183    -         2026-08-23T07:44:34.425Z
+trial     0       SUNSET SPEEDWAY         AAAAAAAAAAAA  0:20.185    0:20.183    -         2026-08-23T07:44:34.425Z
 trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.432    0:24.432    -         2026-08-18T10:21:10.193Z
 trial     0       SUNSET SPEEDWAY         SCOOPDOG      0:25.106    0:25.106    -         2026-08-20T00:20:17.123Z
 trial     0       SUNSET SPEEDWAY         NOTHECKER     0:25.156    0:25.156    -         2026-08-23T08:19:38.636Z
@@ -497,11 +497,7 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-<<<<<<< HEAD
-  "generatedAt": "2026-08-31T12:29:28.999Z",
-=======
-  "generatedAt": "2026-09-04T02:42:32.970Z",
->>>>>>> 051b3fd77647e84e1a98b0823b3cdfc30c0985f4
+  "generatedAt": "2026-09-04T03:22:04.478Z",
   "deviceCount": 8,
   "scoreCount": 457,
   "onlineWinCount": 4,
@@ -553,13 +549,13 @@ MACHINE-READABLE JSON (for restore / import)
       "trackId": 0,
       "trackName": "SUNSET SPEEDWAY",
       "username": "AAAAAAAAAAAA",
-      "bestLap": 20.18280000001192,
-      "bestLapText": "0:20.183",
-      "total": 20.18280000001192,
+      "bestLap": 20.185,
+      "bestLapText": "0:20.185",
+      "total": 20.183,
       "totalText": "0:20.183",
       "winner": null,
       "createdAt": "2026-08-23T07:44:34.425Z",
-      "updatedAt": "2026-08-31T08:35:25.199Z"
+      "updatedAt": "2026-09-01T03:05:01.273Z"
     },
     {
       "mode": "trial",
