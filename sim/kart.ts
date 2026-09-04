@@ -5,7 +5,7 @@ import {
   isWetWeather,
   normalizeWeatherId,
 } from "./constants";
-import { distToSeg, linesCross, splineTangent, type Vec2 } from "./math";
+import { linesCross, splineTangent, type Vec2 } from "./math";
 import { seedTyreTemp, updateTyres } from "./tyres";
 import { computeBaseStats, defaultUpgrades, sanitizeUpgrades, type UpgradeStats } from "./upgrades";
 import { resolveKartCollisions } from "./collision";
@@ -37,7 +37,6 @@ export type BakedTrack = {
   drsZones: DrsZone[];
   gridSlots?: { x: number; y: number; a: number }[];
   surface?: { offTrackMult?: number };
-  pitLane?: { path: Vec2[]; width?: number };
 };
 
 export function emptyInput(): SimInput {
@@ -191,18 +190,7 @@ export class SimKart {
       }
     }
     this._nearestSplineIdx = bestIdx;
-    if (bestDist < hw) return true;
-    // Pit lane counts as on-track (matches offline Kart.onTrack)
-    if (td.pitLane && td.pitLane.path) {
-      const pitHw = (td.pitLane.width || 60) / 2 + 28;
-      const path = td.pitLane.path;
-      for (let i = 0; i < path.length - 1; i++) {
-        if (distToSeg(this.x, this.y, path[i].x, path[i].y, path[i + 1].x, path[i + 1].y) < pitHw) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return bestDist < hw;
   }
 
   inDrsZone(td: BakedTrack): boolean {
@@ -220,18 +208,7 @@ export class SimKart {
     if (this.finished) return;
     const strictHw = track.trackWidth / 2 + 18;
     const nearP = track.spline[this._nearestSplineIdx || 0];
-    let nearPitLane = false;
-    if (track.pitLane && track.pitLane.path) {
-      const pitHw = (track.pitLane.width || 60) / 2 + 28;
-      const plPath = track.pitLane.path;
-      for (let i = 0; i < plPath.length - 1; i++) {
-        if (distToSeg(this.x, this.y, plPath[i].x, plPath[i].y, plPath[i + 1].x, plPath[i + 1].y) < pitHw) {
-          nearPitLane = true;
-          break;
-        }
-      }
-    }
-    this._isCompletelyOff = !nearPitLane && Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
+    this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
     if (this._isCompletelyOff) {
       this.speed *= Math.pow(0.978, dt * 60);
       const offCap = 100;
@@ -535,7 +512,6 @@ export function copyKartState(dst: SimKart, src: SimKart) {
   dst._throttleAssist = src._throttleAssist;
   dst._brakeAssist = src._brakeAssist;
   dst._penaltyTimer = src._penaltyTimer;
-  dst._isCompletelyOff = src._isCompletelyOff;
   dst.maxSpeed = src.maxSpeed;
   dst.accel = src.accel;
   dst.turnRate = src.turnRate;

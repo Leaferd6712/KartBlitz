@@ -266,9 +266,10 @@ export class KartBlitzRoom extends Server<Env> {
           };
         }
 
-        // Prefer host's finalized track bake (matches client visuals); fall back to catalog.
-        let track = msg.trackBake ? sanitizeTrackBake(msg.trackBake) : null;
-        if (!track) track = loadTrackBake(this.settings.trackId);
+        let track = loadTrackBake(this.settings.trackId);
+        if (!track && msg.trackBake) {
+          track = sanitizeTrackBake(msg.trackBake);
+        }
         if (!track) {
           sender.send(
             json({
@@ -613,7 +614,7 @@ function sanitizeTrackBake(raw: unknown): BakedTrack | null {
 
   return {
     id: typeof t.id === "number" ? t.id : 0,
-    trackWidth: Math.max(40, Math.min(1200, Number(t.trackWidth) || 160)),
+    trackWidth: Math.max(40, Math.min(400, Number(t.trackWidth) || 160)),
     spline: cleanSpline,
     cum,
     totalLen: Number(t.totalLen) || cum[cum.length - 1] || 1,
@@ -641,25 +642,6 @@ function sanitizeTrackBake(raw: unknown): BakedTrack | null {
     surface: t.surface && typeof t.surface === "object"
       ? { offTrackMult: Number((t.surface as { offTrackMult?: number }).offTrackMult) || 1 }
       : { offTrackMult: 1 },
-    pitLane: sanitizePitLane(t.pitLane),
-  };
-}
-
-function sanitizePitLane(raw: unknown): BakedTrack["pitLane"] {
-  if (!raw || typeof raw !== "object") return undefined;
-  const pl = raw as { path?: unknown; width?: unknown };
-  if (!Array.isArray(pl.path) || pl.path.length < 2) return undefined;
-  const path = pl.path
-    .slice(0, 512)
-    .map((p) => {
-      const pt = p as { x?: number; y?: number };
-      return { x: Number(pt.x) || 0, y: Number(pt.y) || 0 };
-    })
-    .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
-  if (path.length < 2) return undefined;
-  return {
-    path,
-    width: Math.max(20, Math.min(200, Number(pl.width) || 60)),
   };
 }
 

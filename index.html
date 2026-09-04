@@ -415,13 +415,11 @@ body{
 .pit-ui-actions{display:flex;justify-content:center;margin-top:16px;}
 .pit-ui-actions .btn{max-width:100%;}
 /* ── DEVICE PROMPT ──────────────────────────────── */
-#device-prompt{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;}
-#device-prompt.open{display:flex;}
-#device-prompt .device-prompt-card{background:rgba(40,35,70,0.96);border:3px solid rgba(255,255,255,0.4);border-radius:22px;padding:36px 56px;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;text-align:center;max-width:520px;width:min(520px,92vw);}
-#device-prompt .device-prompt-card h2{color:#fff;margin:0 0 12px;font-size:18px;letter-spacing:.06em;font-weight:900;}
-#device-prompt .device-prompt-card p{opacity:.8;margin:0 0 24px;font-size:13px;line-height:1.8;font-family:'Nunito',sans-serif;word-wrap:break-word;}
-#device-prompt .device-prompt-card .dp-btns{display:flex;gap:16px;justify-content:center;}
-#device-prompt .device-prompt-card .dp-btns .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.04em;white-space:nowrap;}
+#device-prompt{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(40,35,70,0.96);border:3px solid rgba(255,255,255,0.4);border-radius:22px;padding:36px 56px;z-index:200;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;text-align:center;max-width:520px;width:520px;}
+#device-prompt h2{color:#fff;margin:0 0 12px;font-size:18px;letter-spacing:.06em;font-weight:900;}
+#device-prompt p{opacity:.8;margin:0 0 24px;font-size:13px;line-height:1.8;font-family:'Nunito',sans-serif;word-wrap:break-word;}
+#device-prompt .dp-btns{display:flex;gap:16px;justify-content:center;}
+#device-prompt .dp-btns .btn{clip-path:none;padding:11px 28px;font-size:13px;letter-spacing:.04em;white-space:nowrap;}
 #patch-notes-overlay{display:none;position:fixed;inset:0;z-index:205;align-items:center;justify-content:center;background:rgba(60,50,110,0.7);padding:20px;box-sizing:border-box;backdrop-filter:blur(6px);}
 #patch-notes-overlay.open{display:flex;}
 #lb-auto-register-overlay{display:none;position:fixed;inset:0;z-index:210;align-items:center;justify-content:center;background:rgba(20,16,40,0.82);padding:20px;box-sizing:border-box;backdrop-filter:blur(8px);}
@@ -1136,6 +1134,58 @@ body::after{
   }
 }
 
+/* ── Embedded Track Editor ── */
+#te-pass-modal{display:none;position:fixed;inset:0;z-index:360;background:rgba(60,50,110,0.94);align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:'Nunito',sans-serif;backdrop-filter:blur(8px);}
+#te-pass-modal.open{display:flex;}
+#te-pass-modal h2{color:#3dd6c6;margin:0;font-size:16px;letter-spacing:.12em;}
+#te-pass-modal p{opacity:.6;margin:0;font-size:11px;letter-spacing:.06em;}
+#te-pass-modal input{background:#0d141c;border:1px solid #2a3a4c;border-radius:8px;padding:10px 14px;color:#e8eef6;font-size:14px;width:min(280px,80vw);text-align:center;letter-spacing:.15em;}
+#te-pass-modal .te-pass-err{color:#ef4444;font-size:11px;min-height:16px;}
+#te-pass-modal .te-pass-btns{display:flex;gap:10px;}
+#screen-te-picker{display:none;position:fixed;inset:0;z-index:350;background:#050510;overflow:auto;padding:40px 24px 60px;flex-direction:column;align-items:center;}
+#screen-te-picker.open{display:flex;}
+#screen-te-picker .te-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;width:min(960px,100%);margin-top:20px;}
+#screen-te-picker .te-pick-card{background:rgba(20,27,36,0.95);border:1px solid #2a3a4c;border-radius:10px;padding:16px;cursor:pointer;text-align:left;color:#e8eef6;font-family:'Nunito',sans-serif;}
+#screen-te-picker .te-pick-card:hover{border-color:#3dd6c6;}
+#screen-te-picker .te-pick-card .te-pick-name{font-size:13px;letter-spacing:.08em;color:#3dd6c6;margin-bottom:6px;}
+#screen-te-picker .te-pick-card .te-pick-meta{font-size:10px;opacity:.55;letter-spacing:.06em;}
+#screen-te-picker .te-pick-add{border-style:dashed;color:#ff9500;text-align:center;}
+#screen-te-editor{display:none;position:fixed;inset:0;z-index:355;background:#0c1118;color:#e8eef6;font-family:"Segoe UI",system-ui,sans-serif;--bg:#0c1118;--panel:#141b24;--panel2:#1a2430;--border:#2a3a4c;--text:#e8eef6;--muted:#8fa3b8;--accent:#3dd6c6;--accent2:#ff9500;--danger:#ef4444;--warn:#f59e0b;--ok:#22c55e;--grid:rgba(255,255,255,0.06);--font:"Segoe UI",system-ui,sans-serif;--mono:"Consolas","Cascadia Mono",monospace;}
+#screen-te-editor.open{display:flex;flex-direction:column;}
+#screen-te-editor *{box-sizing:border-box;}
+#screen-te-editor button,#screen-te-editor input,#screen-te-editor select,#screen-te-editor textarea{font:inherit;color:inherit;}
+#screen-te-editor button{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 10px;cursor:pointer;}
+#screen-te-editor button:hover{border-color:var(--accent);}
+#screen-te-editor button.active{background:#1e3a36;border-color:var(--accent);color:var(--accent);}
+#screen-te-editor button.danger:hover{border-color:var(--danger);color:var(--danger);}
+#screen-te-editor input[type="text"],#screen-te-editor input[type="number"],#screen-te-editor select,#screen-te-editor textarea{background:#0d141c;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:100%;}
+#screen-te-editor textarea{min-height:110px;resize:vertical;font-family:var(--mono);font-size:12px;}
+#screen-te-editor label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+#screen-te-editor .field{margin-bottom:10px;}
+#screen-te-editor .row{display:flex;gap:8px;}
+#screen-te-editor .row>*{flex:1;}
+#screen-te-editor .app{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(280px,320px);grid-template-rows:48px minmax(0,1fr) 28px;height:100%;width:100%;min-height:0;flex:1;}
+#screen-te-editor .topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--border);}
+#screen-te-editor .topbar h1{font-size:14px;margin:0;letter-spacing:0.04em;color:var(--accent);}
+#screen-te-editor .topbar .hint{color:var(--muted);font-size:12px;flex:1;}
+#screen-te-editor .toolbar{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;gap:6px;padding:8px;align-items:stretch;min-height:0;overflow:auto;}
+#screen-te-editor .toolbar button{padding:8px 4px;font-size:11px;line-height:1.2;}
+#screen-te-editor .toolbar .sep{height:1px;background:var(--border);margin:4px 0;}
+#screen-te-editor .canvas-wrap{position:relative;background:#080c12;overflow:hidden;min-width:0;min-height:0;}
+#screen-te-editor #te-canvas{display:block;width:100%;height:100%;cursor:crosshair;}
+#screen-te-editor .side{background:var(--panel);border-left:1px solid var(--border);overflow:auto;padding:10px 12px 24px;min-height:0;}
+#screen-te-editor .side h2{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+#screen-te-editor .side h2:first-child{margin-top:0;}
+#screen-te-editor .toggle-row{display:flex;flex-wrap:wrap;gap:8px 12px;font-size:12px;margin-bottom:8px;}
+#screen-te-editor .toggle-row label{display:flex;align-items:center;gap:5px;color:var(--text);margin:0;cursor:pointer;}
+#screen-te-editor .status{grid-column:1/-1;background:#0a1016;border-top:1px solid var(--border);display:flex;align-items:center;gap:18px;padding:0 12px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+#screen-te-editor .status strong{color:var(--text);font-weight:600;}
+#screen-te-editor .btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+#screen-te-editor .btn-row button{flex:1;min-width:70px;font-size:12px;}
+#screen-te-editor .note{font-size:11px;color:var(--muted);line-height:1.4;margin:6px 0 10px;}
+#screen-te-editor .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1e3a36;color:var(--accent);font-size:11px;}
+#screen-te-editor .te-apply-row{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+#screen-te-editor .te-apply-row button{background:#1e3a36;border-color:#3dd6c6;color:#3dd6c6;font-weight:600;}
 
 </style>
 </head>
@@ -1156,7 +1206,7 @@ body::after{
       </div>
       <div class="menu-car-stage" id="menu-car-stage">
         <canvas id="menu-car-canvas"></canvas>
-        <div class="menu-car-hint">DRAG TO SPIN · CHASSIS / WHEEL RIMS · STOCK = ORIGINAL</div>
+        <div class="menu-car-hint">DRAG TO SPIN · CHASSIS/ACCENTS TINT 3D · STOCK = ORIGINAL</div>
         <div class="menu-car-status" id="menu-car-status">LOADING CAR…</div>
       </div>
       <div class="menu-paint-strip" id="menu-paint-strip">
@@ -1166,7 +1216,7 @@ body::after{
       <div class="portal-pill-row">
         <div class="portal-pill" id="portal-track-count">8 TRACKS</div>
         <div class="portal-pill">5 MODES</div>
-        <div class="portal-pill">CHASSIS & RIM PAINT</div>
+        <div class="portal-pill">MULTI-PART PAINT</div>
         <div class="portal-pill">DYNAMIC WEATHER</div>
       </div>
     </div>
@@ -1180,12 +1230,7 @@ body::after{
         <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()"> GARAGE</button>
         <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');"> LEADERBOARD</button>
         <button class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();showControlsScreen()"> CONTROLS &amp; SETTINGS</button>
-<<<<<<< HEAD
-        <a class="btn btn-sm" id="btn-track-editor" style="color:#3dd6c6;text-decoration:none;display:inline-flex;align-items:center;" href="admin.html" target="_blank" rel="noopener"> ADMIN</a>
-        <a class="btn btn-sm" href="training.html" style="color:#b8a0ff;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;"> ML TRAINING LAB</a>
-=======
         <button type="button" class="btn btn-sm" id="btn-track-editor" style="color:#3dd6c6;" onclick="openTrackEditorFromMenu()"> TRACK EDITOR</button>
->>>>>>> parent of 942d919 (Machine learning)
       </div>
       <div class="menu-utility-card">
         <div class="menu-utility-title">Desktop Layout</div>
@@ -1329,7 +1374,7 @@ body::after{
 <!-- TRACK SELECT -->
 <div id="screen-track" class="screen hidden">
   <div class="scanlines"></div>
-  <button class="back-btn" onclick="goBackFromTrack()">← BACK</button>
+  <button class="back-btn" onclick="showScreen('mode')">← BACK</button>
   <div class="section-title">SELECT TRACK</div>
   <div class="section-sub" id="track-mode-label">CHOOSE YOUR CIRCUIT</div>
   <div class="track-grid" id="track-grid"></div>
@@ -1338,7 +1383,6 @@ body::after{
 <!-- QUALIFYING RESULTS -->
 <div id="screen-quali-results" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
-  <button class="back-btn" onclick="returnToMainMenu()">← BACK</button>
   <div class="section-title"> QUALIFYING RESULTS</div>
   <div class="section-sub" id="quali-results-sub">STARTING GRID</div>
   <div class="results-wrap" id="quali-results-wrap"></div>
@@ -1352,7 +1396,6 @@ body::after{
 <!-- RESULTS -->
 <div id="screen-results" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
-  <button class="back-btn" onclick="returnToMainMenu()">← BACK</button>
   <div class="section-title" id="results-title">RACE COMPLETE</div>
   <div class="results-wrap" id="results-wrap"></div>
   <div id="coins-earned-display"></div>
@@ -1504,20 +1547,16 @@ body::after{
 
 <!-- DEVICE PROMPT -->
 <div id="device-prompt">
-  <button class="back-btn" type="button" onclick="setDeviceMode(false)">← BACK</button>
-  <div class="device-prompt-card">
-    <h2>CHOOSE YOUR CONTROLS</h2>
-    <p>Use keyboard, or enable on-screen touch controls?</p>
-    <div class="dp-btns">
-      <button class="btn btn-cyan" onclick="setDeviceMode(true)">TOUCH CONTROLS</button>
-      <button class="btn btn-orange" onclick="setDeviceMode(false)">KEYBOARD ONLY</button>
-    </div>
+  <h2>CHOOSE YOUR CONTROLS</h2>
+  <p>Use keyboard, or enable on-screen touch controls?</p>
+  <div class="dp-btns">
+    <button class="btn btn-cyan" onclick="setDeviceMode(true)">TOUCH CONTROLS</button>
+    <button class="btn btn-orange" onclick="setDeviceMode(false)">KEYBOARD ONLY</button>
   </div>
 </div>
 
 <!-- PATCH NOTES (once per page load) -->
 <div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
-  <button class="back-btn" type="button" onclick="dismissPatchNotes()">← BACK</button>
   <div id="patch-notes-card">
     <h2 id="patch-notes-title">PATCH NOTES</h2>
     <div class="patch-date">AUGUST 20</div>
@@ -1531,7 +1570,6 @@ body::after{
 </div>
 
 <div id="lb-auto-register-overlay" role="dialog" aria-labelledby="lb-auto-register-title">
-  <button class="back-btn" type="button" onclick="dismissAutoRegister()">← BACK</button>
   <div id="lb-auto-register-card">
     <h3 id="lb-auto-register-title">SAVE TO LEADERBOARD</h3>
     <p>Choose a username once for this device. Every lap you finish will auto-save to the cloud leaderboard.</p>
@@ -1597,7 +1635,6 @@ body::after{
 
 <!-- PAUSE MENU -->
 <div id="pause-overlay">
-  <button class="back-btn" type="button" onclick="resumeGame()">← BACK</button>
   <div class="pause-title">PAUSED</div>
   <div class="pause-btns">
     <button class="btn btn-cyan" onclick="resumeGame()">RESUME</button>
@@ -1614,6 +1651,192 @@ body::after{
 </div>
 
 
+<!-- TRACK EDITOR PASSCODE -->
+<div id="te-pass-modal" aria-hidden="true">
+  <h2>AUTHOR ACCESS</h2>
+  <p>ENTER PASSCODE TO OPEN TRACK EDITOR</p>
+  <input type="password" id="te-pass-input" autocomplete="off" placeholder="••••••••" />
+  <div class="te-pass-err" id="te-pass-err"></div>
+  <div class="te-pass-btns">
+    <button type="button" class="btn btn-cyan" id="te-pass-ok">UNLOCK</button>
+    <button type="button" class="btn btn-sm" id="te-pass-cancel" style="color:#9ad4ff;">CANCEL</button>
+  </div>
+</div>
+
+<!-- TRACK EDITOR PICKER -->
+<div id="screen-te-picker" aria-hidden="true">
+  <button class="back-btn" type="button" id="te-picker-back">← BACK</button>
+  <div class="section-title" style="margin-top:20px;">TRACK EDITOR</div>
+  <div class="section-sub">CLICK A TRACK TO EDIT · OR ADD A NEW CIRCUIT</div>
+  <div class="te-picker-grid" id="te-picker-grid"></div>
+</div>
+
+<!-- TRACK EDITOR WORKSPACE -->
+<div id="screen-te-editor" aria-hidden="true">
+  <div class="app">
+    <header class="topbar">
+      <h1>KARTBLITZ TRACK EDITOR</h1>
+      <span class="hint">Edit live tracks in this file. Apply to race-test · Copy/Download to paste into TRACKS permanently.</span>
+      <span class="pill" id="te-nodeCountPill">0 nodes</span>
+      <div class="te-apply-row">
+        <button type="button" id="te-btnApplyGame" title="Apply to live TRACKS">Apply to Game</button>
+        <button type="button" id="te-btnBackPicker">Tracks</button>
+        <button type="button" id="te-btnCloseEditor">Close</button>
+      </div>
+    </header>
+    
+  
+
+  <aside class="toolbar" id="te-toolbar">
+    <button type="button" data-tool="select" class="active" title="Select (V)">Select</button>
+    <button type="button" data-tool="move" title="Move (G)">Move</button>
+    <button type="button" data-tool="add" title="Add node (A)">Add</button>
+    <button type="button" data-tool="insert" title="Insert on segment (I)">Insert</button>
+    <button type="button" data-tool="delete" class="danger" title="Delete (Del)">Delete</button>
+    <div class="sep"></div>
+    <button type="button" id="te-btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+    <button type="button" id="te-btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+    <div class="sep"></div>
+    <button type="button" id="te-btnCenter" title="Center view">Center</button>
+    <button type="button" id="te-btnResetCam" title="Reset camera">Reset</button>
+    <button type="button" id="te-btnCloseLoop" title="Toggle closed loop">Loop</button>
+    <div class="sep"></div>
+    <button type="button" id="te-btnLayerTrack" class="active" title="Edit track waypoints">Track</button>
+    <button type="button" id="te-btnLayerAI" title="Edit AI racing line">AI Line</button>
+    <button type="button" id="te-btnLayerPit" title="Edit pit lane path">Pit</button>
+  </aside>
+
+  <div class="canvas-wrap">
+    <canvas id="te-canvas"></canvas>
+  </div>
+
+  <aside class="side">
+    <h2>Selected Node</h2>
+    <div class="note" id="te-selInfo">None selected</div>
+    <div class="row">
+      <div class="field"><label>Index</label><input type="number" id="te-inpIdx" disabled /></div>
+      <div class="field"><label>X</label><input type="number" id="te-inpX" step="1" /></div>
+      <div class="field"><label>Y</label><input type="number" id="te-inpY" step="1" /></div>
+    </div>
+    <div class="btn-row">
+      <button type="button" id="te-btnApplyXY">Apply XY</button>
+      <button type="button" id="te-btnDeleteSel" class="danger">Delete</button>
+    </div>
+    <h2>Brake Tag (track nodes)</h2>
+    <div class="note">0 = none · 1 light · 2 · 3 medium · 4 · 5 max. Game stretches each tag into an approach zone. Keys: 0–5</div>
+    <div class="btn-row">
+      <button type="button" id="te-btnBrake0" title="No brake (0)">0</button>
+      <button type="button" id="te-btnBrake1" title="Brake 1">1</button>
+      <button type="button" id="te-btnBrake2" title="Brake 2">2</button>
+      <button type="button" id="te-btnBrake3" title="Brake 3">3</button>
+      <button type="button" id="te-btnBrake4" title="Brake 4">4</button>
+      <button type="button" id="te-btnBrake5" title="Brake 5">5</button>
+    </div>
+    <div class="note" id="te-brakeInfo">Select track node(s) to set brake tags</div>
+
+    <h2>View</h2>
+    <div class="toggle-row">
+      <label><input type="checkbox" id="te-togGrid" checked /> Grid</label>
+      <label><input type="checkbox" id="te-togSnap" /> Snap</label>
+      <label><input type="checkbox" id="te-togNodes" checked /> Nodes</label>
+      <label><input type="checkbox" id="te-togLine" checked /> Authored line</label>
+      <label><input type="checkbox" id="te-togRace" checked /> Track ribbon</label>
+      <label><input type="checkbox" id="te-togAILine" checked /> AI racing line</label>
+      <label><input type="checkbox" id="te-togRemap" /> Remap preview</label>
+      <label><input type="checkbox" id="te-togPit" checked /> Pit path</label>
+      <label><input type="checkbox" id="te-togDir" checked /> Direction</label>
+      <label><input type="checkbox" id="te-togCp" checked /> CP / DRS</label>
+    </div>
+    <div class="field"><label>Grid size</label><input type="number" id="te-inpGrid" value="100" min="10" step="10" /></div>
+
+    <h2>AI Racing Line</h2>
+    <div class="note">Optional path AI prefers. Nodes are curve control points (Catmull-Rom) — place a few through each corner for a smooth outside→apex→outside line. Omit to keep default AI behaviour.</div>
+    <div class="btn-row">
+      <button type="button" id="te-btnCopyRL">Copy from centerline</button>
+      <button type="button" id="te-btnClearRL" class="danger">Clear</button>
+    </div>
+    <div class="note" id="te-rlInfo">No AI racing line</div>
+
+    <h2>Track Meta</h2>
+    <div class="field"><label>Name</label><input type="text" id="te-metaName" value="MY CIRCUIT" /></div>
+    <div class="row">
+      <div class="field">
+        <label>Difficulty</label>
+        <select id="te-metaDiff">
+          <option value="EASY">EASY</option>
+          <option value="MEDIUM" selected>MEDIUM</option>
+          <option value="HARD">HARD</option>
+        </select>
+      </div>
+      <div class="field"><label>Track width</label><input type="number" id="te-metaWidth" value="120" /></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Laps</label><input type="number" id="te-metaLaps" value="3" /></div>
+      <div class="field"><label>Target lap (s)</label><input type="number" id="te-metaTarget" value="60" /></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Start X</label><input type="number" id="te-startX" value="1200" /></div>
+      <div class="field"><label>Start Y</label><input type="number" id="te-startY" value="5200" /></div>
+    </div>
+    <div class="field"><label>Start angle (rad)</label><input type="number" id="te-startAngle" value="0" step="0.01" /></div>
+    <div class="field"><label>cpFracs (comma)</label><input type="text" id="te-cpFracs" value="0.0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90" /></div>
+    <div class="field"><label>S/F gate half-width (checkered length; blank = auto)</label><input type="number" id="te-sfGateHalfWidth" value="" min="1" step="1" placeholder="auto (trackWidth×0.7)" /></div>
+    <div class="note">Drag the green S/F handle on the canvas to move the line (also moves start). Drag the gate end squares to lengthen the checkered line into the pit.</div>
+    <div class="field"><label>drsFracs (e.g. 0.02-0.12; 0.50-0.60)</label><input type="text" id="te-drsFracs" value="0.02-0.12; 0.50-0.60" /></div>
+    <div class="row">
+      <div class="field"><label>Pit width</label><input type="number" id="te-pitWidth" value="56" min="20" step="1" /></div>
+    </div>
+    <div class="field"><label>Pit path JSON</label><textarea id="te-pitPath">[{"x":900,"y":5200},{"x":900,"y":5020},{"x":1600,"y":5020},{"x":2300,"y":5020},{"x":2300,"y":5200}]</textarea></div>
+    <div class="note">Or switch to the Pit layer and drag/add/insert/delete pit nodes like track waypoints.</div>
+
+    <h2>Import</h2>
+    <div class="note">Selecting a track fills this box with that track’s layout JSON, then loads it automatically (same as paste + Import Text).</div>
+    <textarea id="te-importArea" placeholder='Paste track JSON / waypoints here, then Import Text'></textarea>
+    <div class="btn-row">
+      <button type="button" id="te-btnImport">Import Text</button>
+      <button type="button" id="te-btnImportFile">Import File</button>
+    </div>
+    <input type="file" id="te-fileImport" accept=".json,.csv,.txt,.js,.kbtrack.json" hidden />
+
+    <h2>Export</h2>
+    <div class="field">
+      <label>Format</label>
+      <select id="te-exportFmt">
+        <option value="tracks">Game TRACKS object</option>
+        <option value="waypoints-js">JS waypoints array</option>
+        <option value="json">JSON waypoints</option>
+        <option value="csv">CSV</option>
+        <option value="text">Plain text</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button type="button" id="te-btnCopy">Copy</button>
+      <button type="button" id="te-btnDownload">Download</button>
+    </div>
+    <textarea id="te-exportArea" readonly></textarea>
+
+    <h2>Project</h2>
+    <div class="note">Saves editor project files (.kbtrack.json). Use <strong>Apply to Game</strong> to race-test; Copy/Download to paste into TRACKS for a permanent source save.</div>
+    <div class="btn-row">
+      <button type="button" id="te-btnSaveProj">Save Project</button>
+      <button type="button" id="te-btnLoadProj">Load Project</button>
+      <button type="button" id="te-btnNew">New Track</button>
+    </div>
+    <input type="file" id="te-fileProject" accept=".json,.kbtrack.json" hidden />
+  </aside>
+
+  <footer class="status">
+    <span>Cursor <strong id="te-stCursor">—</strong></span>
+    <span>Selected <strong id="te-stSel">—</strong></span>
+    <span>Nodes <strong id="te-stNodes">0</strong></span>
+    <span>Zoom <strong id="te-stZoom">100%</strong></span>
+    <span>Loop <strong id="te-stLoop">closed</strong></span>
+    <span id="te-stMsg"></span>
+  </footer>
+
+  </div>
+</div>
+
 <!-- AD REQUEST BLOCKER (CrazyGames: block UI from request until adFinished/adError) -->
 <div id="ad-block-overlay" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(60,50,110,0.88);align-items:center;justify-content:center;flex-direction:column;gap:14px;pointer-events:all;backdrop-filter:blur(6px);">
   <div style="font-family:'Nunito',sans-serif;font-size:16px;letter-spacing:.06em;color:#fff;font-weight:900;">LOADING AD…</div>
@@ -1625,7 +1848,6 @@ body::after{
 <!-- CONFETTI -->
 <canvas id="confetti-canvas"></canvas>
 
-<script src="tracks-shared.js"></script>
 <script>
 // kart blitz - main racing engine
 
@@ -1947,10 +2169,11 @@ function dismissPatchNotes() {
     if(body) body.textContent = preferTouch
       ? 'Enable on-screen joysticks? You can switch anytime in Settings.'
       : 'Use keyboard, or enable on-screen joysticks? You can switch anytime in Settings.';
-    document.getElementById('device-prompt').classList.add('open');
+    document.getElementById('device-prompt').style.display = 'block';
   }
 })();
 document.addEventListener('keydown', e => {
+  if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) return;
   if (e.key === 'Enter' && document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
     const patch = document.getElementById('patch-notes-overlay');
     if(patch && patch.classList.contains('open')) {
@@ -2168,6 +2391,1118 @@ function playUIClick() {
   o.start(AC.currentTime); o.stop(AC.currentTime + 0.09);
 }
 
+// ── SPLINE MATH ─────────────────────────────────────────
+function catmullRom(p0,p1,p2,p3,t) {
+  const t2=t*t, t3=t2*t;
+  return {
+    x: 0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+    y: 0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
+  };
+}
+function buildSpline(wps, steps=25) {
+  const pts=[], n=wps.length;
+  for(let i=0;i<n;i++){
+    const p0=wps[(i-1+n)%n],p1=wps[i],p2=wps[(i+1)%n],p3=wps[(i+2)%n];
+    for(let s=0;s<steps;s++) pts.push(catmullRom(p0,p1,p2,p3,s/steps));
+  }
+  return pts;
+}
+function splineTangent(spl, idx) {
+  const n=spl.length;
+  const a=spl[(idx-1+n)%n], b=spl[(idx+1)%n];
+  const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+  return {x:dx/len, y:dy/len};
+}
+function distToSeg(px,py,ax,ay,bx,by) {
+  const dx=bx-ax,dy=by-ay,lenSq=dx*dx+dy*dy;
+  if(lenSq===0) return Math.hypot(px-ax,py-ay);
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/lenSq));
+  return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+function linesCross(ax,ay,bx,by,cx,cy,dx,dy) {
+  function cross(o,a,b){return(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);}
+  const A={x:ax,y:ay},B={x:bx,y:by},C={x:cx,y:cy},D={x:dx,y:dy};
+  return cross(A,B,C)*cross(A,B,D)<0 && cross(C,D,A)*cross(C,D,B)<0;
+}
+
+// ── TRACK DATA ───────────────────────────────────────────
+// Default free circuits (AI-friendly pack + Titan). Author challenge tracks unlock with coins.
+const DEFAULT_UNLOCKED_TRACKS = [0, 1, 2, 3, 4, 5];
+
+const TRACKS = [
+  // ── AI-FRIENDLY PACK (wide, flowing, gentle braking) ───────────────
+  {
+    id:0, name:'SUNSET SPEEDWAY', difficulty:'EASY', diffClass:'diff-easy', diffLetter:'e',
+    targetLap:42, laps:3, trackWidth:160, lapDistance:0, coinMult:1.0, aiFriendly:true,
+    grassColor:'#173012', grassColor2:'#1e3e18',
+    trackColor:'#2e2e2e', borderColor:'#ff9500', lineColor:'#ffffff',
+    accentColor:'#ff6b35', bgColor:'#0f1a08',
+    treeColor:'#1a4010', treeColor2:'#2a6018',
+    standRoof:'#2a2218', standConcrete:'#3a3228',
+    seatPalette:['#ff6b35','#ff9500','#ffd166','#cc4400'],
+    crowdColors:['#e8d4b8','#d4a574','#ff6b35','#1a3a6a','#cc2222','#ffee88'],
+    waypoints:[
+      {x:1800,y:4200},{x:2400,y:4200},{x:3200,y:4200},
+      {x:3700,y:4100},{x:4050,y:3800},{x:4200,y:3400},
+      {x:4200,y:2800},{x:4200,y:2200},
+      {x:4050,y:1750},{x:3700,y:1450},{x:3200,y:1350},
+      {x:2500,y:1350},{x:1700,y:1350},
+      {x:1100,y:1500},{x:800,y:1850},
+      {x:750,y:2450},
+      {x:700,y:2800},{x:600,y:3100},{x:700,y:3400},{x:900,y:3600},
+      {x:1050,y:3850},{x:1200,y:4050},{x:1500,y:4200},{x:1650,y:4200}
+    ],
+    startPos:{x:2100,y:4200}, startAngle:0,
+    pitPos:{x:2200,y:4020},
+    pitLane:{
+      path:[{x:1700,y:4200},{x:1700,y:4020},{x:2200,y:4020},{x:2800,y:4020},{x:2800,y:4200}],
+      entryPt:{x:1700,y:4200}, garagePos:{x:2200,y:4020}, garageAngle:0,
+      exitPos:{x:2800,y:4200}, exitAngle:0, width:58
+    },
+    cpFracs:[0.0, 0.19, 0.37, 0.54, 0.70, 0.86],
+    drsFracs:[[0.01, 0.16], [0.39, 0.51]],
+    aiBrakeLookaheadScale:0.96,
+    surface:{offTrackMult:1.00, label:'GRASS'}
+  },
+  {
+    id:1, name:'MEADOW PARK', difficulty:'EASY', diffClass:'diff-easy', diffLetter:'e',
+    targetLap:38, laps:3, trackWidth:168, lapDistance:0, coinMult:1.0, aiFriendly:true,
+    // Wide stadium oval — almost flat everywhere, ideal for AI races
+    grassColor:'#1a3a14', grassColor2:'#244e1c',
+    trackColor:'#2a2a2a', borderColor:'#6dd46a', lineColor:'#ffffff',
+    accentColor:'#8ef08a', bgColor:'#0c1a0a',
+    treeColor:'#204818', treeColor2:'#347028',
+    standRoof:'#1e2a1c', standConcrete:'#2e3a2c',
+    seatPalette:['#6dd46a','#4488cc','#ffd166','#cc5555'],
+    crowdColors:['#e8d4b8','#c4a882','#6dd46a','#1a3a6a','#cc2222','#ffee88'],
+    waypoints:[
+      {x:1100,y:4000},{x:1900,y:4000},{x:2800,y:4000},{x:3500,y:3900},
+      {x:3900,y:3600},{x:4050,y:3100},{x:4050,y:2500},
+      {x:3900,y:2000},{x:3500,y:1700},{x:2800,y:1600},{x:1900,y:1600},
+      {x:1200,y:1700},{x:850,y:2000},{x:700,y:2500},{x:700,y:3100},
+      {x:850,y:3600},{x:1100,y:3900}
+    ],
+    startPos:{x:1600,y:4000}, startAngle:0,
+    pitPos:{x:2000,y:3820},
+    pitLane:{
+      path:[{x:1400,y:4000},{x:1400,y:3820},{x:2000,y:3820},{x:2700,y:3820},{x:2700,y:4000}],
+      entryPt:{x:1400,y:4000}, garagePos:{x:2000,y:3820}, garageAngle:0,
+      exitPos:{x:2700,y:4000}, exitAngle:0, width:60
+    },
+    cpFracs:[0.0, 0.18, 0.36, 0.54, 0.72, 0.90],
+    drsFracs:[[0.02, 0.14], [0.48, 0.60]],
+    aiBrakeLookaheadScale:0.98,
+    surface:{offTrackMult:1.05, label:'PARKLAND'}
+  },
+  {
+    id:2, name:'BLUE BAY RUN', difficulty:'EASY', diffClass:'diff-easy', diffLetter:'e',
+    targetLap:44, laps:3, trackWidth:158, lapDistance:0, coinMult:1.1, aiFriendly:true,
+    // Gentle kidney loop — long sweeps, one light brake zone
+    grassColor:'#0a2840', grassColor2:'#123850',
+    trackColor:'#1e2830', borderColor:'#4db8ff', lineColor:'#ffffff',
+    accentColor:'#7ad4ff', bgColor:'#061018',
+    treeColor:'#1a3840', treeColor2:'#2a5060',
+    standRoof:'#142830', standConcrete:'#243840',
+    seatPalette:['#4db8ff','#ffd166','#ff6b6b','#88ccaa'],
+    crowdColors:['#e8d4b8','#c4a882','#4db8ff','#1a3a6a','#cc2222','#ffee88'],
+    waypoints:[
+      {x:900,y:4600},{x:1800,y:4600},{x:2700,y:4600},{x:3400,y:4450},
+      {x:3800,y:4100},{x:3950,y:3600},{x:3850,y:3100},
+      {x:3500,y:2750},{x:2900,y:2550},{x:2300,y:2400},
+      {x:1800,y:2100},{x:1400,y:1800},{x:1000,y:1750},
+      {x:650,y:2000},{x:500,y:2500},{x:500,y:3200},
+      {x:600,y:3800},{x:750,y:4300}
+    ],
+    startPos:{x:1400,y:4600}, startAngle:0,
+    pitPos:{x:1900,y:4420},
+    pitLane:{
+      path:[{x:1200,y:4600},{x:1200,y:4420},{x:1900,y:4420},{x:2600,y:4420},{x:2600,y:4600}],
+      entryPt:{x:1200,y:4600}, garagePos:{x:1900,y:4420}, garageAngle:0,
+      exitPos:{x:2600,y:4600}, exitAngle:0, width:58
+    },
+    cpFracs:[0.0, 0.17, 0.34, 0.50, 0.67, 0.84],
+    drsFracs:[[0.02, 0.13], [0.52, 0.64]],
+    aiBrakeLookaheadScale:0.96,
+    surface:{offTrackMult:0.95, label:'COASTAL'}
+  },
+  {
+    id:3, name:'HURRICANE PASS', difficulty:'EASY', diffClass:'diff-easy', diffLetter:'e',
+    targetLap:52, laps:3, trackWidth:148, lapDistance:0, coinMult:1.15, aiFriendly:true,
+    grassColor:'#08182e', grassColor2:'#0c2040',
+    trackColor:'#1e1e30', borderColor:'#00ccff', lineColor:'#ffffff',
+    accentColor:'#00f5ff', bgColor:'#040a18',
+    treeColor:'#0c2840', treeColor2:'#184868',
+    standRoof:'#101828', standConcrete:'#1c2838',
+    seatPalette:['#00ccff','#0088aa','#66eeff','#004466'],
+    crowdColors:['#e8d4b8','#c4a882','#00ccff','#1a3a6a','#cc2222','#ffee88'],
+    waypoints:[
+      {x:700,y:5400},{x:1600,y:5400},{x:2700,y:5400},
+      {x:3250,y:5250},{x:3550,y:4950},{x:3650,y:4550},
+      {x:3650,y:4050},
+      {x:3500,y:3700},{x:3200,y:3550},
+      {x:2650,y:3500},{x:2100,y:3500},
+      {x:1700,y:3500},{x:1400,y:3700},{x:1300,y:4000},{x:1400,y:4300},{x:1700,y:4500},
+      {x:2200,y:4600},{x:2600,y:4600},
+      {x:3000,y:4500},{x:3100,y:4200},
+      {x:3100,y:3600},{x:3100,y:3100},
+      {x:2950,y:2750},{x:2600,y:2550},
+      {x:2000,y:2550},{x:1400,y:2550},
+      {x:1050,y:2600},{x:750,y:2800},{x:700,y:3100},
+      {x:750,y:3600},
+      {x:600,y:3900},{x:450,y:4200},{x:500,y:4500},{x:650,y:4750},
+      {x:700,y:5150}
+    ],
+    startPos:{x:1200,y:5400}, startAngle:0,
+    pitPos:{x:1500,y:5224},
+    pitLane:{
+      path:[{x:800,y:5400},{x:800,y:5224},{x:1500,y:5224},{x:2400,y:5224},{x:2400,y:5400}],
+      entryPt:{x:800,y:5400}, garagePos:{x:1500,y:5224}, garageAngle:0,
+      exitPos:{x:2400,y:5400}, exitAngle:0, width:58
+    },
+    cpFracs:[0.0, 0.12, 0.25, 0.38, 0.50, 0.63, 0.76, 0.88],
+    drsFracs:[[0.02, 0.11], [0.44, 0.54]],
+    aiBrakeLookaheadScale:0.94,
+    surface:{offTrackMult:0.90, label:'WET GROUND'}
+  },
+  {
+    id:4, name:'RIVIERA GP', difficulty:'MEDIUM', diffClass:'diff-med', diffLetter:'m',
+    targetLap:58, laps:3, trackWidth:150, lapDistance:0, coinMult:1.35, aiFriendly:true,
+    grassColor:'#092236', grassColor2:'#10304a',
+    trackColor:'#1b2630', borderColor:'#4dd9ff', lineColor:'#ffffff',
+    accentColor:'#ffd166', bgColor:'#041019',
+    treeColor:'#0c3040', treeColor2:'#184858',
+    standRoof:'#122830', standConcrete:'#223840',
+    seatPalette:['#4dd9ff','#ffd166','#ff6b35','#88ccee'],
+    crowdColors:['#e8d4b8','#c4a882','#4dd9ff','#ffd166','#1a3a6a','#cc2222'],
+    waypoints:[
+      {x:900,y:5800},{x:1700,y:5800},{x:2600,y:5800},{x:3400,y:5800},
+      {x:3900,y:5600},{x:4200,y:5200},{x:4300,y:4700},
+      {x:4250,y:4200},{x:4100,y:3800},{x:3800,y:3500},{x:3350,y:3350},{x:2900,y:3300},
+      {x:2500,y:3150},{x:2300,y:2800},{x:2300,y:2350},
+      {x:2500,y:1950},{x:2900,y:1750},{x:3450,y:1700},{x:4000,y:1700},
+      {x:4450,y:1550},{x:4700,y:1250},{x:4700,y:850},{x:4450,y:600},{x:3950,y:520},
+      {x:3400,y:600},{x:2850,y:780},{x:2450,y:1100},{x:2150,y:1500},{x:1900,y:2000},
+      {x:1600,y:2350},{x:1200,y:2550},{x:850,y:2850},{x:700,y:3300},{x:650,y:3900},{x:700,y:4600},{x:780,y:5250}
+    ],
+    startPos:{x:1450,y:5800}, startAngle:0,
+    pitPos:{x:1950,y:5590},
+    pitLane:{
+      path:[{x:1300,y:5800},{x:1300,y:5590},{x:1950,y:5590},{x:2600,y:5590},{x:2600,y:5800}],
+      entryPt:{x:1300,y:5800}, garagePos:{x:1950,y:5590}, garageAngle:0,
+      exitPos:{x:2600,y:5800}, exitAngle:0, width:60
+    },
+    cpFracs:[0.03, 0.10, 0.18, 0.28, 0.38, 0.48, 0.58, 0.68, 0.78, 0.88],
+    drsFracs:[[0.02, 0.10], [0.44, 0.54]],
+    aiBrakeLookaheadScale:0.92,
+    surface:{offTrackMult:0.88, label:'SEASIDE'}
+  },
+
+  // ── AUTHOR CHALLENGE TRACKS (kept intact) ──────────────────────────
+  {
+    id:5, name:'TITAN LOOP', difficulty:'MEDIUM', diffClass:'diff-med', diffLetter:'m',
+    targetLap:63, laps:3, trackWidth:128, lapDistance:0, coinMult:1.5,
+    // Acid-industrial: lime borders on dark olive infield
+    grassColor:'#0a1500', grassColor2:'#142000',
+    trackColor:'#1a1a10', borderColor:'#b3ff00', lineColor:'#ffffff',
+    accentColor:'#39ff14', bgColor:'#060900',
+    treeColor:'#1a4010', treeColor2:'#2a6018',
+    standRoof:'#1a2210', standConcrete:'#2a3220',
+    seatPalette:['#39ff14','#88aa00','#ccff44','#226622'],
+    crowdColors:['#e8d4b8','#c4a882','#2a4a1a','#f0ffe0','#8b2020','#1a3a6a','#ffee88'],
+    waypoints:[
+      {x:700,y:5000},
+      {x:1500,y:5000},
+      {x:2400,y:5000},
+      {x:3050,y:4950},
+      {x:3380,y:4700},
+      {x:3550,y:4300},
+      {x:3560,y:3800},
+      {x:4059,y:3120},
+      {x:3280,y:2880},
+      {x:2960,y:2620},
+      {x:2520,y:2500},
+      {x:3932,y:1471},
+      {x:1924,y:1829},
+      {x:1400,y:2260},
+      {x:1160,y:2050},
+      {x:980,y:1800},
+      {x:830,y:1950},
+      {x:700,y:2240},
+      {x:620,y:2600},
+      {x:700,y:3000},
+      {x:980,y:3240},
+      {x:1280,y:3380},
+      {x:1240,y:3800},
+      {x:1130,y:4250},
+      {x:980,y:4620},
+      {x:760,y:4800},
+      {x:464,y:4818}
+    ],
+    racingLine:[
+      {x:700,y:5000},
+      {x:1500,y:5000},
+      {x:2400,y:5000},
+      {x:3050,y:4950},
+      {x:3380,y:4700},
+      {x:3550,y:4300},
+      {x:3560,y:3800},
+      {x:4082,y:3168},
+      {x:3280,y:2880},
+      {x:2960,y:2620},
+      {x:2521,y:2537},
+      {x:3918,y:1479},
+      {x:1924,y:1829},
+      {x:1449,y:2265},
+      {x:1149,y:1986},
+      {x:1002,y:1798},
+      {x:785,y:2023},
+      {x:700,y:2240},
+      {x:620,y:2600},
+      {x:700,y:3000},
+      {x:980,y:3240},
+      {x:1277,y:3413},
+      {x:1240,y:3800},
+      {x:1130,y:4250},
+      {x:980,y:4620},
+      {x:760,y:4800},
+      {x:500,y:4799}
+    ],
+    startPos:{x:1300,y:5000}, startAngle:0,
+    pitPos:{x:1740,y:4840},
+    pitLane:{
+      path:[{x:1180,y:5000},{x:1180,y:4840},{x:1740,y:4840},{x:2420,y:4840},{x:2420,y:5000}],
+      entryPt:{x:1180,y:5000},
+      garagePos:{x:1740,y:4840}, garageAngle:0,
+      exitPos:{x:2420,y:5000}, exitAngle:0, width:56
+    },
+    cpFracs:[0.12, 0.24, 0.36, 0.48, 0.6, 0.72, 0.84, 0.96],
+    drsFracs:[[0.02, 0.11], [0.55, 0.66]],
+    aiBrakeLookaheadScale:0.90,
+    surface:{offTrackMult:1, label:'GRASS'}
+  },
+  {
+    id:6, name:'AMBER HIGHWAY', difficulty:'MEDIUM', diffClass:'diff-med', diffLetter:'m',
+    targetLap:55, laps:3, trackWidth:136, lapDistance:0, coinMult:1.6, locked:true, unlockCost:200,
+    // Desert dusk: burnt amber asphalt, warm sand runoff
+    grassColor:'#1a0a00', grassColor2:'#2a1200',
+    trackColor:'#252015', borderColor:'#ff8800', lineColor:'#ffffff',
+    accentColor:'#ff6600', bgColor:'#0e0500',
+    treeColor:'#3a2810', treeColor2:'#5a3c18',
+    standRoof:'#2a1810', standConcrete:'#3a2820',
+    seatPalette:['#ff6600','#cc4400','#ffaa33','#884400'],
+    crowdColors:['#e8d4b8','#d4a574','#f5c6a0','#8b4510','#1a3a6a','#cc2222','#ffe0a0'],
+    waypoints:[
+      {x:700,y:5000},
+      {x:1400,y:5000},
+      {x:2100,y:5000},
+      {x:2800,y:5000},
+      {x:3350,y:4995},
+      {x:3925,y:4928},
+      {x:3900,y:4300},
+      {x:3900,y:3700},
+      {x:3558,y:3390},
+      {x:1581,y:4034},
+      {x:2899,y:2651},
+      {x:2035,y:2096},
+      {x:1637,y:1241},
+      {x:306,y:1029},
+      {x:1791,y:2685},
+      {x:1715,y:2987},
+      {x:900,y:3000},
+      {x:616,y:2178},
+      {x:-359,y:2360},
+      {x:-87,y:4624},
+      {x:380,y:5000}
+    ],
+    racingLine:[
+      {x:700,y:5000},
+      {x:1400,y:5000},
+      {x:2100,y:5000},
+      {x:2800,y:5000},
+      {x:3423,y:5040},
+      {x:3895,y:4903},
+      {x:3900,y:4300},
+      {x:3932,y:3663},
+      {x:3485,y:3425},
+      {x:1586,y:4039},
+      {x:2903,y:2699},
+      {x:2035,y:2096},
+      {x:1637,y:1241},
+      {x:290,y:1007},
+      {x:1816,y:2683},
+      {x:1538,y:3034},
+      {x:900,y:3000},
+      {x:616,y:2178},
+      {x:-357,y:2372},
+      {x:-87,y:4624},
+      {x:380,y:5000}
+    ],
+    startPos:{x:1100,y:5000}, startAngle:0,
+    pitPos:{x:1600,y:4836},
+    pitLane:{
+      path:[{x:550,y:5000},{x:550,y:4836},{x:1600,y:4836},{x:2800,y:4836},{x:2800,y:5000}],
+      entryPt:{x:550,y:5000},
+      garagePos:{x:1600,y:4836}, garageAngle:0,
+      exitPos:{x:2800,y:5000}, exitAngle:0, width:56
+    },
+    cpFracs:[0, 0.11, 0.22, 0.34, 0.47, 0.6, 0.72, 0.84],
+    drsFracs:[[0.02, 0.12], [0.5, 0.61]],
+    aiBrakeLookaheadScale:0.88,
+    surface:{offTrackMult:1, label:'GRASS'}
+  },
+  {
+    id:7, name:'NEON CITY GP', difficulty:'HARD', diffClass:'diff-hard', diffLetter:'h',
+    targetLap:65, laps:3, trackWidth:200, lapDistance:0, coinMult:1.8, locked:true, unlockCost:450,
+    // Night metro: magenta neon on deep purple pavement
+    grassColor:'#0c0016', grassColor2:'#140020',
+    trackColor:'#18182a', borderColor:'#ff00cc', lineColor:'#ffffff',
+    accentColor:'#dd00ff', bgColor:'#070010',
+    treeColor:'#1a0830', treeColor2:'#2a1050',
+    standRoof:'#1a1028', standConcrete:'#2a2038',
+    seatPalette:['#ff00cc','#00ddff','#aa00ff','#ff66ee'],
+    crowdColors:['#e8d4b8','#c4a882','#ff66cc','#66eeff','#2a1a4a','#ffee88','#cc2244'],
+    waypoints:[
+      {x:700,y:5900},
+      {x:1500,y:5900},
+      {x:2508,y:5909},
+      {x:3131,y:5930},
+      {x:3887,y:5925},
+      {x:4204,y:6386},
+      {x:5114,y:6432},
+      {x:6330,y:6786},
+      {x:6191,y:7354},
+      {x:7474,y:7748},
+      {x:5904,y:10494},
+      {x:5719,y:11234},
+      {x:4718,y:11669},
+      {x:4013,y:10623},
+      {x:3135,y:9469},
+      {x:928,y:8645},
+      {x:354,y:9797},
+      {x:-1934,y:9378},
+      {x:-2455,y:7631},
+      {x:-739,y:7117},
+      {x:-1503,y:6440}
+    ],
+    racingLine:[
+      {x:700,y:5900},
+      {x:1500,y:5900},
+      {x:2508,y:5909},
+      {x:3131,y:5930},
+      {x:3832,y:5987},
+      {x:4244,y:6336},
+      {x:5114,y:6432},
+      {x:6367,y:6753},
+      {x:6129,y:7336},
+      {x:7464,y:7663},
+      {x:5904,y:10494},
+      {x:5719,y:11234},
+      {x:4718,y:11669},
+      {x:4013,y:10623},
+      {x:3135,y:9469},
+      {x:928,y:8645},
+      {x:354,y:9797},
+      {x:-1934,y:9378},
+      {x:-2455,y:7631},
+      {x:-739,y:7117},
+      {x:-1534,y:6477}
+    ],
+    startPos:{x:1100,y:5900}, startAngle:0,
+    pitPos:{x:1820,y:5716},
+    pitLane:{
+      path:[{x:1200,y:5900},{x:1200,y:5716},{x:1820,y:5716},{x:2300,y:5716},{x:2300,y:5900}],
+      entryPt:{x:1200,y:5900},
+      garagePos:{x:1820,y:5716}, garageAngle:0,
+      exitPos:{x:2300,y:5900}, exitAngle:0, width:56
+    },
+    cpFracs:[0.03, 0.09, 0.18, 0.27, 0.37, 0.47, 0.56, 0.65, 0.74, 0.83, 0.92],
+    drsFracs:[[0.02, 0.08], [0.57, 0.66]],
+    aiBrakeLookaheadScale:0.86,
+    surface:{offTrackMult:1, label:'GRASS'}
+  }
+];
+
+// Build splines, checkpoint geometry, and spatial grid.
+// Easy tracks keep low minCorners so remap does not inject AI-breaking chicanes.
+const TRACK_REMAP_PROFILES = {
+  easy: {
+    widthBoost:1.42, cornerThreshold:0.34, cornerPull:0.26, maxInsert:150, minSeg:170,
+    aiBrakeLookaheadScale:0.96, aiLaneSpreadScale:1.38,
+    minCorners:6, cornerCountAngle:0.45, straightThreshold:780, chicaneOffset:110, overlapGap:300
+  },
+  medium: {
+    widthBoost:1.28, cornerThreshold:0.30, cornerPull:0.28, maxInsert:175, minSeg:145,
+    aiBrakeLookaheadScale:0.90, aiLaneSpreadScale:1.28,
+    minCorners:10, cornerCountAngle:0.40, straightThreshold:620, chicaneOffset:150, overlapGap:260
+  },
+  hard: {
+    widthBoost:1.18, cornerThreshold:0.26, cornerPull:0.28, maxInsert:175, minSeg:125,
+    aiBrakeLookaheadScale:0.85, aiLaneSpreadScale:1.28,
+    minCorners:12, cornerCountAngle:0.36, straightThreshold:500, chicaneOffset:165, overlapGap:230
+  }
+};
+// Per-track overrides keyed to current roster ids (0–7).
+const TRACK_REMAP_OVERRIDES = {
+  // AI-friendly pack — stay wide, avoid forced technical inserts
+  0: { widthBoost:1.48, minCorners:5, straightThreshold:820, chicaneOffset:90, overlapGap:320, aiBrakeLookaheadScale:0.97, aiLaneSpreadScale:1.42 },
+  1: { widthBoost:1.50, minCorners:4, straightThreshold:860, chicaneOffset:80, overlapGap:340, aiBrakeLookaheadScale:0.98, aiLaneSpreadScale:1.45 },
+  2: { widthBoost:1.46, minCorners:5, straightThreshold:800, chicaneOffset:95, overlapGap:310, aiBrakeLookaheadScale:0.96, aiLaneSpreadScale:1.40 },
+  3: { widthBoost:1.40, minCorners:7, straightThreshold:720, chicaneOffset:120, overlapGap:280, aiBrakeLookaheadScale:0.94, aiLaneSpreadScale:1.34 },
+  4: { widthBoost:1.34, minCorners:9, straightThreshold:640, chicaneOffset:140, overlapGap:260, aiBrakeLookaheadScale:0.92, aiLaneSpreadScale:1.30 },
+  // Author challenge tracks — keep geometry, widen slightly for driveability
+  5: { widthBoost:1.32, cornerThreshold:0.28, cornerPull:0.30, maxInsert:190, minCorners:10, straightThreshold:560, chicaneOffset:160, overlapGap:250, aiBrakeLookaheadScale:0.90, aiLaneSpreadScale:1.28 },
+  6: { widthBoost:1.28, cornerThreshold:0.28, cornerPull:0.28, maxInsert:180, minCorners:11, straightThreshold:540, chicaneOffset:155, overlapGap:245, aiBrakeLookaheadScale:0.88, aiLaneSpreadScale:1.26 },
+  7: { widthBoost:1.20, cornerThreshold:0.26, cornerPull:0.26, maxInsert:170, minCorners:12, straightThreshold:500, chicaneOffset:150, overlapGap:230, aiBrakeLookaheadScale:0.86, aiLaneSpreadScale:1.24 }
+};
+const TRACK_WIDTH_SCALE = 18.0;
+const TRACK_CENTERLINE_BUFFER = 88;
+const TRACK_PIT_BUFFER = 24;
+
+function getTrackGridLayout(trackWidth) {
+  const safeWidth = Math.max(180, trackWidth || 0);
+  const slotWidth = Math.round(Math.max(24, Math.min(36, safeWidth * 0.013)));
+  const slotLength = Math.round(Math.max(46, Math.min(72, safeWidth * 0.022)));
+  const laneGap = Math.round(Math.max(20, Math.min(28, safeWidth * 0.0105)));
+  const rowGap = Math.round(Math.max(56, Math.min(86, slotLength + 14)));
+  return {
+    slotWidth,
+    slotLength,
+    laneGap,
+    rowGap,
+    labelSize: Math.max(11, Math.min(15, Math.round(slotWidth * 0.45))),
+    chipWidth: Math.max(26, Math.min(40, Math.round(slotLength * 0.48))),
+    chipHeight: Math.max(18, Math.min(26, Math.round(slotWidth * 0.72)))
+  };
+}
+
+function getTrackRemapProfile(tr) {
+  const base = TRACK_REMAP_PROFILES[(tr.difficulty || 'MEDIUM').toLowerCase()] || TRACK_REMAP_PROFILES.medium;
+  return {...base, ...(TRACK_REMAP_OVERRIDES[tr.id] || {})};
+}
+
+function getWaypointTurnAngle(prev, cur, next) {
+  const inX = cur.x - prev.x, inY = cur.y - prev.y;
+  const outX = next.x - cur.x, outY = next.y - cur.y;
+  const inLen = Math.hypot(inX, inY);
+  const outLen = Math.hypot(outX, outY);
+  if(inLen < 1 || outLen < 1) return 0;
+  const dot = (inX / inLen) * (outX / outLen) + (inY / inLen) * (outY / outLen);
+  return Math.acos(Math.max(-1, Math.min(1, dot)));
+}
+
+function countWaypointCorners(wps, minAngle) {
+  if(!wps || wps.length < 3) return 0;
+  let count = 0;
+  for(let i = 0; i < wps.length; i++) {
+    const prev = wps[(i - 1 + wps.length) % wps.length];
+    const cur = wps[i];
+    const next = wps[(i + 1) % wps.length];
+    if(getWaypointTurnAngle(prev, cur, next) >= minAngle) count++;
+  }
+  return count;
+}
+
+function minWaypointSegmentClearance(wps) {
+  if(!wps || wps.length < 4) return Infinity;
+  let minClearance = Infinity;
+  const n = wps.length;
+  for(let i = 0; i < n; i++) {
+    const ni = (i + 1) % n;
+    const a = wps[i], b = wps[ni];
+    for(let j = i + 1; j < n; j++) {
+      const nj = (j + 1) % n;
+      if(i === j || ni === j || nj === i) continue;
+      const c = wps[j], d = wps[nj];
+      if(linesCross(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y)) return 0;
+      const clearance = Math.min(
+        distToSeg(a.x, a.y, c.x, c.y, d.x, d.y),
+        distToSeg(b.x, b.y, c.x, c.y, d.x, d.y),
+        distToSeg(c.x, c.y, a.x, a.y, b.x, b.y),
+        distToSeg(d.x, d.y, a.x, a.y, b.x, b.y)
+      );
+      if(clearance < minClearance) minClearance = clearance;
+    }
+  }
+  return minClearance;
+}
+
+function hasWaypointOverlapRisk(wps, minGap) {
+  return minWaypointSegmentClearance(wps) < minGap;
+}
+
+function insertCornerControlPoints(wps, remap) {
+  if(!wps || wps.length < 3) return wps;
+  const n = wps.length;
+  const out = [];
+  for(let i = 0; i < n; i++) {
+    const prev = wps[(i - 1 + n) % n];
+    const cur = wps[i];
+    const next = wps[(i + 1) % n];
+    const inX = cur.x - prev.x, inY = cur.y - prev.y;
+    const outX = next.x - cur.x, outY = next.y - cur.y;
+    const inLen = Math.hypot(inX, inY);
+    const outLen = Math.hypot(outX, outY);
+    if(inLen < remap.minSeg || outLen < remap.minSeg) {
+      out.push({x: cur.x, y: cur.y});
+      continue;
+    }
+    const turnAngle = getWaypointTurnAngle(prev, cur, next);
+    if(turnAngle < remap.cornerThreshold) {
+      out.push({x: cur.x, y: cur.y});
+      continue;
+    }
+    const inNX = inX / inLen, inNY = inY / inLen;
+    const outNX = outX / outLen, outNY = outY / outLen;
+    const preDist = Math.min(remap.maxInsert, inLen * remap.cornerPull);
+    const postDist = Math.min(remap.maxInsert, outLen * remap.cornerPull);
+    out.push({x: cur.x - inNX * preDist, y: cur.y - inNY * preDist});
+    out.push({x: cur.x, y: cur.y});
+    out.push({x: cur.x + outNX * postDist, y: cur.y + outNY * postDist});
+  }
+  return out;
+}
+
+function insertTechnicalChicane(wps, segIdx, remap, sign, strength) {
+  const n = wps.length;
+  if(!n) return null;
+  const a = wps[segIdx];
+  const b = wps[(segIdx + 1) % n];
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if(len < remap.straightThreshold) return null;
+  const ux = dx / len, uy = dy / len;
+  const px = -uy, py = ux;
+  const offset = Math.min(remap.chicaneOffset * strength, len * 0.22);
+  const p1 = { x: a.x + dx * 0.28 + px * offset * 0.95 * sign, y: a.y + dy * 0.28 + py * offset * 0.95 * sign };
+  const p2 = { x: a.x + dx * 0.52 - px * offset * 1.15 * sign, y: a.y + dy * 0.52 - py * offset * 1.15 * sign };
+  const p3 = { x: a.x + dx * 0.78 + px * offset * 0.82 * sign, y: a.y + dy * 0.78 + py * offset * 0.82 * sign };
+  return [...wps.slice(0, segIdx + 1), p1, p2, p3, ...wps.slice(segIdx + 1)];
+}
+
+function getStraightSegmentCandidates(wps, remap) {
+  const candidates = [];
+  const n = wps.length;
+  for(let i = 0; i < n; i++) {
+    const a = wps[i];
+    const b = wps[(i + 1) % n];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if(len < remap.straightThreshold) continue;
+    const prev = wps[(i - 1 + n) % n];
+    const next = wps[(i + 2) % n];
+    const straightness = len - (getWaypointTurnAngle(prev, a, b) + getWaypointTurnAngle(a, b, next)) * 180;
+    candidates.push({ idx:i, score:straightness, len });
+  }
+  candidates.sort((a, b) => b.score - a.score || b.len - a.len);
+  return candidates;
+}
+
+function addTechnicalCorners(wps, remap) {
+  let out = wps.map(p => ({x:p.x, y:p.y}));
+  let cornerCount = countWaypointCorners(out, remap.cornerCountAngle);
+  const maxPasses = Math.max(4, remap.minCorners);
+  for(let pass = 0; pass < maxPasses && cornerCount < remap.minCorners; pass++) {
+    const candidates = getStraightSegmentCandidates(out, remap);
+    let improved = false;
+    for(const candidate of candidates) {
+      const signOrder = (pass % 2 === 0) ? [1, -1] : [-1, 1];
+      for(const strength of [1.0, 0.86, 0.72]) {
+        for(const sign of signOrder) {
+          const trial = insertTechnicalChicane(out, candidate.idx, remap, sign, strength);
+          if(!trial || hasWaypointOverlapRisk(trial, remap.overlapGap)) continue;
+          const trialCorners = countWaypointCorners(trial, remap.cornerCountAngle);
+          if(trialCorners <= cornerCount) continue;
+          out = trial;
+          cornerCount = trialCorners;
+          improved = true;
+          break;
+        }
+        if(improved) break;
+      }
+      if(improved) break;
+    }
+    if(!improved) break;
+  }
+  return out;
+}
+
+function remapTrackWaypointsForBraking(wps, remap) {
+  if(!wps || wps.length < 3) return wps;
+  const base = wps.map(p => ({x:p.x, y:p.y}));
+  let bestSafe = base;
+  let bestSafeCorners = countWaypointCorners(base, remap.cornerCountAngle);
+  let bestSafeClearance = minWaypointSegmentClearance(base);
+  const scales = [1.0, 0.92, 0.84, 0.76, 0.68];
+  for(const scale of scales) {
+    const tuned = {
+      ...remap,
+      cornerPull: remap.cornerPull * scale,
+      maxInsert: remap.maxInsert * scale,
+      chicaneOffset: remap.chicaneOffset * scale
+    };
+    let candidate = insertCornerControlPoints(base, tuned);
+    candidate = addTechnicalCorners(candidate, tuned);
+    const clearance = minWaypointSegmentClearance(candidate);
+    if(clearance < remap.overlapGap) continue;
+    const cornerCount = countWaypointCorners(candidate, remap.cornerCountAngle);
+    if(cornerCount > bestSafeCorners || (cornerCount === bestSafeCorners && clearance > bestSafeClearance)) {
+      bestSafe = candidate;
+      bestSafeCorners = cornerCount;
+      bestSafeClearance = clearance;
+    }
+    if(cornerCount >= remap.minCorners) return candidate;
+  }
+  return bestSafe;
+}
+
+function densifyPolyline(path, spacing) {
+  if(!path || path.length < 2) return path || [];
+  const step = Math.max(12, spacing || 24);
+  const out = [{ x: path[0].x, y: path[0].y }];
+  for(let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const n = Math.max(1, Math.ceil(len / step));
+    for(let s = 1; s <= n; s++) {
+      const t = s / n;
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    }
+  }
+  return out;
+}
+
+/** Bake authored racingLine polyline → per-spline lateral offsets (signed, track-normal).
+ *  Racing-line nodes are Catmull-Rom control points (same as track waypoints), so corners curve smoothly. */
+function bakeRacingLineOffsets(tr) {
+  const line = tr.racingLine;
+  const spl = tr.spline;
+  if(!line || line.length < 3 || !spl || spl.length < 2) {
+    tr.racingLineOffset = null;
+    return;
+  }
+  // Smooth closed curve through authored nodes (not straight chords between them).
+  const dense = buildSpline(line, 28);
+  const maxOff = Math.max(20, (tr.trackWidth || 120) * 0.42);
+  const offsets = new Array(spl.length);
+  for(let i = 0; i < spl.length; i++) {
+    const p = spl[i];
+    let bestD = Infinity, bestX = p.x, bestY = p.y;
+    for(let j = 0; j < dense.length; j++) {
+      const q = dense[j];
+      const d = Math.hypot(p.x - q.x, p.y - q.y);
+      if(d < bestD) { bestD = d; bestX = q.x; bestY = q.y; }
+    }
+    // Also check segments for slightly better nearest-point accuracy
+    for(let j = 0; j < dense.length; j++) {
+      const a = dense[j], b = dense[(j + 1) % dense.length];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const lenSq = dx * dx + dy * dy;
+      let t = 0;
+      if(lenSq > 0) t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq));
+      const qx = a.x + dx * t, qy = a.y + dy * t;
+      const d = Math.hypot(p.x - qx, p.y - qy);
+      if(d < bestD) { bestD = d; bestX = qx; bestY = qy; }
+    }
+    const tang = splineTangent(spl, i);
+    const nx = -tang.y, ny = tang.x;
+    let lat = (bestX - p.x) * nx + (bestY - p.y) * ny;
+    if(lat > maxOff) lat = maxOff;
+    else if(lat < -maxOff) lat = -maxOff;
+    offsets[i] = lat;
+  }
+  tr.racingLineOffset = offsets;
+}
+
+/** Normalize authored brake tags: 0 = none … 5 = maximum. */
+function normalizeBrakeTag(v) {
+  const n = Number(v);
+  if(!isFinite(n) || n <= 0) return 0;
+  return Math.max(0, Math.min(5, Math.round(n)));
+}
+
+/**
+ * Bake waypoint `brake` tags onto the dense spline.
+ * Tags are placed on authored (pre-remap) points, then stretched into approach + hold zones.
+ */
+function bakeBrakePlan(tr) {
+  const spl = tr.spline;
+  const cum = tr.cum;
+  const n = spl && spl.length;
+  const plan = new Float32Array(n || 0);
+  const authored = tr.authoredBrakePoints;
+  if(!n || !cum || !authored || !authored.length) {
+    tr.brakePlan = plan;
+    tr.hasBrakePlan = false;
+    return;
+  }
+  const totalLen = tr.totalLen || cum[n - 1] || 1;
+  // Longer approach / hold for harder tags (world units along the centreline).
+  const approachByTag = { 1: 160, 2: 220, 3: 300, 4: 400, 5: 520 };
+  const holdByTag = { 1: 100, 2: 140, 3: 180, 4: 240, 5: 300 };
+
+  function nearestSplineIdx(x, y) {
+    let bestI = 0, bestD = Infinity;
+    for(let i = 0; i < n; i++) {
+      const d = Math.hypot(spl[i].x - x, spl[i].y - y);
+      if(d < bestD) { bestD = d; bestI = i; }
+    }
+    return bestI;
+  }
+
+  function arcDist(fromIdx, toIdx) {
+    let d = cum[toIdx] - cum[fromIdx];
+    if(d < 0) d += totalLen;
+    return d;
+  }
+
+  let any = false;
+  for(let t = 0; t < authored.length; t++) {
+    const tag = normalizeBrakeTag(authored[t].brake);
+    if(tag <= 0) continue;
+    any = true;
+    const center = nearestSplineIdx(authored[t].x, authored[t].y);
+    const approach = approachByTag[tag] || 240;
+    const hold = holdByTag[tag] || 160;
+    for(let i = 0; i < n; i++) {
+      const ahead = arcDist(center, i);
+      const behind = arcDist(i, center);
+      let intensity = 0;
+      if(behind <= approach && behind <= totalLen * 0.45) {
+        // Ramp up into the brake point (1 at the point, softer far away).
+        intensity = tag * (0.55 + 0.45 * (1 - behind / Math.max(1, approach)));
+      } else if(ahead <= hold && ahead <= totalLen * 0.45) {
+        // Short hold through the apex / exit.
+        intensity = tag * (0.70 + 0.30 * (1 - ahead / Math.max(1, hold)));
+      }
+      if(intensity > plan[i]) plan[i] = intensity;
+    }
+  }
+  tr.brakePlan = plan;
+  tr.hasBrakePlan = any;
+}
+
+
+function cloneAuthoredPoint(p) {
+  const o = { x: p.x, y: p.y };
+  const b = normalizeBrakeTag(p.brake);
+  if (b > 0) o.brake = b;
+  else if (p.brake != null) o.brake = 0;
+  return o;
+}
+
+function invalidateTrackBaseCache() {
+  if (typeof clearTrackBaseCache === 'function') clearTrackBaseCache();
+  else if (typeof _trackBaseCache !== 'undefined') _trackBaseCache = null;
+}
+
+/** Bake / re-bake a track from authored (pre-remap) data. Safe to call again after editor Apply. */
+function finalizeTrack(tr) {
+  if (!tr.authoredWaypoints) {
+    tr.authoredWaypoints = (tr.waypoints || []).map(cloneAuthoredPoint);
+  }
+  if (tr.authoredRacingLine === undefined) {
+    tr.authoredRacingLine = Array.isArray(tr.racingLine) && tr.racingLine.length
+      ? tr.racingLine.map(p => ({ x: p.x, y: p.y }))
+      : null;
+  }
+  if (tr.authoredBaseWidth == null) {
+    tr.authoredBaseWidth = tr.trackWidth;
+  }
+
+  // Restore authored geometry before remap/densify so re-bake is idempotent.
+  tr.waypoints = tr.authoredWaypoints.map(cloneAuthoredPoint);
+  tr.trackWidth = tr.authoredBaseWidth;
+  if (tr.authoredRacingLine && tr.authoredRacingLine.length >= 3) {
+    tr.racingLine = tr.authoredRacingLine.map(p => ({ x: p.x, y: p.y }));
+  } else {
+    tr.racingLine = null;
+  }
+  if (tr.pitLane) {
+    const raw = tr.pitLane.rawPath || tr.pitLane.path;
+    if (raw && raw.length) {
+      tr.pitLane.path = raw.map(p => ({ x: p.x, y: p.y }));
+    }
+  }
+
+  // Capture brake tags before remap (remap rebuilds {x,y} only).
+  tr.authoredBrakePoints = (tr.waypoints || []).map(p => ({
+    x: p.x, y: p.y, brake: normalizeBrakeTag(p.brake)
+  }));
+  const remap = getTrackRemapProfile(tr);
+  tr.trackWidth = Math.round(tr.trackWidth * remap.widthBoost);
+  tr.aiBrakeLookaheadScale = Math.min(tr.aiBrakeLookaheadScale || 1, remap.aiBrakeLookaheadScale);
+  tr.aiLaneSpreadScale = remap.aiLaneSpreadScale;
+  tr.waypoints = remapTrackWaypointsForBraking(tr.waypoints, remap);
+  tr.cornerCount = countWaypointCorners(tr.waypoints, remap.cornerCountAngle);
+  tr.centerlineClearance = minWaypointSegmentClearance(tr.waypoints);
+  tr.spline = buildSpline(tr.waypoints, 28);
+  // Densify pit lane so AI/player routing follows the painted road, not sparse corner-cutting chords.
+  if(tr.pitLane && tr.pitLane.path && tr.pitLane.path.length >= 2) {
+    tr.pitLane.rawPath = tr.pitLane.path.map(p => ({ x: p.x, y: p.y }));
+    tr.pitLane.path = densifyPolyline(tr.pitLane.path, 22);
+  }
+
+  const spl = tr.spline, n = spl.length;
+  // cumulative distances
+  const cum = [0];
+  for(let i=1;i<n;i++) cum.push(cum[i-1]+Math.hypot(spl[i].x-spl[i-1].x,spl[i].y-spl[i-1].y));
+  tr.totalLen = cum[n-1];
+  tr.cum = cum;
+  tr.lapDistance = Math.round(tr.totalLen);
+
+  // Widen each track aggressively, but clamp width based on local geometry
+  // so nearby sections and pit lane corridors do not overlap.
+  const baseWidth = tr.trackWidth;
+  const targetWidth = baseWidth * TRACK_WIDTH_SCALE;
+  let maxSafeWidth = Infinity;
+
+  let minCenterDist = Infinity;
+  for(let i = 0; i < n; i += 6) {
+    for(let j = i + 12; j < n; j += 6) {
+      const arcA = Math.abs(cum[j] - cum[i]);
+      const arcDist = Math.min(arcA, tr.totalLen - arcA);
+      if(arcDist < 420) continue;
+      const d = Math.hypot(spl[j].x - spl[i].x, spl[j].y - spl[i].y);
+      if(d < minCenterDist) minCenterDist = d;
+    }
+  }
+  if(isFinite(minCenterDist)) {
+    // Keep a separation buffer between nearby centerlines.
+    maxSafeWidth = Math.min(maxSafeWidth, Math.max(baseWidth, minCenterDist - TRACK_CENTERLINE_BUFFER));
+  }
+
+  if(tr.pitLane && tr.pitLane.path && tr.pitLane.path.length >= 2) {
+    const pitPath = tr.pitLane.path;
+    const pitHalf = (tr.pitLane.width || 60) * 0.5;
+    let minPitDist = Infinity;
+    for(let i = 0; i < n; i += 5) {
+      const px = spl[i].x, py = spl[i].y;
+      for(let p = 0; p < pitPath.length - 1; p++) {
+        const d = distToSeg(px, py, pitPath[p].x, pitPath[p].y, pitPath[p+1].x, pitPath[p+1].y);
+        if(d < minPitDist) minPitDist = d;
+      }
+    }
+    if(isFinite(minPitDist)) {
+      // Keep a small margin between main track edge and pit lane edge.
+      const pitSafeWidth = (minPitDist - pitHalf - TRACK_PIT_BUFFER) * 2;
+      maxSafeWidth = Math.min(maxSafeWidth, Math.max(baseWidth, pitSafeWidth));
+    }
+  }
+
+  tr.trackWidth = Math.max(baseWidth, Math.min(targetWidth, maxSafeWidth));
+
+  // Optional authored racing line → per-spline lateral offsets for AI (after final width).
+  bakeRacingLineOffsets(tr);
+  // Optional waypoint brake tags → stretched brake plan for AI speed targets.
+  bakeBrakePlan(tr);
+
+  // Spatial grid for fast on-track checks
+  const cellSize = 200;
+  tr.gridCell = cellSize;
+  tr.grid = {};
+  for(let i = 0; i < n; i++) {
+    const cx = Math.floor(spl[i].x / cellSize);
+    const cy = Math.floor(spl[i].y / cellSize);
+    const key = cx + ',' + cy;
+    if(!tr.grid[key]) tr.grid[key] = [];
+    tr.grid[key].push(i);
+  }
+  // checkpoint lines (perpendicular to spline)
+  // Optional sfGateHalfWidth overrides half-length of S/F (index 0) only.
+  const sfHwAuthored = (tr.sfGateHalfWidth != null && isFinite(tr.sfGateHalfWidth) && tr.sfGateHalfWidth > 0)
+    ? tr.sfGateHalfWidth : null;
+  tr.cpLines = tr.cpFracs.map((frac, cpIdx) => {
+    const target = frac * tr.totalLen;
+    let idx = cum.findIndex(d => d >= target);
+    if(idx < 0) idx = 0;
+    const tang = splineTangent(spl, idx);
+    const perp = {x: -tang.y, y: tang.x};
+    const hw = (cpIdx === 0 && sfHwAuthored != null) ? sfHwAuthored : (tr.trackWidth * 0.7);
+    const cx = spl[idx].x, cy = spl[idx].y;
+    return {
+      idx,
+      cx, cy,
+      x1: cx + perp.x*hw, y1: cy + perp.y*hw,
+      x2: cx - perp.x*hw, y2: cy - perp.y*hw
+    };
+  });
+  // Build a dedicated pit-lane start/finish gate so laps can count while in pit lane.
+  tr.pitSfGate = null;
+  if(tr.pitLane && tr.pitLane.path && tr.pitLane.path.length >= 2 && tr.cpLines.length) {
+    const sf = tr.cpLines[0];
+    const p = tr.pitLane.path;
+    let best = null;
+    for(let i = 0; i < p.length - 1; i++) {
+      const a = p[i], b = p[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const lenSq = dx*dx + dy*dy;
+      if(lenSq <= 0) continue;
+      const t = Math.max(0, Math.min(1, ((sf.cx - a.x) * dx + (sf.cy - a.y) * dy) / lenSq));
+      const qx = a.x + dx * t, qy = a.y + dy * t;
+      const d = Math.hypot(qx - sf.cx, qy - sf.cy);
+      if(!best || d < best.d) best = { i, d, qx, qy };
+    }
+    if(best) {
+      const a = p[best.i], b = p[best.i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const tx = dx / len, ty = dy / len;
+      const perp = { x: -ty, y: tx };
+      const hw = sfHwAuthored != null ? sfHwAuthored : ((tr.pitLane.width || 60) * 0.78);
+      tr.pitSfGate = {
+        x1: best.qx + perp.x * hw, y1: best.qy + perp.y * hw,
+        x2: best.qx - perp.x * hw, y2: best.qy - perp.y * hw
+      };
+    }
+  }
+  // DRS zone entry gates (perpendicular lines at start of each DRS zone)
+  tr.drsZones = (tr.drsFracs || []).map(([sf, ef]) => {
+    const sTarget = sf * tr.totalLen;
+    let sIdx = cum.findIndex(d => d >= sTarget); if(sIdx < 0) sIdx = 0;
+    const eTarget = ef * tr.totalLen;
+    let eIdx = cum.findIndex(d => d >= eTarget); if(eIdx < 0) eIdx = n - 1;
+    const tang = splineTangent(spl, sIdx);
+    const perp = {x: -tang.y, y: tang.x};
+    const hw = tr.trackWidth * 0.72;
+    const cx = spl[sIdx].x, cy = spl[sIdx].y;
+    return {
+      sIdx, eIdx,
+      cx, cy,
+      x1: cx + perp.x * hw, y1: cy + perp.y * hw,
+      x2: cx - perp.x * hw, y2: cy - perp.y * hw
+    };
+  });
+
+  // Default race grid slots for all tracks (used by players and AI at race start).
+  const gridCount = 14;
+  const gridAng = tr.startAngle !== undefined ? tr.startAngle : 0;
+  const gridBackX = -Math.cos(gridAng), gridBackY = -Math.sin(gridAng);
+  const gridPerpX = -Math.sin(gridAng), gridPerpY = Math.cos(gridAng);
+  tr.gridLayout = getTrackGridLayout(tr.trackWidth);
+  const gridRowGap = tr.gridLayout.rowGap;
+  const gridLaneGap = tr.gridLayout.laneGap;
+  tr.gridSlots = [];
+  for(let i = 0; i < gridCount; i++) {
+    const row = Math.floor(i / 2);
+    const lane = (i % 2 === 0) ? -1 : 1;
+    tr.gridSlots.push({
+      x: tr.startPos.x + gridBackX * gridRowGap * row + gridPerpX * gridLaneGap * lane,
+      y: tr.startPos.y + gridBackY * gridRowGap * row + gridPerpY * gridLaneGap * lane,
+      a: gridAng
+    });
+  }
+
+  // ── SCENERY GENERATION ─────────────────────────────────
+  // Deterministic seeded RNG per track so scenery is stable frame-to-frame
+  let _seed = tr.id * 7919 + 1234;
+  function srng() {
+    _seed = (_seed * 1664525 + 1013904223) & 0xffffffff;
+    return ((_seed >>> 0) / 4294967295);
+  }
+
+  // -- Grandstands: spaced banks with no overlaps, variety in size/side
+  const stands = [];
+  const adboards = [];
+  const standFracs = [];
+  // Main straight — alternating sides so stands don't collide across the track
+  for(let fi = 0.02; fi <= 0.18; fi += 0.028) standFracs.push({fi, side: (standFracs.length % 2 === 0 ? 'outer' : 'inner'), scale:1.05 + (standFracs.length % 3) * 0.08});
+  // Start/finish outer bank only (clear of pit lane)
+  for(let fi = 0.93; fi <= 0.985; fi += 0.028) standFracs.push({fi, side:'outer', scale:1.0});
+  // Back-straight / mid-lap outer bank
+  for(let fi = 0.46; fi <= 0.54; fi += 0.032) standFracs.push({fi, side:'outer', scale:0.95});
+  // Technical complex — sparse inner/outer mix
+  for(let fi = 0.70; fi <= 0.76; fi += 0.030) standFracs.push({fi, side: (fi < 0.73 ? 'inner' : 'outer'), scale:0.82});
+
+  const placedStands = [];
+  const standsOverlap = (a, b) => {
+    const minSep = (a.width + b.width) * 0.55 + 40;
+    return Math.hypot(a.x - b.x, a.y - b.y) < minSep;
+  };
+
+  standFracs.forEach(({fi, side, scale}) => {
+    const target = fi * tr.totalLen;
+    let idx = cum.findIndex(d => d >= target); if(idx < 0) idx = 0;
+    const tang = splineTangent(spl, idx);
+    const perp = {x: -tang.y, y: tang.x};
+    const cx = spl[idx].x, cy = spl[idx].y;
+    // Push stands further off the racing surface for cleaner sight lines
+    const standOff = tr.trackWidth / 2 + 175 + srng() * 36;
+    const standW = (150 + srng() * 90) * (scale || 1);
+    const rows = 3 + Math.round(srng() * 2);
+    const candidates = [];
+    if(side === 'both' || side === 'outer') {
+      candidates.push({x: cx + perp.x*standOff, y: cy + perp.y*standOff, angle: Math.atan2(tang.y, tang.x) + Math.PI/2, width: standW, rows, perpSign: 1, isObstacle: true});
+    }
+    if(side === 'both' || side === 'inner') {
+      candidates.push({x: cx - perp.x*standOff, y: cy - perp.y*standOff, angle: Math.atan2(tang.y, tang.x) - Math.PI/2, width: standW, rows, perpSign: -1, isObstacle: true});
+    }
+    candidates.forEach(st => {
+      if(placedStands.some(prev => standsOverlap(prev, st))) return;
+      // Keep clear of pit lane corridor
+      if(tr.pitLane && tr.pitLane.path) {
+        let nearPit = false;
+        for(let pi = 0; pi < tr.pitLane.path.length; pi++) {
+          const pp = tr.pitLane.path[pi];
+          if(Math.hypot(st.x - pp.x, st.y - pp.y) < (tr.pitLane.width || 60) + st.width * 0.45 + 50) {
+            nearPit = true; break;
+          }
+        }
+        if(nearPit) return;
+      }
+      placedStands.push(st);
+      stands.push(st);
+    });
+  });
+
+  // -- Advertising boards: place on the inside/outside of sharp corners
+  for(let i = 4; i < n; i += 7) {
+    const prev2 = spl[(i-4+n)%n], next2 = spl[(i+4)%n];
+    const tx = next2.x - prev2.x, ty = next2.y - prev2.y;
+    const tlen = Math.hypot(tx,ty)||1;
+    const tnx = tx/tlen, tny = ty/tlen;
+    const px0 = spl[(i-2+n)%n];
+    const tx0 = spl[i].x - px0.x, ty0 = spl[i].y - px0.y;
+    const tl0 = Math.hypot(tx0,ty0)||1;
+    const curvEst = tnx*(ty0/tl0) - tny*(tx0/tl0);
+    if(Math.abs(curvEst) > 0.03) {
+      const sign = Math.sign(curvEst);
+      const nx = -tny, ny = tnx;
+      const offDist = tr.trackWidth * 0.5 + 28;
+      adboards.push({
+        x: spl[i].x + nx*offDist*sign,
+        y: spl[i].y + ny*offDist*sign,
+        angle: Math.atan2(ty, tx),
+        side: sign
+      });
+    }
+  }
+
+  // -- Trees: scatter in grass, avoiding track proximity
+  const trees = [];
+  // Get rough bounding box from waypoints
+  const wxs = tr.waypoints.map(w=>w.x), wys = tr.waypoints.map(w=>w.y);
+  const minX = Math.min(...wxs) - 200, maxX = Math.max(...wxs) + 200;
+  const minY = Math.min(...wys) - 200, maxY = Math.max(...wys) + 200;
+  const attempts = 160;
+  for(let a = 0; a < attempts; a++) {
+    const tx = minX + srng()*(maxX-minX);
+    const ty = minY + srng()*(maxY-minY);
+    // Check distance from all spline points (only add if far from track)
+    let minDist = Infinity;
+    const step = Math.max(1, Math.floor(n/80));
+    for(let si = 0; si < n; si += step) {
+      const d = Math.hypot(tx-spl[si].x, ty-spl[si].y);
+      if(d < minDist) minDist = d;
+    }
+    if(minDist > tr.trackWidth/2 + 55) {
+      trees.push({x:tx, y:ty, r: 14 + srng()*18, shade: srng()});
+    }
+  }
+
+  tr.scenery = { stands, trees, adboards };
+
+}
+
+TRACKS.forEach(tr => finalizeTrack(tr));
 // ── PARTICLE SYSTEM (pooled — 100 slots, zero GC churn) ──
 const POOL_SIZE = 100;
 const _pPool = [];
@@ -3218,22 +4553,26 @@ class Kart {
     const flash = this.flashTimer > 0 && Math.floor(this.flashTimer*8)%2===0;
     const liv = this.livery || null;
     const chassis = liv ? getPaintColor(liv.chassis) : { body:this.color, shadow:this.shadowColor };
-    const rims = (liv && liv.rims && liv.rims !== 'stock')
-      ? getPaintColor(liv.rims)
-      : { body:'#3c3c3c', shadow:'#555555' };
+    const frontWing = liv ? getPaintColor(liv.frontWing) : chassis;
+    const rearWing = liv ? getPaintColor(liv.rearWing) : chassis;
+    const nose = liv ? getPaintColor(liv.nose) : chassis;
+    const accents = liv ? getPaintColor(liv.accents) : { body:this.shadowColor, shadow:this.shadowColor };
     const col = flash ? '#ffffff' : chassis.body;
-    const acc = flash ? '#ffffff' : chassis.shadow;
-    const rimCol = flash ? '#ffffff' : rims.body;
-    const spokeCol = flash ? '#ffffff' : (rims.shadow || rims.body);
+    const acc = flash ? '#ffffff' : accents.body;
+    const fw = flash ? '#ffffff' : frontWing.body;
+    const rw = flash ? '#ffffff' : rearWing.body;
+    const ns = flash ? '#ffffff' : nose.body;
+    const fwAcc = flash ? '#ffffff' : frontWing.shadow;
+    const rwAcc = flash ? '#ffffff' : rearWing.shadow;
 
     ctx.shadowColor = 'rgba(0,0,0,0.55)';
     ctx.shadowBlur = 7;
     ctx.shadowOffsetY = 3;
 
     // rear wing blade
-    ctx.fillStyle = col;
+    ctx.fillStyle = rw;
     ctx.fillRect(-21, -9, 5, 18);
-    ctx.fillStyle = acc;
+    ctx.fillStyle = rwAcc;
     ctx.fillRect(-21, -9, 2, 18);
     ctx.fillRect(-17, -9, 2, 5);
     ctx.fillRect(-17,  4, 2, 5);
@@ -3266,7 +4605,7 @@ class Kart {
     ctx.fill();
 
     // tapered nose cone
-    ctx.fillStyle = col;
+    ctx.fillStyle = ns;
     ctx.beginPath();
     ctx.moveTo(12,-1.8); ctx.lineTo(19,-0.6); ctx.lineTo(19,0.6); ctx.lineTo(12,1.8);
     ctx.closePath(); ctx.fill();
@@ -3293,9 +4632,9 @@ class Kart {
     ctx.fillRect(0,-6,2,3);
 
     // front wing (wide)
-    ctx.fillStyle = col;
+    ctx.fillStyle = fw;
     ctx.fillRect(16,-12,5,24);
-    ctx.fillStyle = acc;
+    ctx.fillStyle = fwAcc;
     ctx.fillRect(16,-12,5,4);
     ctx.fillRect(16, 8,5,4);
 
@@ -3303,9 +4642,9 @@ class Kart {
     ctx.fillStyle = '#141414';
     [[10,-10],[10,10],[-8,-10],[-8,10]].forEach(([wx,wy])=>{
       ctx.beginPath(); ctx.arc(wx,wy,4.5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = rimCol;
+      ctx.fillStyle = '#3c3c3c';
       ctx.beginPath(); ctx.arc(wx,wy,2.6,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle = spokeCol; ctx.lineWidth = 0.7;
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 0.7;
       for(let s=0;s<5;s++){
         const a=s*Math.PI*2/5;
         ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(wx+Math.cos(a)*2.6,wy+Math.sin(a)*2.6); ctx.stroke();
@@ -7946,7 +9285,6 @@ function advanceRace(now, opts) {
       localKart.drsActive = race._onlineLocalSim.drsActive;
       localKart.tyreWear = race._onlineLocalSim.tyreWear;
       if(typeof race._onlineLocalSim.tyreTemp === 'number') localKart.tyreTemp = race._onlineLocalSim.tyreTemp;
-      syncOnlineOffTrackFromSim(localKart, race._onlineLocalSim);
     } else if(race.phase === 'racing' && localKart && !localKart.finished && !Sim) {
       // Shared sim required for online — do not fall back to HTML Kart physics
       if(!race._onlineSimMissingWarned) {
@@ -8195,13 +9533,6 @@ let currentMode = 'trial';
 let raceQualiEnabled = false;
 let raceQualiSessionMin = 4;
 let raceQualiLaps = 3;
-
-function goBackFromTrack() {
-  initAudio();
-  playUIClick();
-  if (currentMode === 'trial') showScreen('menu');
-  else showScreen('mode');
-}
 
 function selectMode(m) {
   currentMode = m;
@@ -8597,22 +9928,16 @@ function ensureOnlineLocalSim(race, localIdx) {
   if(!race || !Sim || !Sim.createKart) return;
   const tid = (race.track && race.track.id != null) ? (race.track.id | 0) : 0;
   if(!race._onlineSimTrack) {
-    // Prefer finalized live track (matches visuals + offline physics bounds)
-    const liveBake = getOnlineTrackBake(tid);
-    if(liveBake) {
-      race._onlineSimTrack = liveBake;
-    } else {
-      // Canonical Worker bake — fallback when live track unavailable
-      const bake = Sim.loadTrackBake && Sim.loadTrackBake(tid);
-      if(!bake) {
-        if(!race._onlineBakeMissingWarned) {
-          race._onlineBakeMissingWarned = true;
-          console.error('Canonical track bake missing for trackId', tid);
-        }
-        return;
+    // Canonical Worker bake only — never fall back to live TRACKS (asymmetric physics)
+    const bake = Sim.loadTrackBake && Sim.loadTrackBake(tid);
+    if(!bake) {
+      if(!race._onlineBakeMissingWarned) {
+        race._onlineBakeMissingWarned = true;
+        console.error('Canonical track bake missing for trackId', tid);
       }
-      race._onlineSimTrack = bake;
+      return;
     }
+    race._onlineSimTrack = bake;
   }
   if(race._onlineLocalSim) return;
   const k = race.karts[localIdx];
@@ -8655,31 +9980,10 @@ function getOnlineTrackBake(trackId) {
     gridSlots: (tr.gridSlots || []).slice(0, 6).map(function(s) {
       return { x: s.x, y: s.y, a: s.a };
     }),
-    surface: tr.surface ? { offTrackMult: tr.surface.offTrackMult || 1 } : { offTrackMult: 1 },
-    pitLane: (tr.pitLane && tr.pitLane.path && tr.pitLane.path.length >= 2)
-      ? {
-          path: tr.pitLane.path.map(function(p) { return { x: p.x, y: p.y }; }),
-          width: tr.pitLane.width || 60
-        }
-      : undefined
+    surface: tr.surface ? { offTrackMult: tr.surface.offTrackMult || 1 } : { offTrackMult: 1 }
   };
 }
 window.getOnlineTrackBake = getOnlineTrackBake;
-
-/** Mirror shared-sim off-track state onto display kart for HUD badges / penalty warning. */
-function syncOnlineOffTrackFromSim(displayKart, simKart) {
-  if(!displayKart || !simKart) return;
-  const wasCompletelyOff = !!displayKart._isCompletelyOff;
-  displayKart.isOffTrack = !!simKart.isOffTrack;
-  displayKart._penaltyTimer = simKart._penaltyTimer || 0;
-  displayKart._isCompletelyOff = !!simKart._isCompletelyOff;
-  if(typeof simKart._nearestSplineIdx === 'number') displayKart._nearestSplineIdx = simKart._nearestSplineIdx;
-  if(!displayKart.isAI && displayKart._isCompletelyOff && !wasCompletelyOff) {
-    spawnSpark(displayKart.x, displayKart.y);
-    try { playCollision(0.45); } catch(e){}
-  }
-}
-window.syncOnlineOffTrackFromSim = syncOnlineOffTrackFromSim;
 
 function onlineCameraIndex() {
   const cfg = window._onlineRaceConfig;
@@ -8869,7 +10173,7 @@ function resetTouchDrive(player) {
 function setDeviceMode(isMobile) {
   touchMode = !!isMobile;
   const prompt = document.getElementById('device-prompt');
-  if(prompt) prompt.classList.remove('open');
+  if(prompt) prompt.style.display = 'none';
   try { localStorage.setItem('kartblitz_devicemode', isMobile ? 'touch' : 'keyboard'); } catch(e){}
   if(isMobile) setupTouchControls();
   else if(touchState) {
@@ -9264,6 +10568,7 @@ function confirmShootoutMode() {
 // ── INPUT ───────────────────────────────────────────────
 const keys = {};
 document.addEventListener('keydown', e => {
+  if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) return;
   keys[e.key] = true;
   const lowerKey = e.key.toLowerCase();
   if(canvas.style.display === 'block' && race && !e.repeat) {
@@ -9283,6 +10588,7 @@ document.addEventListener('keydown', e => {
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
 });
 document.addEventListener('keyup', e => {
+  if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) return;
   delete keys[e.key];
 });
 
@@ -9782,6 +11088,13 @@ async function buildLeaderboardScreen() {
 
 // ── MENU KEYBOARD NAV ───────────────────────────────────
 document.addEventListener('keydown', e => {
+  if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.isUiActive === 'function' && KartBlitzTrackEditor.isUiActive()) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      KartBlitzTrackEditor.closeAll();
+    }
+    return;
+  }
   const activePit = (typeof getActivePitSelectionKart === 'function') ? getActivePitSelectionKart() : null;
   if (e.key === 'Escape' && activePit) {
     e.preventDefault();
@@ -9798,7 +11111,7 @@ document.addEventListener('keydown', e => {
     const menus=['mode','track','results','save','leaderboard','garage','setup','controls','quali-results'];
     const active = menus.find(m=>!document.getElementById('screen-'+m).classList.contains('hidden'));
     if(active==='mode') showScreen('menu');
-    else if(active==='track') goBackFromTrack();
+    else if(active==='track') showScreen('mode');
     else if(active==='results') showScreen('menu');
     else if(active==='save') showScreen('results');
     else if(active==='leaderboard' || active==='garage' || active==='controls' || active==='quali-results') showScreen('menu');
@@ -9841,8 +11154,11 @@ const PAINT_COLORS = [
 ];
 
 const PAINT_PARTS = [
-  { id:'chassis', label:'CHASSIS', meshHints:['body21', 'chassis1'] },
-  { id:'rims',    label:'WHEEL RIMS', meshHints:['meshpart1', 'meshpart4'] },
+  { id:'chassis',   label:'CHASSIS',    meshHints:['car_livery', 'car '] },
+  { id:'frontWing', label:'FRONT WING', meshHints:['front wing'] },
+  { id:'rearWing',  label:'REAR WING',  meshHints:['rear wing'] },
+  { id:'nose',      label:'NOSE',       meshHints:['nose'] },
+  { id:'accents',   label:'ACCENTS',    meshHints:['wheelcovers', 'rearlight'] },
 ];
 
 function getPaintColor(id) {
@@ -9851,19 +11167,25 @@ function getPaintColor(id) {
 
 function defaultLivery(primaryId, accentId) {
   const primary = primaryId || 'stock';
+  const accent = accentId || 'stock';
   return {
     chassis: primary,
-    rims: accentId || 'stock',
+    frontWing: primary === 'stock' ? 'stock' : 'white',
+    rearWing: primary,
+    nose: primary,
+    accents: accent,
   };
 }
 
 function normalizeLivery(raw, fallbackPrimary) {
   const base = defaultLivery(fallbackPrimary || 'stock');
   const src = raw && typeof raw === 'object' ? raw : {};
-  return {
-    chassis: getPaintColor(src.chassis || fallbackPrimary || base.chassis).id,
-    rims: getPaintColor(src.rims || src.accents || base.rims).id,
-  };
+  const out = { ...base };
+  PAINT_PARTS.forEach(part => {
+    const id = src[part.id];
+    out[part.id] = getPaintColor(id).id;
+  });
+  return out;
 }
 
 function getPlayerLivery(player) {
@@ -10908,13 +12230,13 @@ function buildGarageContent() {
   if(garageTab === 'paint') {
     const stageWrap = document.createElement('div');
     stageWrap.className = 'garage-car-stage';
-    stageWrap.innerHTML = '<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">P1 LIVERY · CHASSIS / WHEEL RIMS · STOCK = ORIGINAL</div>';
+    stageWrap.innerHTML = '<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">P1 LIVERY · CHASSIS/ACCENTS · STOCK = ORIGINAL</div>';
     content.appendChild(stageWrap);
 
     ['p1','p2'].forEach(pl => {
       const label = document.createElement('div');
       label.className = 'setup-section-label';
-      label.textContent = pl.toUpperCase() + ' — CHASSIS & WHEEL RIMS';
+      label.textContent = pl.toUpperCase() + ' — MULTI-PART LIVERY';
       content.appendChild(label);
 
       const grid = document.createElement('div');
@@ -11471,6 +12793,87 @@ function unlockTrack(trackId) {
   const el = document.getElementById('portal-track-count');
   if(el) el.textContent = TRACKS.length + 'TRACKS';
 })();
+function openTrackEditorFromMenu() {
+  try { if (typeof initAudio === 'function') initAudio(); } catch (e) {}
+  try { if (typeof playUIClick === 'function') playUIClick(); } catch (e) {}
+  // Prefer full editor API; fall back to direct passcode UI so the button never dead-ends.
+  if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.requestOpen === 'function') {
+    KartBlitzTrackEditor.requestOpen();
+    return;
+  }
+  openTrackEditorPassFallback();
+}
+
+function openTrackEditorPassFallback() {
+  const modal = document.getElementById('te-pass-modal');
+  const inp = document.getElementById('te-pass-input');
+  const err = document.getElementById('te-pass-err');
+  if (!modal) {
+    alert('Track editor UI missing — reload the page.');
+    return;
+  }
+  if (err) err.textContent = '';
+  if (inp) inp.value = '';
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  setTimeout(() => { if (inp) inp.focus(); }, 30);
+}
+
+(function bindTrackEditorFallbackUi() {
+  const TE_PASS = 'kartblitz';
+  const TE_SESSION_KEY = 'kartblitz_te_unlocked';
+  function unlocked() {
+    try { return sessionStorage.getItem(TE_SESSION_KEY) === '1'; } catch (e) { return false; }
+  }
+  function setUnlocked(v) {
+    try { sessionStorage.setItem(TE_SESSION_KEY, v ? '1' : '0'); } catch (e) {}
+  }
+  function hidePass() {
+    const modal = document.getElementById('te-pass-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  function showPicker() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    hidePass();
+    if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.openPicker === 'function') {
+      KartBlitzTrackEditor.openPicker();
+      return;
+    }
+    const el = document.getElementById('screen-te-picker');
+    if (el) {
+      el.classList.add('open');
+      el.setAttribute('aria-hidden', 'false');
+      if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.buildPicker === 'function') {
+        KartBlitzTrackEditor.buildPicker();
+      }
+    }
+  }
+  function tryPass() {
+    const inp = document.getElementById('te-pass-input');
+    const err = document.getElementById('te-pass-err');
+    const val = ((inp && inp.value) || '').trim().toLowerCase();
+    if (val === TE_PASS || unlocked()) {
+      setUnlocked(true);
+      showPicker();
+    } else if (err) {
+      err.textContent = 'INCORRECT PASSCODE';
+      if (inp) { inp.value = ''; inp.focus(); }
+    }
+  }
+  const ok = document.getElementById('te-pass-ok');
+  const cancel = document.getElementById('te-pass-cancel');
+  const inp = document.getElementById('te-pass-input');
+  if (ok) ok.addEventListener('click', tryPass);
+  if (cancel) cancel.addEventListener('click', hidePass);
+  if (inp) inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryPass();
+    if (e.key === 'Escape') hidePass();
+  });
+})();
+console.log('%cKART BLITZ  LOADED', 'color:#00f5ff;font-family:Orbitron;font-size:20px;font-weight:bold;');
+console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
 console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [AI]' : '')).join(' | '));
 </script>
 
@@ -12287,7 +13690,10 @@ function hexToThree(hex) {
 }
 
 function emptyPartMats() {
-  return { chassis: [], rims: [] };
+  return {
+    chassis: [], frontWing: [], frontWingShadow: [],
+    rearWing: [], rearWingShadow: [], nose: [], accents: [], wheels: [],
+  };
 }
 
 function paintMat(hex, opts = {}) {
@@ -12453,7 +13859,16 @@ function makeNumberTexture(text) {
 /** Sculpted extrusion of Kart.draw footprints for the cover/garage car. */
 function buildProceduralCar() {
   const group = new THREE.Group();
-  const partMats = { chassis: [], rims: [] };
+  const partMats = {
+    chassis: [],
+    frontWing: [],
+    frontWingShadow: [],
+    rearWing: [],
+    rearWingShadow: [],
+    nose: [],
+    accents: [],
+    wheels: [],
+  };
 
   const matChassis = paintMat(0x00ccff, { metalness: 0.58, roughness: 0.28, clearcoat: 0.75 });
   const matFront = paintMat(0xe8e8e8, { metalness: 0.45, roughness: 0.34, clearcoat: 0.55 });
@@ -12468,8 +13883,14 @@ function buildProceduralCar() {
   const matCockpit = paintMat(0x0c1b2a, { metalness: 0.12, roughness: 0.9, physical: false });
   const matTcam = paintMat(0xffd700, { metalness: 0.78, roughness: 0.2, physical: false });
 
-  partMats.chassis.push(matChassis, matFront, matFrontShadow, matRear, matRearShadow, matNose, matAccent);
-  partMats.rims.push(matRim, matSpoke);
+  partMats.chassis.push(matChassis);
+  partMats.frontWing.push(matFront);
+  partMats.frontWingShadow.push(matFrontShadow);
+  partMats.rearWing.push(matRear);
+  partMats.rearWingShadow.push(matRearShadow);
+  partMats.nose.push(matNose);
+  partMats.accents.push(matAccent, matTcam);
+  partMats.wheels.push(matWheel, matRim, matSpoke);
 
   const add = (mesh) => {
     group.add(mesh);
@@ -12666,7 +14087,10 @@ function createCarStage(canvas, opts = {}) {
   scene.add(root);
 
   let car = null;
-  let partMats = { chassis: [], rims: [] };
+  let partMats = {
+    chassis: [], frontWing: [], frontWingShadow: [],
+    rearWing: [], rearWingShadow: [], nose: [], accents: [], wheels: [],
+  };
   let animId = 0;
   let running = false;
   let yaw = 0.55;
@@ -12709,8 +14133,8 @@ function createCarStage(canvas, opts = {}) {
     mat.userData.stockEmissive = mat.emissive ? mat.emissive.clone() : null;
   }
 
-  // RB6 GLB material slots (see rb6.glb): Body21=body, Chassis1=roll hoop,
-  // Meshpart1=rim face, Meshpart3=tyre rubber (not painted), Meshpart4=rim edge.
+  // RB6 GLB only has a few named materials — map each to a paint slot so
+  // Chassis / Nose / Front Wing / Rear Wing / Accents all recolor something.
   function mapGlbMaterials(rootObj) {
     const mats = emptyPartMats();
     const seen = new Set();
@@ -12725,12 +14149,21 @@ function createCarStage(canvas, opts = {}) {
         stashStockMaterial(mat);
         const name = (mat.name || '').toLowerCase();
         if (name.startsWith('window')) return;
-        if (name.startsWith('body21') || name.startsWith('chassis1')) {
+        if (name.startsWith('body21')) {
           mats.chassis.push(mat);
-        } else if (name.startsWith('meshpart1') || name.startsWith('meshpart4')) {
-          mats.rims.push(mat);
+        } else if (name.startsWith('chassis1')) {
+          mats.nose.push(mat);
+        } else if (name.startsWith('meshpart1')) {
+          mats.accents.push(mat);
+        } else if (name.startsWith('meshpart3')) {
+          mats.frontWing.push(mat);
+        } else if (name.startsWith('meshpart4')) {
+          mats.rearWing.push(mat);
+        } else if (name.startsWith('meshpart')) {
+          mats.accents.push(mat);
+        } else {
+          mats.chassis.push(mat);
         }
-        // meshpart3 = tyre rubber — leave on stock livery textures
       });
     });
     return mats;
@@ -12756,14 +14189,14 @@ function createCarStage(canvas, opts = {}) {
     } else if (hasStock && !isStock) {
       mat.map = null;
       mat.color.copy(hexToThree(pc.body));
-      if (part === 'rims' && mat.emissive) {
+      if (part === 'accents' && mat.emissive) {
         mat.emissive.copy(hexToThree(pc.body)).multiplyScalar(0.18);
       } else if (mat.emissive) {
         mat.emissive.set(0x000000);
       }
     } else {
       mat.color.copy(hexToThree(pc.body));
-      if (part === 'rims' && mat.emissive) {
+      if (part === 'accents' && mat.emissive) {
         mat.emissive.copy(hexToThree(pc.body)).multiplyScalar(0.18);
       } else if (mat.emissive) {
         mat.emissive.set(0x000000);
@@ -12775,7 +14208,19 @@ function createCarStage(canvas, opts = {}) {
   function applyLivery(livery) {
     if (!livery) return;
     (partMats.chassis || []).forEach((mat) => applyMatPaint(mat, livery.chassis, 'chassis'));
-    (partMats.rims || []).forEach((mat) => applyMatPaint(mat, livery.rims, 'rims'));
+    (partMats.accents || []).forEach((mat) => applyMatPaint(mat, livery.accents, 'accents'));
+    ['frontWing', 'rearWing', 'nose'].forEach((part) => {
+      const id = livery[part];
+      (partMats[part] || []).forEach((mat) => applyMatPaint(mat, id, part));
+      const pc = (typeof window.getPaintColor === 'function')
+        ? window.getPaintColor(id)
+        : { body: '#00ccff', shadow: '#005f8f' };
+      (partMats[part + 'Shadow'] || []).forEach((mat) => {
+        if (!mat) return;
+        mat.color.copy(hexToThree(pc.shadow || pc.body));
+        mat.needsUpdate = true;
+      });
+    });
   }
 
   function placeCar(builtGroup, builtMats, extraRotY = Math.PI * 0.12) {
@@ -12972,6 +14417,1998 @@ window.refreshCarStages = function refreshCarStages() {
 if(document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
   window.mountMenuCarStage();
 }
+</script>
+
+
+<script>
+
+window.KartBlitzTrackEditor = (function(){
+  const LS_KEY = 'kartblitz_track_editor_project';
+  const TE_PASS = 'kartblitz';
+  const TE_SESSION_KEY = 'kartblitz_te_unlocked';
+  let _open = false;
+  let _editIndex = null; // null = new track
+  let _bound = false;
+  let _exportTimer = null;
+  const api = {
+    isOpen() { return _open; },
+    isUnlocked() {
+      try { return sessionStorage.getItem(TE_SESSION_KEY) === '1'; } catch(e) { return false; }
+    },
+    setUnlocked(v) {
+      try { sessionStorage.setItem(TE_SESSION_KEY, v ? '1' : '0'); } catch(e) {}
+    }
+  };
+  // Publish immediately so the menu button works even if later init throws.
+  window.KartBlitzTrackEditor = api;
+
+  function $(id) { return document.getElementById(id); }
+
+  function showPassModal(show) {
+    const m = $('te-pass-modal');
+    if (!m) return;
+    m.classList.toggle('open', !!show);
+    m.setAttribute('aria-hidden', show ? 'false' : 'true');
+    if (show) {
+      const inp = $('te-pass-input');
+      const err = $('te-pass-err');
+      if (err) err.textContent = '';
+      if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 50); }
+    }
+  }
+
+  function showPicker(show) {
+    const el = $('screen-te-picker');
+    if (!el) return;
+    el.classList.toggle('open', !!show);
+    el.setAttribute('aria-hidden', show ? 'false' : 'true');
+    if (show) buildPicker();
+  }
+
+  function openPicker() {
+    if (typeof window.pauseMenuCarStage === 'function') window.pauseMenuCarStage();
+    if (typeof showScreen === 'function') {
+      document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    }
+    showPassModal(false);
+    showPicker(true);
+  }
+
+  function showEditor(show) {
+    const el = $('screen-te-editor');
+    if (!el) return;
+    el.classList.toggle('open', !!show);
+    el.setAttribute('aria-hidden', show ? 'false' : 'true');
+    _open = !!show;
+    if (show) {
+      try {
+        ensureBound();
+        startExportTimer();
+        syncUI();
+      } catch (err) {
+        console.error('Track editor open bind failed:', err);
+      }
+      // Wait for layout after display:none → flex before measuring canvas size
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try {
+            fitEditorView(true);
+            refreshExport();
+          } catch (err) {
+            console.error('Track editor fit failed:', err);
+          }
+        });
+      });
+    } else {
+      stopExportTimer();
+    }
+  }
+
+  function buildPicker() {
+    const grid = $('te-picker-grid');
+    if (!grid || typeof TRACKS === 'undefined') return;
+    grid.innerHTML = '';
+    TRACKS.forEach((t, i) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'te-pick-card';
+      card.innerHTML = '<div class="te-pick-name">' + (t.name || ('TRACK ' + t.id)) + '</div>' +
+        '<div class="te-pick-meta">ID ' + t.id + ' · ' + (t.difficulty || '?') + '</div>';
+      card.onclick = () => openTrackAt(i);
+      grid.appendChild(card);
+    });
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'te-pick-card te-pick-add';
+    add.innerHTML = '<div class="te-pick-name">+ ADD NEW TRACK</div><div class="te-pick-meta">START FROM TEMPLATE</div>';
+    add.onclick = () => openNewTrack();
+    grid.appendChild(add);
+  }
+
+  function trackToProject(tr) {
+    const wps = (tr.authoredWaypoints || tr.waypoints || []).map(clonePtsSingle);
+    const rl = tr.authoredRacingLine
+      ? tr.authoredRacingLine.map(p => ({ x: p.x, y: p.y }))
+      : [];
+    const pitRaw = (tr.pitLane && (tr.pitLane.rawPath || tr.pitLane.path)) || [];
+    const width = tr.authoredBaseWidth != null ? tr.authoredBaseWidth : tr.trackWidth;
+    return {
+      version: 1,
+      type: 'kartblitz-track-editor',
+      closed: true,
+      waypoints: wps,
+      racingLine: rl,
+      meta: {
+        id: tr.id,
+        name: tr.name,
+        difficulty: tr.difficulty || 'MEDIUM',
+        trackWidth: width,
+        laps: tr.laps || 3,
+        targetLap: tr.targetLap || 60,
+        coinMult: tr.coinMult != null ? tr.coinMult : 1.5,
+        grassColor: tr.grassColor || '#173012',
+        grassColor2: tr.grassColor2 || '#1e3e18',
+        trackColor: tr.trackColor || '#2e2e2e',
+        borderColor: tr.borderColor || '#ff9500',
+        lineColor: tr.lineColor || '#ffffff',
+        accentColor: tr.accentColor || '#ff6b35',
+        bgColor: tr.bgColor || '#0f1a08',
+        startPos: tr.startPos ? { x: tr.startPos.x, y: tr.startPos.y } : { x: 1200, y: 5200 },
+        startAngle: tr.startAngle || 0,
+        pitPos: tr.pitPos ? { x: tr.pitPos.x, y: tr.pitPos.y } : { x: 900, y: 5020 },
+        pitLane: {
+          path: pitRaw.map(p => ({ x: p.x, y: p.y })),
+          entryPt: tr.pitLane && tr.pitLane.entryPt ? { ...tr.pitLane.entryPt } : null,
+          garagePos: tr.pitLane && tr.pitLane.garagePos ? { ...tr.pitLane.garagePos } : null,
+          garageAngle: 0,
+          exitPos: tr.pitLane && tr.pitLane.exitPos ? { ...tr.pitLane.exitPos } : null,
+          exitAngle: 0,
+          width: (tr.pitLane && tr.pitLane.width) || 56
+        },
+        cpFracs: (tr.cpFracs || []).slice(),
+        drsFracs: (tr.drsFracs || []).map(p => [p[0], p[1]]),
+        sfGateHalfWidth: (tr.sfGateHalfWidth != null && isFinite(tr.sfGateHalfWidth) && tr.sfGateHalfWidth > 0)
+          ? tr.sfGateHalfWidth : null,
+        surface: tr.surface ? { ...tr.surface } : { offTrackMult: 1.0, label: 'GRASS' },
+        aiFriendly: !!tr.aiFriendly,
+        locked: !!tr.locked,
+        unlockCost: tr.unlockCost || 0,
+        treeColor: tr.treeColor,
+        treeColor2: tr.treeColor2,
+        standRoof: tr.standRoof,
+        standConcrete: tr.standConcrete,
+        seatPalette: tr.seatPalette,
+        crowdColors: tr.crowdColors,
+        aiBrakeLookaheadScale: tr.aiBrakeLookaheadScale
+      }
+    };
+  }
+
+  function clonePtsSingle(p) {
+    const o = { x: p.x, y: p.y };
+    const b = normalizeBrakeTag(p.brake);
+    if (b > 0) o.brake = b;
+    else if (p.brake != null) o.brake = 0;
+    return o;
+  }
+
+  function trackLayoutForImport(tr) {
+    const wps = (tr.authoredWaypoints || tr.waypoints || []).map(p => {
+      const o = { x: Math.round(p.x), y: Math.round(p.y) };
+      const b = normalizeBrakeTag(p.brake);
+      if (b > 0) o.brake = b;
+      return o;
+    });
+    const rlSrc = tr.authoredRacingLine || tr.racingLine;
+    const rl = Array.isArray(rlSrc) && rlSrc.length >= 3
+      ? rlSrc.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }))
+      : [];
+    const pitRaw = (tr.pitLane && (tr.pitLane.rawPath || tr.pitLane.path)) || [];
+    const width = tr.authoredBaseWidth != null ? tr.authoredBaseWidth : tr.trackWidth;
+    const obj = {
+      id: tr.id,
+      name: tr.name || ('TRACK ' + tr.id),
+      difficulty: tr.difficulty || 'MEDIUM',
+      trackWidth: width,
+      laps: tr.laps || 3,
+      targetLap: tr.targetLap || 60,
+      waypoints: wps,
+      startPos: tr.startPos ? { x: Math.round(tr.startPos.x), y: Math.round(tr.startPos.y) } : { x: 1200, y: 5200 },
+      startAngle: tr.startAngle || 0,
+      cpFracs: (tr.cpFracs || []).slice(),
+      drsFracs: (tr.drsFracs || []).map(p => [p[0], p[1]]),
+      pitLane: {
+        path: pitRaw.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })),
+        width: (tr.pitLane && tr.pitLane.width) || 56
+      },
+      surface: tr.surface ? { ...tr.surface } : { offTrackMult: 1.0, label: 'GRASS' }
+    };
+    if (rl.length) obj.racingLine = rl;
+    if (tr.sfGateHalfWidth != null && isFinite(tr.sfGateHalfWidth) && tr.sfGateHalfWidth > 0) {
+      obj.sfGateHalfWidth = tr.sfGateHalfWidth;
+    }
+    return JSON.stringify(obj, null, 2);
+  }
+
+  function openTrackAt(idx) {
+    ensureBound();
+    _editIndex = idx;
+    const tr = TRACKS[idx];
+    showPicker(false);
+    showEditor(true);
+    // Same workflow as the standalone editor: put layout in Import, then load it.
+    const payload = trackLayoutForImport(tr);
+    const area = document.getElementById('te-importArea');
+    if (area) area.value = payload;
+    try {
+      applyImport(parseCoordinateText(payload));
+      setMsg('Loaded track layout: ' + (tr.name || ('#' + tr.id)));
+    } catch (err) {
+      console.error(err);
+      setMsg('Load failed: ' + err.message);
+      alert('Failed to load track into editor: ' + err.message);
+    }
+  }
+
+  function openNewTrack() {
+    ensureBound();
+    _editIndex = null;
+    showPicker(false);
+    showEditor(true);
+    const d = defaultProject();
+    const used = new Set(TRACKS.map(t => t.id));
+    let nid = 0;
+    while (used.has(nid)) nid++;
+    d.meta.id = nid;
+    d.meta.name = 'NEW CIRCUIT ' + nid;
+    state.waypoints = clonePts(d.waypoints);
+    state.racingLine = clonePts(d.racingLine || []);
+    state.pitPath = clonePts((d.meta.pitLane && d.meta.pitLane.path) || []);
+    state.closed = true;
+    state.selected.clear();
+    applyMetaToForm(d.meta);
+    syncUI();
+    requestAnimationFrame(() => fitEditorView(true));
+    refreshExport();
+    setMsg('New track template — Apply to add to game');
+  }
+
+  function pathAngleAt(path, idx) {
+    if (!path || path.length < 2) return 0;
+    let a, b;
+    if (idx <= 0) { a = path[0]; b = path[1]; }
+    else if (idx >= path.length - 1) { a = path[path.length - 2]; b = path[path.length - 1]; }
+    else { a = path[idx - 1]; b = path[idx + 1]; }
+    return Math.atan2(b.y - a.y, b.x - a.x);
+  }
+
+  function buildTrackObjectFromEditor() {
+    const meta = readMetaFromForm();
+    const wps = state.waypoints.map(p => ({
+      x: Math.round(p.x), y: Math.round(p.y), brake: normalizeBrakeTag(p.brake)
+    }));
+    const pitPath = (state.pitPath && state.pitPath.length
+      ? state.pitPath
+      : (meta.pitLane.path || [])).map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+    const entry = pitPath[0] || { x: meta.startPos.x, y: meta.startPos.y };
+    const exit = pitPath[pitPath.length - 1] || entry;
+    const garageIdx = Math.floor(pitPath.length / 2);
+    const garage = pitPath[garageIdx] || entry;
+    const garageAngle = pathAngleAt(pitPath, garageIdx);
+    const exitAngle = pathAngleAt(pitPath, pitPath.length - 1);
+    const existing = _editIndex != null ? TRACKS[_editIndex] : null;
+    const id = existing ? existing.id : meta.id;
+    const pitWidth = (meta.pitLane && meta.pitLane.width) || (existing && existing.pitLane && existing.pitLane.width) || 56;
+    const obj = {
+      id,
+      name: meta.name,
+      difficulty: meta.difficulty,
+      diffClass: meta.diffClass,
+      diffLetter: meta.diffLetter,
+      targetLap: meta.targetLap,
+      laps: meta.laps,
+      trackWidth: meta.trackWidth,
+      lapDistance: 0,
+      coinMult: existing && existing.coinMult != null ? existing.coinMult : meta.coinMult,
+      grassColor: (existing && existing.grassColor) || meta.grassColor,
+      grassColor2: (existing && existing.grassColor2) || meta.grassColor2,
+      trackColor: (existing && existing.trackColor) || meta.trackColor,
+      borderColor: (existing && existing.borderColor) || meta.borderColor,
+      lineColor: (existing && existing.lineColor) || meta.lineColor,
+      accentColor: (existing && existing.accentColor) || meta.accentColor,
+      bgColor: (existing && existing.bgColor) || meta.bgColor,
+      waypoints: wps,
+      startPos: { x: Math.round(meta.startPos.x), y: Math.round(meta.startPos.y) },
+      startAngle: meta.startAngle,
+      pitPos: { x: Math.round(garage.x), y: Math.round(garage.y) },
+      pitLane: {
+        path: pitPath,
+        entryPt: { x: entry.x, y: entry.y },
+        garagePos: { x: garage.x, y: garage.y },
+        garageAngle,
+        exitPos: { x: exit.x, y: exit.y },
+        exitAngle,
+        width: pitWidth
+      },
+      cpFracs: meta.cpFracs.slice(),
+      drsFracs: meta.drsFracs.map(p => [p[0], p[1]]),
+      surface: meta.surface
+    };
+    if (meta.sfGateHalfWidth != null && isFinite(meta.sfGateHalfWidth) && meta.sfGateHalfWidth > 0) {
+      obj.sfGateHalfWidth = meta.sfGateHalfWidth;
+    }
+    if (state.racingLine.length >= 3) {
+      obj.racingLine = state.racingLine.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+    }
+    if (existing) {
+      if (existing.aiFriendly) obj.aiFriendly = true;
+      if (existing.locked) { obj.locked = true; obj.unlockCost = existing.unlockCost; }
+      if (existing.treeColor) obj.treeColor = existing.treeColor;
+      if (existing.treeColor2) obj.treeColor2 = existing.treeColor2;
+      if (existing.standRoof) obj.standRoof = existing.standRoof;
+      if (existing.standConcrete) obj.standConcrete = existing.standConcrete;
+      if (existing.seatPalette) obj.seatPalette = existing.seatPalette;
+      if (existing.crowdColors) obj.crowdColors = existing.crowdColors;
+      if (existing.aiBrakeLookaheadScale != null) obj.aiBrakeLookaheadScale = existing.aiBrakeLookaheadScale;
+    }
+    return obj;
+  }
+
+  function applyToGame() {
+    if (state.waypoints.length < 3) {
+      setMsg('Need at least 3 waypoints');
+      alert('Need at least 3 waypoints to apply.');
+      return;
+    }
+    const obj = buildTrackObjectFromEditor();
+    // Seed authored fields then finalize
+    obj.authoredWaypoints = obj.waypoints.map(clonePtsSingle);
+    obj.authoredRacingLine = obj.racingLine && obj.racingLine.length >= 3
+      ? obj.racingLine.map(p => ({ x: p.x, y: p.y }))
+      : null;
+    obj.authoredBaseWidth = obj.trackWidth;
+
+    if (_editIndex == null) {
+      TRACKS.push(obj);
+      _editIndex = TRACKS.length - 1;
+      try {
+        const pd = getPlayerData();
+        if (pd && Array.isArray(pd.unlockedTracks) && !pd.unlockedTracks.includes(obj.id)) {
+          pd.unlockedTracks = pd.unlockedTracks.concat([obj.id]);
+          savePlayerData(pd);
+        }
+      } catch (e) {}
+    } else {
+      // Replace in place keeping array identity for this slot
+      const slot = TRACKS[_editIndex];
+      Object.keys(slot).forEach(k => { delete slot[k]; });
+      Object.assign(slot, obj);
+    }
+
+    finalizeTrack(TRACKS[_editIndex]);
+    invalidateTrackBaseCache();
+    try {
+      const el = document.getElementById('portal-track-count');
+      if (el) el.textContent = TRACKS.length + 'TRACKS';
+    } catch (e) {}
+    setMsg('Applied to game — race to test. Copy/Download to save permanently in TRACKS.');
+    refreshExport();
+  }
+
+  function closeAll() {
+    showEditor(false);
+    showPicker(false);
+    showPassModal(false);
+    if (typeof showScreen === 'function') showScreen('menu');
+  }
+
+  function requestOpen() {
+    if (typeof window.pauseMenuCarStage === 'function') window.pauseMenuCarStage();
+    if (api.isUnlocked()) {
+      openPicker();
+      return;
+    }
+    showPassModal(true);
+  }
+  api.requestOpen = requestOpen;
+  api.openPicker = openPicker;
+  api.buildPicker = buildPicker;
+
+  function tryPass() {
+    const inp = $('te-pass-input');
+    const err = $('te-pass-err');
+    const val = (inp && inp.value || '').trim().toLowerCase();
+    if (val === TE_PASS) {
+      api.setUnlocked(true);
+      openPicker();
+    } else {
+      if (err) err.textContent = 'INCORRECT PASSCODE';
+      if (inp) { inp.value = ''; inp.focus(); }
+    }
+  }
+
+  function startExportTimer() {
+    if (_exportTimer) return;
+    _exportTimer = setInterval(() => {
+      if (!_open) return;
+      if (document.activeElement === document.getElementById('te-exportArea')) return;
+      try { refreshExport(); } catch (e) {}
+    }, 2000);
+  }
+  function stopExportTimer() {
+    if (_exportTimer) { clearInterval(_exportTimer); _exportTimer = null; }
+  }
+
+  function ensureBound() {
+    if (_bound) return;
+    _bound = true;
+    bindEditorChrome();
+  }
+
+  function bindEditorChrome() {
+    const root = $('screen-te-editor');
+    // Wire apply / nav (editor-specific controls)
+    const btnApply = $('te-btnApplyGame');
+    if (btnApply) btnApply.onclick = () => applyToGame();
+    const btnBack = $('te-btnBackPicker');
+    if (btnBack) btnBack.onclick = () => { showEditor(false); showPicker(true); };
+    const btnClose = $('te-btnCloseEditor');
+    if (btnClose) btnClose.onclick = () => closeAll();
+
+    // Rebind toolbar with root scope if needed
+    root.querySelectorAll('#te-toolbar [data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => setTool(btn.dataset.tool));
+    });
+  }
+
+  function bindPassUi() {
+    const ok = $('te-pass-ok');
+    const cancel = $('te-pass-cancel');
+    const inp = $('te-pass-input');
+    if (ok) ok.onclick = tryPass;
+    if (cancel) cancel.onclick = () => showPassModal(false);
+    if (inp) inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') tryPass();
+      if (e.key === 'Escape') showPassModal(false);
+    });
+    const pickerBack = $('te-picker-back');
+    if (pickerBack) pickerBack.onclick = () => closeAll();
+  }
+
+
+// Preview-only helpers (not on game globals)
+function buildCum(spline) {
+  const cum = [0];
+  for (let i = 1; i < spline.length; i++) {
+    cum[i] = cum[i - 1] + Math.hypot(spline[i].x - spline[i - 1].x, spline[i].y - spline[i - 1].y);
+  }
+  if (spline.length > 1) {
+    cum.push(cum[cum.length - 1] + Math.hypot(spline[0].x - spline[spline.length - 1].x, spline[0].y - spline[spline.length - 1].y));
+  }
+  return cum;
+}
+function fracToSplineIndex(cum, frac) {
+  if (!cum.length) return 0;
+  const total = cum[cum.length - 1] || 1;
+  const target = ((frac % 1) + 1) % 1 * total;
+  let lo = 0, hi = cum.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (cum[mid] < target) lo = mid + 1; else hi = mid;
+  }
+  return Math.min(lo, Math.max(0, (cum.length > 1 ? cum.length - 2 : 0)));
+}
+// ── Editor state ────────────────────────────────────────────────────────────
+const canvas = document.getElementById('te-canvas');
+  if (!canvas) { console.warn('Track editor canvas missing'); }
+  const ctx = canvas ? canvas.getContext('2d') : null;
+  const root = document.getElementById('screen-te-editor');
+const state = {
+  waypoints: [],
+  racingLine: [],
+  pitPath: [],
+  editLayer: 'waypoints', // 'waypoints' | 'racingLine' | 'pitPath'
+  closed: true,
+  tool: 'select',
+  selected: new Set(),
+  cam: { x: 2600, y: 3200, zoom: 0.22 },
+  gridSize: 100,
+  snap: false,
+  showGrid: true,
+  showNodes: true,
+  showLine: true,
+  showRace: true,
+  showAILine: true,
+  showRemap: false,
+  showPit: true,
+  showDir: true,
+  showCp: true,
+  dragging: null,
+  pan: null,
+  box: null,
+  spaceDown: false,
+  cursorWorld: null,
+  undoStack: [],
+  redoStack: [],
+  dirty: false
+};
+
+function activePts() {
+  if (state.editLayer === 'racingLine') return state.racingLine;
+  if (state.editLayer === 'pitPath') return state.pitPath;
+  return state.waypoints;
+}
+
+function setEditLayer(layer) {
+  state.editLayer = layer;
+  state.selected.clear();
+  const trackBtn = document.getElementById('te-btnLayerTrack');
+  const aiBtn = document.getElementById('te-btnLayerAI');
+  const pitBtn = document.getElementById('te-btnLayerPit');
+  if (trackBtn) trackBtn.classList.toggle('active', layer === 'waypoints');
+  if (aiBtn) aiBtn.classList.toggle('active', layer === 'racingLine');
+  if (pitBtn) pitBtn.classList.toggle('active', layer === 'pitPath');
+  if (layer === 'pitPath') state.showPit = true;
+  syncUI(); render();
+}
+
+function syncPitPathToForm() {
+  const el = document.getElementById('te-pitPath');
+  if (el) el.value = JSON.stringify((state.pitPath || []).map(p => ({
+    x: Math.round(p.x), y: Math.round(p.y)
+  })));
+}
+
+function loadPitPathFromForm() {
+  const el = document.getElementById('te-pitPath');
+  let pitPath = [];
+  try { pitPath = JSON.parse(el ? el.value : '[]'); } catch (e) { pitPath = []; }
+  if (!Array.isArray(pitPath)) pitPath = [];
+  state.pitPath = pitPath.map(p => ({ x: Number(p.x) || 0, y: Number(p.y) || 0 }));
+}
+
+function defaultProject() {
+  const wps = [
+    { x: 800, y: 5200 }, { x: 1600, y: 5200 }, { x: 2400, y: 5200 }, { x: 3200, y: 5200 },
+    { x: 3600, y: 4800 }, { x: 3800, y: 4200 }, { x: 3800, y: 3600 }, { x: 3400, y: 3200 },
+    { x: 2800, y: 3000 }, { x: 2000, y: 3000 }, { x: 1400, y: 3200 }, { x: 1000, y: 3600 },
+    { x: 800, y: 4200 }, { x: 700, y: 4800 }
+  ];
+  return {
+    version: 1,
+    closed: true,
+    waypoints: wps,
+    racingLine: clonePts(wps),
+    meta: {
+      id: 12, name: 'MY CIRCUIT', difficulty: 'MEDIUM', trackWidth: 120, laps: 3, targetLap: 60, coinMult: 1.5,
+      grassColor: '#173012', grassColor2: '#1e3e18', trackColor: '#2e2e2e', borderColor: '#ff9500',
+      lineColor: '#ffffff', accentColor: '#ff6b35', bgColor: '#0f1a08',
+      startPos: { x: 1200, y: 5200 }, startAngle: 0,
+      pitPos: { x: 900, y: 5020 },
+      pitLane: {
+        path: [{ x: 900, y: 5200 }, { x: 900, y: 5020 }, { x: 1600, y: 5020 }, { x: 2300, y: 5020 }, { x: 2300, y: 5200 }],
+        entryPt: { x: 900, y: 5200 }, garagePos: { x: 1600, y: 5020 }, garageAngle: 0,
+        exitPos: { x: 2300, y: 5200 }, exitAngle: 0, width: 56
+      },
+      cpFracs: [0.0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90],
+      drsFracs: [[0.02, 0.12], [0.50, 0.60]],
+      sfGateHalfWidth: null,
+      surface: { offTrackMult: 1.0, label: 'GRASS' }
+    }
+  };
+}
+
+function normalizeBrakeTag(v) {
+  const n = Number(v);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.max(0, Math.min(5, Math.round(n)));
+}
+
+function clonePts(pts) {
+  return (pts || []).map(p => {
+    const o = { x: p.x, y: p.y };
+    const b = normalizeBrakeTag(p.brake);
+    if (b > 0) o.brake = b;
+    else if (p.brake != null) o.brake = 0;
+    return o;
+  });
+}
+
+function formatWpJS(p) {
+  const b = normalizeBrakeTag(p.brake);
+  return `{x:${Math.round(p.x)},y:${Math.round(p.y)},brake:${b}}`;
+}
+
+function captureMetaSnap() {
+  const meta = readMetaFromForm();
+  return {
+    pitPath: clonePts(state.pitPath),
+    cpFracs: (meta.cpFracs || []).slice(),
+    startPos: meta.startPos ? { x: meta.startPos.x, y: meta.startPos.y } : { x: 0, y: 0 },
+    startAngle: meta.startAngle || 0,
+    sfGateHalfWidth: meta.sfGateHalfWidth,
+    pitWidth: (meta.pitLane && meta.pitLane.width) || 56
+  };
+}
+
+function restoreMetaSnap(m) {
+  if (!m) return;
+  if (m.pitPath) {
+    state.pitPath = clonePts(m.pitPath);
+    syncPitPathToForm();
+  }
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el != null && val != null) el.value = val;
+  };
+  if (m.cpFracs) set('te-cpFracs', m.cpFracs.join(', '));
+  if (m.startPos) {
+    set('te-startX', m.startPos.x);
+    set('te-startY', m.startPos.y);
+  }
+  if (m.startAngle != null) set('te-startAngle', m.startAngle);
+  const hwEl = document.getElementById('te-sfGateHalfWidth');
+  if (hwEl) hwEl.value = (m.sfGateHalfWidth != null && m.sfGateHalfWidth > 0) ? m.sfGateHalfWidth : '';
+  if (m.pitWidth != null) set('te-pitWidth', m.pitWidth);
+}
+
+function pushUndo() {
+  state.undoStack.push({
+    waypoints: clonePts(state.waypoints),
+    racingLine: clonePts(state.racingLine),
+    closed: state.closed,
+    meta: captureMetaSnap()
+  });
+  if (state.undoStack.length > 100) state.undoStack.shift();
+  state.redoStack = [];
+  state.dirty = true;
+}
+
+function undo() {
+  if (!state.undoStack.length) return;
+  state.redoStack.push({
+    waypoints: clonePts(state.waypoints),
+    racingLine: clonePts(state.racingLine),
+    closed: state.closed,
+    meta: captureMetaSnap()
+  });
+  const snap = state.undoStack.pop();
+  state.waypoints = snap.waypoints;
+  state.racingLine = snap.racingLine || [];
+  state.closed = snap.closed;
+  restoreMetaSnap(snap.meta);
+  state.selected.clear();
+  syncUI(); render();
+}
+
+function redo() {
+  if (!state.redoStack.length) return;
+  state.undoStack.push({
+    waypoints: clonePts(state.waypoints),
+    racingLine: clonePts(state.racingLine),
+    closed: state.closed,
+    meta: captureMetaSnap()
+  });
+  const snap = state.redoStack.pop();
+  state.waypoints = snap.waypoints;
+  state.racingLine = snap.racingLine || [];
+  state.closed = snap.closed;
+  restoreMetaSnap(snap.meta);
+  state.selected.clear();
+  syncUI(); render();
+}
+
+function loadProject(proj) {
+  if (!proj || !Array.isArray(proj.waypoints)) throw new Error('Invalid project');
+  state.waypoints = clonePts(proj.waypoints);
+  state.racingLine = Array.isArray(proj.racingLine) ? clonePts(proj.racingLine)
+    : (proj.meta && Array.isArray(proj.meta.racingLine) ? clonePts(proj.meta.racingLine) : []);
+  state.closed = proj.closed !== false;
+  state.selected.clear();
+  if (proj.meta) applyMetaToForm(proj.meta);
+  else loadPitPathFromForm();
+  syncUI();
+  requestAnimationFrame(() => fitEditorView(true));
+  setMsg('Project loaded');
+}
+
+function readMetaFromForm() {
+  const get = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? el.value : fallback;
+  };
+  const diff = get('te-metaDiff', 'MEDIUM');
+  const diffMap = { EASY: ['diff-easy', 'e'], MEDIUM: ['diff-med', 'm'], HARD: ['diff-hard', 'h'] };
+  const [diffClass, diffLetter] = diffMap[diff] || diffMap.MEDIUM;
+  let pitPath = [];
+  if (state.pitPath && state.pitPath.length) {
+    pitPath = state.pitPath.map(p => ({ x: p.x, y: p.y }));
+  } else {
+    try { pitPath = JSON.parse(get('te-pitPath', '[]')); } catch (e) { pitPath = []; }
+  }
+  if (!Array.isArray(pitPath)) pitPath = [];
+  const cpFracs = String(get('te-cpFracs', '0,0.5')).split(/[, ]+/).map(Number).filter(n => !isNaN(n));
+  const drsFracs = String(get('te-drsFracs', '')).split(';').map(s => {
+    const m = s.trim().match(/([\d.]+)\s*-\s*([\d.]+)/);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }).filter(Boolean);
+  const sx = Number(get('te-startX', 1200)) || 0;
+  const sy = Number(get('te-startY', 5200)) || 0;
+  const entry = pitPath[0] || { x: sx, y: sy };
+  const exit = pitPath[pitPath.length - 1] || entry;
+  const garage = pitPath[Math.floor(pitPath.length / 2)] || entry;
+  const pitWidth = Number(get('te-pitWidth', 56)) || 56;
+  const sfRaw = get('te-sfGateHalfWidth', '');
+  const sfGateHalfWidth = (sfRaw !== '' && sfRaw != null && isFinite(Number(sfRaw)) && Number(sfRaw) > 0)
+    ? Number(sfRaw) : null;
+  return {
+    id: 12,
+    name: get('te-metaName', 'MY CIRCUIT') || 'MY CIRCUIT',
+    difficulty: diff, diffClass, diffLetter,
+    targetLap: Number(get('te-metaTarget', 60)) || 60,
+    laps: Number(get('te-metaLaps', 3)) || 3,
+    trackWidth: Number(get('te-metaWidth', 120)) || 120,
+    lapDistance: 0,
+    coinMult: 1.5,
+    grassColor: '#173012', grassColor2: '#1e3e18', trackColor: '#2e2e2e', borderColor: '#ff9500',
+    lineColor: '#ffffff', accentColor: '#ff6b35', bgColor: '#0f1a08',
+    startPos: { x: sx, y: sy },
+    startAngle: Number(get('te-startAngle', 0)) || 0,
+    pitPos: { x: garage.x, y: garage.y },
+    pitLane: {
+      path: pitPath,
+      entryPt: { x: entry.x, y: entry.y },
+      garagePos: { x: garage.x, y: garage.y }, garageAngle: 0,
+      exitPos: { x: exit.x, y: exit.y }, exitAngle: 0, width: pitWidth
+    },
+    cpFracs, drsFracs,
+    sfGateHalfWidth,
+    surface: { offTrackMult: 1.0, label: 'GRASS' }
+  };
+}
+
+function applyMetaToForm(meta) {
+  if (!meta) return;
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el != null && val != null) el.value = val;
+  };
+  set('te-metaName', meta.name);
+  set('te-metaDiff', meta.difficulty);
+  if (meta.trackWidth != null) set('te-metaWidth', meta.trackWidth);
+  if (meta.laps != null) set('te-metaLaps', meta.laps);
+  if (meta.targetLap != null) set('te-metaTarget', meta.targetLap);
+  if (meta.startPos) {
+    set('te-startX', meta.startPos.x);
+    set('te-startY', meta.startPos.y);
+  }
+  if (meta.startAngle != null) set('te-startAngle', meta.startAngle);
+  if (meta.cpFracs) set('te-cpFracs', meta.cpFracs.join(', '));
+  if (meta.drsFracs) set('te-drsFracs', meta.drsFracs.map(p => p[0] + '-' + p[1]).join('; '));
+  if (meta.pitLane && meta.pitLane.path) {
+    state.pitPath = meta.pitLane.path.map(p => ({ x: Number(p.x) || 0, y: Number(p.y) || 0 }));
+    set('te-pitPath', JSON.stringify(state.pitPath));
+  }
+  if (meta.pitLane && meta.pitLane.width != null) set('te-pitWidth', meta.pitLane.width);
+  const hwEl = document.getElementById('te-sfGateHalfWidth');
+  if (hwEl) {
+    hwEl.value = (meta.sfGateHalfWidth != null && isFinite(meta.sfGateHalfWidth) && meta.sfGateHalfWidth > 0)
+      ? meta.sfGateHalfWidth : '';
+  }
+}
+
+function getProject() {
+  return {
+    version: 1,
+    type: 'kartblitz-track-editor',
+    closed: state.closed,
+    waypoints: clonePts(state.waypoints),
+    racingLine: clonePts(state.racingLine),
+    meta: readMetaFromForm()
+  };
+}
+
+function autosave() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(getProject())); } catch (e) {}
+}
+
+// ── Camera / coords ─────────────────────────────────────────────────────────
+function resize() {
+  if (!canvas || !ctx) return false;
+  const wrap = canvas.parentElement;
+  if (!wrap) return false;
+  let w = Math.max(0, Math.floor(wrap.clientWidth));
+  let h = Math.max(0, Math.floor(wrap.clientHeight));
+  // Fallback when grid hasn't laid out yet (common right after opening editor)
+  if (w < 48 || h < 48) {
+    w = Math.max(320, Math.floor(window.innerWidth - 400));
+    h = Math.max(240, Math.floor(window.innerHeight - 90));
+  }
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return w >= 48 && h >= 48;
+}
+function fitEditorView(forceCenter) {
+  let tries = 0;
+  const run = () => {
+    const ok = resize();
+    if (!ok && tries++ < 25) {
+      requestAnimationFrame(run);
+      return;
+    }
+    if (forceCenter !== false) centerView();
+    syncUI();
+    render();
+  };
+  run();
+}
+function screenToWorld(sx, sy) {
+  const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
+  return {
+    x: state.cam.x + (sx - w / 2) / state.cam.zoom,
+    y: state.cam.y + (sy - h / 2) / state.cam.zoom
+  };
+}
+function worldToScreen(wx, wy) {
+  const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
+  return {
+    x: (wx - state.cam.x) * state.cam.zoom + w / 2,
+    y: (wy - state.cam.y) * state.cam.zoom + h / 2
+  };
+}
+function snapPt(p) {
+  if (!state.snap) return p;
+  const g = state.gridSize || 100;
+  return { x: Math.round(p.x / g) * g, y: Math.round(p.y / g) * g };
+}
+function centerView() {
+  if (!state.waypoints.length) {
+    state.cam.x = 2600;
+    state.cam.y = 3200;
+    state.cam.zoom = 0.18;
+    return;
+  }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of state.waypoints) {
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+  }
+  // Include racing line / start in the fit box when present
+  for (const p of state.racingLine) {
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+  }
+  for (const p of state.pitPath) {
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+  }
+  state.cam.x = (minX + maxX) / 2;
+  state.cam.y = (minY + maxY) / 2;
+  const pad = 180;
+  const spanX = Math.max(400, maxX - minX + pad * 2);
+  const spanY = Math.max(400, maxY - minY + pad * 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const w = Math.max(1, canvas.clientWidth || Math.floor(canvas.width / dpr) || 800);
+  const h = Math.max(1, canvas.clientHeight || Math.floor(canvas.height / dpr) || 600);
+  const zx = w / spanX;
+  const zy = h / spanY;
+  // Fit whole circuit with a little margin; avoid extreme zooms
+  state.cam.zoom = Math.max(0.03, Math.min(1.2, Math.min(zx, zy) * 0.9));
+}
+function hitNode(world, radiusWorld) {
+  const pts = activePts();
+  let best = -1, bestD = radiusWorld;
+  for (let i = 0; i < pts.length; i++) {
+    const d = Math.hypot(pts[i].x - world.x, pts[i].y - world.y);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+function nearestSegment(world) {
+  const pts = activePts();
+  const n = pts.length;
+  if (n < 2) return null;
+  let best = null, bestD = Infinity;
+  const closedLayer = state.editLayer === 'waypoints' ? state.closed : false;
+  const segs = closedLayer ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const a = pts[i], b = pts[(i + 1) % n];
+    const d = distToSeg(world.x, world.y, a.x, a.y, b.x, b.y);
+    if (d < bestD) {
+      bestD = d;
+      const dx = b.x - a.x, dy = b.y - a.y, lenSq = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((world.x - a.x) * dx + (world.y - a.y) * dy) / lenSq));
+      best = { idx: i, t, point: { x: a.x + dx * t, y: a.y + dy * t }, dist: d };
+    }
+  }
+  return best;
+}
+
+function getSfGateGeom() {
+  if (state.waypoints.length < 2) return null;
+  const meta = readMetaFromForm();
+  const spline = buildSpline(state.waypoints, 28);
+  if (!spline || spline.length < 2) return null;
+  const cum = buildCum(spline);
+  const total = cum[cum.length - 1] || 1;
+  const frac = (meta.cpFracs && meta.cpFracs.length) ? (((meta.cpFracs[0] % 1) + 1) % 1) : 0;
+  const i = fracToSplineIndex(cum, frac);
+  const p = spline[Math.min(i, spline.length - 1)];
+  const tan = splineTangent(spline, i);
+  const perp = { x: -tan.y, y: tan.x };
+  const tw = meta.trackWidth || 120;
+  const hw = (meta.sfGateHalfWidth != null && meta.sfGateHalfWidth > 0)
+    ? meta.sfGateHalfWidth
+    : tw * 0.7;
+  return {
+    cx: p.x, cy: p.y, tan, perp, hw, frac, idx: i, total,
+    e1: { x: p.x + perp.x * hw, y: p.y + perp.y * hw },
+    e2: { x: p.x - perp.x * hw, y: p.y - perp.y * hw }
+  };
+}
+
+function projectWorldOntoSpline(world) {
+  if (state.waypoints.length < 2) return null;
+  const spline = buildSpline(state.waypoints, 28);
+  if (!spline || spline.length < 2) return null;
+  const cum = buildCum(spline);
+  const total = cum[cum.length - 1] || 1;
+  let best = null;
+  for (let i = 0; i < spline.length; i++) {
+    const d = Math.hypot(world.x - spline[i].x, world.y - spline[i].y);
+    if (!best || d < best.d) best = { i, d };
+  }
+  const tan = splineTangent(spline, best.i);
+  const frac = Math.max(0, Math.min(0.9999, (cum[best.i] || 0) / total));
+  return {
+    frac,
+    point: { x: spline[best.i].x, y: spline[best.i].y },
+    tan,
+    angle: Math.atan2(tan.y, tan.x)
+  };
+}
+
+function setCpFrac0(frac) {
+  const el = document.getElementById('te-cpFracs');
+  const parts = String(el ? el.value : '0').split(/[, ]+/).map(s => s.trim()).filter(Boolean);
+  const rest = parts.slice(1);
+  const f = Math.max(0, Math.min(0.9999, Number(frac) || 0));
+  const next = [String(Math.round(f * 10000) / 10000)].concat(rest.length ? rest : []);
+  if (el) el.value = next.join(', ');
+}
+
+function setSfGateHalfWidth(hw) {
+  const el = document.getElementById('te-sfGateHalfWidth');
+  if (el) el.value = Math.round(hw);
+}
+
+function setStartFromPoint(point, angle) {
+  const sx = document.getElementById('te-startX');
+  const sy = document.getElementById('te-startY');
+  const sa = document.getElementById('te-startAngle');
+  if (sx) sx.value = Math.round(point.x);
+  if (sy) sy.value = Math.round(point.y);
+  if (sa && angle != null) sa.value = Math.round(angle * 1000) / 1000;
+}
+
+function hitSfHandle(world, radiusWorld) {
+  const g = getSfGateGeom();
+  if (!g) return null;
+  const d0 = Math.hypot(world.x - g.cx, world.y - g.cy);
+  const d1 = Math.hypot(world.x - g.e1.x, world.y - g.e1.y);
+  const d2 = Math.hypot(world.x - g.e2.x, world.y - g.e2.y);
+  if (d1 <= radiusWorld || d2 <= radiusWorld) {
+    if (d1 <= d2 && d1 <= radiusWorld) return { type: 'gateEnd', end: 1, geom: g };
+    if (d2 <= radiusWorld) return { type: 'gateEnd', end: 2, geom: g };
+  }
+  if (d0 <= radiusWorld * 1.35) return { type: 'sf', geom: g };
+  return null;
+}
+
+// ── Rendering ───────────────────────────────────────────────────────────────
+function drawPoly(pts, closePath) {
+  if (!pts.length) return;
+  ctx.beginPath();
+  const s0 = worldToScreen(pts[0].x, pts[0].y);
+  ctx.moveTo(s0.x, s0.y);
+  for (let i = 1; i < pts.length; i++) {
+    const s = worldToScreen(pts[i].x, pts[i].y);
+    ctx.lineTo(s.x, s.y);
+  }
+  if (closePath && pts.length > 2) ctx.closePath();
+}
+
+function render() {
+  if (!_open || !canvas || !ctx) return;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#080c12';
+  ctx.fillRect(0, 0, w, h);
+
+  if (state.showGrid) drawGrid();
+
+  const meta = readMetaFromForm();
+  const widthPx = Math.max(4, (meta.trackWidth || 120) * state.cam.zoom * 0.35);
+
+  // Remapped preview (optional)
+  let previewWps = state.waypoints;
+  if (state.showRemap && state.waypoints.length >= 3) {
+    previewWps = remapTrackWaypointsForBraking(state.waypoints, getTrackRemapProfile(meta));
+  }
+
+  const spline = (state.showRace || state.showCp || state.showDir) && previewWps.length >= 2
+    ? buildSpline(previewWps, 28) : [];
+
+  // Track ribbon (racing line width)
+  if (state.showRace && spline.length > 2) {
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = Math.max(8, (meta.trackWidth || 120) * state.cam.zoom);
+    drawPoly(spline, true); ctx.stroke();
+    ctx.strokeStyle = '#ff950088';
+    ctx.lineWidth = Math.max(10, (meta.trackWidth || 120) * state.cam.zoom + 4);
+    drawPoly(spline, true); ctx.stroke();
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.lineWidth = Math.max(6, (meta.trackWidth || 120) * state.cam.zoom - 2);
+    drawPoly(spline, true); ctx.stroke();
+    ctx.strokeStyle = '#ffffff55';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([8, 10]);
+    drawPoly(spline, true); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Authored polyline
+  if (state.showLine && state.waypoints.length) {
+    ctx.strokeStyle = '#3dd6c6';
+    ctx.lineWidth = 2;
+    drawPoly(state.waypoints, state.closed);
+    ctx.stroke();
+  }
+
+  // Authored AI racing line — Catmull-Rom curve through nodes (same as track centreline)
+  if (state.showAILine && state.racingLine.length >= 2) {
+    const rlCurve = state.racingLine.length >= 3
+      ? buildSpline(state.racingLine, 28)
+      : state.racingLine;
+    ctx.strokeStyle = '#e879f9';
+    ctx.lineWidth = state.editLayer === 'racingLine' ? 3 : 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.setLineDash(state.editLayer === 'racingLine' ? [] : [10, 6]);
+    drawPoly(rlCurve, true);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Pit path
+  const pitPts = (state.pitPath && state.pitPath.length)
+    ? state.pitPath
+    : ((meta.pitLane && meta.pitLane.path) || []);
+  if (state.showPit && pitPts.length) {
+    ctx.strokeStyle = state.editLayer === 'pitPath' ? '#fbbf24' : '#f59e0b';
+    ctx.lineWidth = state.editLayer === 'pitPath' ? 3 : 2;
+    ctx.setLineDash(state.editLayer === 'pitPath' ? [] : [6, 4]);
+    drawPoly(pitPts, false);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const entry = pitPts[0];
+    const exit = pitPts[pitPts.length - 1];
+    const garage = pitPts[Math.floor(pitPts.length / 2)];
+    for (const [p, label] of [[entry, 'entry'], [garage, 'garage'], [exit, 'exit']]) {
+      if (!p) continue;
+      const s = worldToScreen(p.x, p.y);
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(label, s.x + 6, s.y - 6);
+    }
+  }
+
+  // CP / DRS markers on spline
+  if (state.showCp && spline.length > 2) {
+    const cum = buildCum(spline);
+    const total = cum[cum.length - 1] || 1;
+    for (const [a, b] of (meta.drsFracs || [])) {
+      const i0 = fracToSplineIndex(cum, a);
+      let i1 = fracToSplineIndex(cum, b);
+      if (i1 < i0) i1 += spline.length;
+      ctx.strokeStyle = '#3b82f688';
+      ctx.lineWidth = Math.max(6, widthPx * 0.8);
+      ctx.beginPath();
+      for (let i = i0; i <= i1; i++) {
+        const p = spline[i % spline.length];
+        const s = worldToScreen(p.x, p.y);
+        if (i === i0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+      }
+      ctx.stroke();
+    }
+    (meta.cpFracs || []).forEach((f, idx) => {
+      if (idx === 0) return; // S/F drawn with draggable gate below
+      const i = fracToSplineIndex(cum, f);
+      const p = spline[Math.min(i, spline.length - 1)];
+      const tan = splineTangent(spline, i);
+      const s = worldToScreen(p.x, p.y);
+      const nx = -tan.y * 18, ny = tan.x * 18;
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(s.x - nx, s.y - ny);
+      ctx.lineTo(s.x + nx, s.y + ny);
+      ctx.stroke();
+      ctx.fillStyle = '#93c5fd';
+      ctx.font = '10px sans-serif';
+      ctx.fillText('CP' + idx, s.x + 8, s.y - 8);
+    });
+  }
+
+  // Draggable S/F + checkered gate length handles
+  {
+    const g = getSfGateGeom();
+    if (g) {
+      const s1 = worldToScreen(g.e1.x, g.e1.y);
+      const s2 = worldToScreen(g.e2.x, g.e2.y);
+      const sc = worldToScreen(g.cx, g.cy);
+      // Checkered preview strip
+      const ang = Math.atan2(g.e2.y - g.e1.y, g.e2.x - g.e1.x);
+      const sfW = Math.hypot(s2.x - s1.x, s2.y - s1.y);
+      ctx.save();
+      ctx.translate(sc.x, sc.y);
+      ctx.rotate(ang);
+      const sq = 6;
+      for (let ci = 0; ci < sfW / sq + 1; ci++) {
+        for (let ri = 0; ri < 3; ri++) {
+          ctx.fillStyle = (ci + ri) % 2 === 0 ? '#ffffff' : '#111111';
+          ctx.fillRect(ci * sq - sfW / 2, ri * sq - sq * 1.5, sq, sq);
+        }
+      }
+      ctx.restore();
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(s1.x, s1.y);
+      ctx.lineTo(s2.x, s2.y);
+      ctx.stroke();
+      // Center drag handle
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath(); ctx.arc(sc.x, sc.y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#052e16';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#86efac';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('S/F', sc.x + 10, sc.y - 10);
+      // End handles for gate length
+      for (const s of [s1, s2]) {
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(s.x - 6, s.y - 6, 12, 12);
+        ctx.strokeStyle = '#854d0e';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(s.x - 6, s.y - 6, 12, 12);
+      }
+    }
+  }
+
+  // Direction arrows on racing line
+  if (state.showDir && spline.length > 20) {
+    ctx.fillStyle = '#3dd6c6aa';
+    for (let i = 0; i < spline.length; i += Math.max(12, Math.floor(spline.length / 24))) {
+      const p = spline[i], tan = splineTangent(spline, i);
+      const s = worldToScreen(p.x, p.y);
+      const ang = Math.atan2(tan.y, tan.x);
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(ang);
+      ctx.beginPath();
+      ctx.moveTo(10, 0); ctx.lineTo(-6, -5); ctx.lineTo(-6, 5);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Start marker
+  {
+    const sp = meta.startPos;
+    const s = worldToScreen(sp.x, sp.y);
+    const ang = meta.startAngle || 0;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(ang);
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-8, -8); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#86efac';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('START', s.x + 10, s.y - 10);
+  }
+
+  // Nodes (active edit layer)
+  if (state.showNodes) {
+    const pts = activePts();
+    const isRL = state.editLayer === 'racingLine';
+    const isPit = state.editLayer === 'pitPath';
+    pts.forEach((p, i) => {
+      const s = worldToScreen(p.x, p.y);
+      const sel = state.selected.has(i);
+      const brake = (!isRL && !isPit) ? normalizeBrakeTag(p.brake) : 0;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, sel ? 8 : 6, 0, Math.PI * 2);
+      if (sel) ctx.fillStyle = '#ff9500';
+      else if (isRL) ctx.fillStyle = '#e879f9';
+      else if (isPit) ctx.fillStyle = i === 0 ? '#f59e0b' : '#fbbf24';
+      else if (brake >= 5) ctx.fillStyle = '#7f1d1d';
+      else if (brake >= 4) ctx.fillStyle = '#dc2626';
+      else if (brake >= 3) ctx.fillStyle = '#ef4444';
+      else if (brake >= 2) ctx.fillStyle = '#f97316';
+      else if (brake >= 1) ctx.fillStyle = '#f59e0b';
+      else ctx.fillStyle = i === 0 ? '#22c55e' : '#e8eef6';
+      ctx.fill();
+      ctx.strokeStyle = '#0c1118';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = isRL ? '#f0abfc' : (isPit ? '#fde68a' : (brake ? '#fecaca' : '#8fa3b8'));
+      ctx.font = '10px Consolas, monospace';
+      const label = isRL ? ('R' + i) : (isPit ? ('P' + i) : (brake ? (i + ':' + brake) : String(i)));
+      ctx.fillText(label, s.x + 9, s.y - 9);
+    });
+  }
+
+  // Selection box
+  if (state.box) {
+    const a = state.box.a, b = state.box.b;
+    ctx.strokeStyle = '#3dd6c688';
+    ctx.fillStyle = '#3dd6c622';
+    ctx.lineWidth = 1;
+    ctx.fillRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+    ctx.strokeRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+  }
+
+  updateStatus();
+}
+
+function drawGrid() {
+  const g = state.gridSize || 100;
+  const tl = screenToWorld(0, 0), br = screenToWorld(canvas.clientWidth, canvas.clientHeight);
+  const x0 = Math.floor(tl.x / g) * g, y0 = Math.floor(tl.y / g) * g;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = x0; x <= br.x + g; x += g) {
+    const s1 = worldToScreen(x, tl.y), s2 = worldToScreen(x, br.y);
+    ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+  }
+  for (let y = y0; y <= br.y + g; y += g) {
+    const s1 = worldToScreen(tl.x, y), s2 = worldToScreen(br.x, y);
+    ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+  }
+  ctx.stroke();
+}
+
+function updateStatus() {
+  const c = state.cursorWorld;
+  document.getElementById('te-stCursor').textContent = c ? `${Math.round(c.x)}, ${Math.round(c.y)}` : '—';
+  const pts = activePts();
+  const sel = [...state.selected];
+  if (sel.length === 1 && pts[sel[0]]) {
+    const p = pts[sel[0]];
+    document.getElementById('te-stSel').textContent = `#${sel[0]} (${Math.round(p.x)}, ${Math.round(p.y)})`;
+  } else if (sel.length > 1) {
+    document.getElementById('te-stSel').textContent = `${sel.length} nodes`;
+  } else {
+    document.getElementById('te-stSel').textContent = '—';
+  }
+  document.getElementById('te-stNodes').textContent = String(state.waypoints.length);
+  document.getElementById('te-nodeCountPill').textContent =
+    state.waypoints.length + ' track · ' + state.racingLine.length + 'AI · ' + state.pitPath.length + ' pit';
+  document.getElementById('te-stZoom').textContent = Math.round(state.cam.zoom * 100) + '%';
+  document.getElementById('te-stLoop').textContent = state.closed ? 'closed' : 'open';
+  const rlEl = document.getElementById('te-rlInfo');
+  if (rlEl) {
+    rlEl.textContent = state.racingLine.length >= 3
+      ? `AI line: ${state.racingLine.length} nodes (exported with track)`
+      : 'No AI racing line (AI uses default centreline behaviour)';
+  }
+}
+
+function setMsg(t) {
+  document.getElementById('te-stMsg').textContent = t || '';
+  if (t) setTimeout(() => { if (document.getElementById('te-stMsg').textContent === t) document.getElementById('te-stMsg').textContent = ''; }, 2500);
+}
+
+function syncUI() {
+  const pts = activePts();
+  const sel = [...state.selected];
+  const layerLabel = state.editLayer === 'racingLine' ? 'AI line'
+    : (state.editLayer === 'pitPath' ? 'Pit' : 'Track');
+  if (sel.length === 1 && pts[sel[0]]) {
+    const p = pts[sel[0]];
+    const brakeTxt = state.editLayer === 'waypoints' ? ` · brake ${normalizeBrakeTag(p.brake)}` : '';
+    document.getElementById('te-selInfo').textContent = `${layerLabel} node #${sel[0]}${brakeTxt}`;
+    document.getElementById('te-inpIdx').value = sel[0];
+    document.getElementById('te-inpX').value = Math.round(p.x * 100) / 100;
+    document.getElementById('te-inpY').value = Math.round(p.y * 100) / 100;
+  } else {
+    document.getElementById('te-selInfo').textContent = sel.length ? `${sel.length} selected (${layerLabel})` : `None selected · editing ${layerLabel}`;
+    document.getElementById('te-inpIdx').value = '';
+    document.getElementById('te-inpX').value = '';
+    document.getElementById('te-inpY').value = '';
+  }
+  const brakeInfo = document.getElementById('te-brakeInfo');
+  if (brakeInfo) {
+    if (state.editLayer !== 'waypoints') {
+      brakeInfo.textContent = 'Switch to Track layer to tag brake points';
+    } else if (!sel.length) {
+      brakeInfo.textContent = 'Select track node(s) to set brake tags';
+    } else if (sel.length === 1 && state.waypoints[sel[0]]) {
+      brakeInfo.textContent = `Node #${sel[0]} brake = ${normalizeBrakeTag(state.waypoints[sel[0]].brake)}`;
+    } else {
+      brakeInfo.textContent = `${sel.length} nodes selected — click Brake 0–5`;
+    }
+  }
+  document.getElementById('te-btnCloseLoop').classList.toggle('active', state.closed);
+  updateStatus();
+}
+
+// ── Editing ─────────────────────────────────────────────────────────────────
+function setTool(tool) {
+  state.tool = tool;
+  root.querySelectorAll('#te-toolbar [data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+}
+
+function deleteSelected() {
+  if (!state.selected.size) return;
+  pushUndo();
+  const kill = new Set(state.selected);
+  if (state.editLayer === 'racingLine') {
+    state.racingLine = state.racingLine.filter((_, i) => !kill.has(i));
+  } else if (state.editLayer === 'pitPath') {
+    state.pitPath = state.pitPath.filter((_, i) => !kill.has(i));
+    syncPitPathToForm();
+  } else {
+    state.waypoints = state.waypoints.filter((_, i) => !kill.has(i));
+  }
+  state.selected.clear();
+  syncUI(); render(); autosave();
+}
+
+function addNodeAt(world) {
+  pushUndo();
+  const p = snapPt(world);
+  if (state.editLayer === 'waypoints') p.brake = 0;
+  const pts = activePts();
+  pts.push(p);
+  state.selected = new Set([pts.length - 1]);
+  if (state.editLayer === 'pitPath') syncPitPathToForm();
+  syncUI(); render(); autosave();
+}
+
+function insertNodeAt(world) {
+  const seg = nearestSegment(world);
+  if (!seg || seg.dist > 80 / state.cam.zoom) {
+    setMsg('Move closer to a segment to insert');
+    return;
+  }
+  pushUndo();
+  const p = snapPt(seg.point);
+  if (state.editLayer === 'waypoints') p.brake = 0;
+  const pts = activePts();
+  pts.splice(seg.idx + 1, 0, p);
+  state.selected = new Set([seg.idx + 1]);
+  if (state.editLayer === 'pitPath') syncPitPathToForm();
+  syncUI(); render(); autosave();
+}
+
+function setSelectedBrake(tag) {
+  if (state.editLayer !== 'waypoints') {
+    setMsg('Switch to Track layer to set brake tags');
+    return;
+  }
+  if (!state.selected.size) {
+    setMsg('Select one or more track nodes first');
+    return;
+  }
+  pushUndo();
+  const b = normalizeBrakeTag(tag);
+  for (const i of state.selected) {
+    if (state.waypoints[i]) state.waypoints[i].brake = b;
+  }
+  syncUI(); render(); autosave();
+  setMsg(`Set brake ${b} on ${state.selected.size} node(s)`);
+}
+
+// ── Pointer events ──────────────────────────────────────────────────────────
+function canvasPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+if (canvas) {
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('wheel', e => {
+  if (!_open) return;
+  e.preventDefault();
+  const sp = canvasPos(e);
+  const before = screenToWorld(sp.x, sp.y);
+  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+  state.cam.zoom = Math.max(0.04, Math.min(4, state.cam.zoom * factor));
+  const after = screenToWorld(sp.x, sp.y);
+  state.cam.x += before.x - after.x;
+  state.cam.y += before.y - after.y;
+  render();
+}, { passive: false });
+
+canvas.addEventListener('pointerdown', e => {
+  if (!_open) return;
+  canvas.setPointerCapture(e.pointerId);
+  const sp = canvasPos(e);
+  const world = screenToWorld(sp.x, sp.y);
+  state.cursorWorld = world;
+
+  if (e.button === 1 || e.button === 2 || state.spaceDown) {
+    state.pan = { sx: sp.x, sy: sp.y, cx: state.cam.x, cy: state.cam.y };
+    return;
+  }
+
+  if (state.tool === 'add') { addNodeAt(world); return; }
+  if (state.tool === 'insert') { insertNodeAt(world); return; }
+
+  const hitR = 12 / state.cam.zoom;
+
+  // Prefer S/F / gate handles over nodes when select/move
+  if (state.tool === 'select' || state.tool === 'move') {
+    const sfHit = hitSfHandle(world, hitR * 1.4);
+    if (sfHit) {
+      pushUndo();
+      state.selected.clear();
+      state.dragging = { kind: sfHit.type, end: sfHit.end, last: world };
+      syncUI(); render();
+      return;
+    }
+  }
+
+  const hit = hitNode(world, hitR);
+
+  if (state.tool === 'delete') {
+    if (hit >= 0) {
+      state.selected = new Set([hit]);
+      deleteSelected();
+    }
+    return;
+  }
+
+  if (hit >= 0) {
+    if (e.shiftKey) {
+      if (state.selected.has(hit)) state.selected.delete(hit);
+      else state.selected.add(hit);
+    } else if (!state.selected.has(hit)) {
+      state.selected = new Set([hit]);
+    }
+    if (state.tool === 'select' || state.tool === 'move') {
+      pushUndo();
+      state.dragging = {
+        kind: 'nodes',
+        last: world,
+        indices: [...state.selected]
+      };
+    }
+    syncUI(); render();
+    return;
+  }
+
+  if (!e.shiftKey) state.selected.clear();
+  if (state.tool === 'select') {
+    state.box = { a: sp, b: sp };
+  }
+  syncUI(); render();
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!_open) return;
+  const sp = canvasPos(e);
+  const world = screenToWorld(sp.x, sp.y);
+  state.cursorWorld = world;
+  updateStatus();
+
+  if (state.pan) {
+    state.cam.x = state.pan.cx - (sp.x - state.pan.sx) / state.cam.zoom;
+    state.cam.y = state.pan.cy - (sp.y - state.pan.sy) / state.cam.zoom;
+    render();
+    return;
+  }
+
+  if (state.dragging) {
+    if (state.dragging.kind === 'sf') {
+      const proj = projectWorldOntoSpline(world);
+      if (proj) {
+        setCpFrac0(proj.frac);
+        setStartFromPoint(proj.point, proj.angle);
+      }
+      state.dragging.last = world;
+      syncUI(); render();
+      return;
+    }
+    if (state.dragging.kind === 'gateEnd') {
+      const g = getSfGateGeom();
+      if (g) {
+        const meta = readMetaFromForm();
+        const tw = meta.trackWidth || 120;
+        const minHw = tw * 0.4;
+        const dist = Math.hypot(world.x - g.cx, world.y - g.cy);
+        setSfGateHalfWidth(Math.max(minHw, dist));
+      }
+      state.dragging.last = world;
+      syncUI(); render();
+      return;
+    }
+    const pts = activePts();
+    let dx = world.x - state.dragging.last.x;
+    let dy = world.y - state.dragging.last.y;
+    if (state.snap) {
+      const primary = state.dragging.indices[0];
+      if (primary != null && pts[primary]) {
+        const p = pts[primary];
+        const snapped = snapPt({ x: p.x + dx, y: p.y + dy });
+        dx = snapped.x - p.x;
+        dy = snapped.y - p.y;
+      }
+    }
+    for (const i of state.dragging.indices) {
+      if (!pts[i]) continue;
+      pts[i].x += dx;
+      pts[i].y += dy;
+    }
+    state.dragging.last = world;
+    if (state.editLayer === 'pitPath') syncPitPathToForm();
+    syncUI(); render();
+    return;
+  }
+
+  if (state.box) {
+    state.box.b = sp;
+    render();
+  }
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (state.pan) { state.pan = null; return; }
+  if (state.dragging) {
+    if (state.editLayer === 'pitPath' || state.dragging.kind === 'sf' || state.dragging.kind === 'gateEnd') {
+      syncPitPathToForm();
+    }
+    state.dragging = null;
+    autosave();
+    return;
+  }
+  if (state.box) {
+    const a = state.box.a, b = state.box.b;
+    const minX = Math.min(a.x, b.x), maxX = Math.max(a.x, b.x);
+    const minY = Math.min(a.y, b.y), maxY = Math.max(a.y, b.y);
+    if (Math.hypot(maxX - minX, maxY - minY) > 4) {
+      if (!e.shiftKey) state.selected.clear();
+      activePts().forEach((p, i) => {
+        const s = worldToScreen(p.x, p.y);
+        if (s.x >= minX && s.x <= maxX && s.y >= minY && s.y <= maxY) state.selected.add(i);
+      });
+    }
+    state.box = null;
+    syncUI(); render();
+  }
+});
+
+canvas.addEventListener('pointerleave', () => {
+  state.cursorWorld = null;
+  updateStatus();
+});
+} // end if (canvas)
+
+// ── Keyboard ────────────────────────────────────────────────────────────────
+try {
+window.addEventListener('keydown', e => {
+  if (!api.isOpen()) return;
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.code === 'Space') { state.spaceDown = true; e.preventDefault(); }
+  if (e.key === 'v' || e.key === 'V') setTool('select');
+  if (e.key === 'g' || e.key === 'G') setTool('move');
+  if (e.key === 'a' || e.key === 'A') setTool('add');
+  if (e.key === 'i' || e.key === 'I') setTool('insert');
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); }
+  if (e.key === '0') setSelectedBrake(0);
+  if (e.key === '1') setSelectedBrake(1);
+  if (e.key === '2') setSelectedBrake(2);
+  if (e.key === '3') setSelectedBrake(3);
+  if (e.key === '4') setSelectedBrake(4);
+  if (e.key === '5') setSelectedBrake(5);
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+  if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+    e.preventDefault(); redo();
+  }
+});
+window.addEventListener('keyup', e => {
+  if (!api.isOpen()) return;
+  if (e.code === 'Space') state.spaceDown = false;
+});
+
+// ── Toolbar / form bindings ─────────────────────────────────────────────────
+if (root) root.querySelectorAll('#te-toolbar [data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => setTool(btn.dataset.tool));
+});
+const _teBind = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+_teBind('te-btnUndo', undo);
+_teBind('te-btnRedo', redo);
+_teBind('te-btnCenter', () => { fitEditorView(true); });
+_teBind('te-btnResetCam', () => {
+  state.cam = { x: 2600, y: 3200, zoom: 0.18 };
+  fitEditorView(false);
+});
+_teBind('te-btnCloseLoop', () => {
+  pushUndo();
+  state.closed = !state.closed;
+  syncUI(); render(); autosave();
+});
+_teBind('te-btnApplyXY', () => {
+  const sel = [...state.selected];
+  const pts = activePts();
+  if (sel.length !== 1 || !pts[sel[0]]) return;
+  pushUndo();
+  pts[sel[0]].x = Number(document.getElementById('te-inpX').value);
+  pts[sel[0]].y = Number(document.getElementById('te-inpY').value);
+  if (state.editLayer === 'pitPath') syncPitPathToForm();
+  syncUI(); render(); autosave();
+});
+_teBind('te-btnBrake0', () => setSelectedBrake(0));
+_teBind('te-btnBrake1', () => setSelectedBrake(1));
+_teBind('te-btnBrake2', () => setSelectedBrake(2));
+_teBind('te-btnBrake3', () => setSelectedBrake(3));
+_teBind('te-btnBrake4', () => setSelectedBrake(4));
+_teBind('te-btnBrake5', () => setSelectedBrake(5));
+_teBind('te-btnDeleteSel', deleteSelected);
+
+_teBind('te-btnLayerTrack', () => setEditLayer('waypoints'));
+_teBind('te-btnLayerAI', () => setEditLayer('racingLine'));
+_teBind('te-btnLayerPit', () => setEditLayer('pitPath'));
+_teBind('te-btnCopyRL', () => {
+  if (state.waypoints.length < 3) { setMsg('Need track waypoints first'); return; }
+  pushUndo();
+  state.racingLine = clonePts(state.waypoints);
+  setEditLayer('racingLine');
+  setMsg('Racing line copied from centerline — nudge apexes inward');
+  autosave();
+});
+_teBind('te-btnClearRL', () => {
+  pushUndo();
+  state.racingLine = [];
+  if (state.editLayer === 'racingLine') setEditLayer('waypoints');
+  else { syncUI(); render(); }
+  autosave();
+  setMsg('AI racing line cleared');
+});
+
+['togGrid','togSnap','togNodes','togLine','togRace','togAILine','togRemap','togPit','togDir','togCp'].forEach(id => {
+  const el = document.getElementById('te-' + id);
+  if (!el) return;
+  el.addEventListener('change', e => {
+    const map = {
+      togGrid: 'showGrid', togSnap: 'snap', togNodes: 'showNodes', togLine: 'showLine',
+      togRace: 'showRace', togAILine: 'showAILine', togRemap: 'showRemap', togPit: 'showPit',
+      togDir: 'showDir', togCp: 'showCp'
+    };
+    state[map[id]] = e.target.checked;
+    if (id === 'togSnap') state.snap = e.target.checked;
+    render();
+  });
+});
+const _teInpGrid = document.getElementById('te-inpGrid');
+if (_teInpGrid) _teInpGrid.addEventListener('change', e => {
+  state.gridSize = Math.max(10, Number(e.target.value) || 100);
+  render();
+});
+['te-metaName','te-metaDiff','te-metaWidth','te-metaLaps','te-metaTarget','te-startX','te-startY','te-startAngle','te-cpFracs','te-drsFracs','te-pitPath','te-pitWidth','te-sfGateHalfWidth'].forEach(fid => {
+  const el = document.getElementById(fid);
+  if (!el) return;
+  el.addEventListener('change', () => {
+    if (fid === 'te-pitPath') loadPitPathFromForm();
+    render(); autosave();
+  });
+});
+} catch (bindErr) {
+  console.error('Track editor control bindings failed:', bindErr);
+}
+
+// ── Import / Export ─────────────────────────────────────────────────────────
+function parseCoordinateText(text) {
+  text = (text || '').trim();
+  if (!text) throw new Error('Empty input');
+
+  // Try JSON first (allow unquoted keys lightly)
+  let jsonTry = text;
+  if (!/^\s*[\[{]/.test(text) && /x\s*:/.test(text)) {
+    jsonTry = '[' + text.replace(/^\s*waypoints\s*[:=]\s*/i, '') + ']';
+  }
+  // Convert JS-ish {x:1,y:2} to JSON
+  const asJson = jsonTry
+    .replace(/([{,]\s*)([a-zA-Z_][\w]*)\s*:/g, '$1"$2":')
+    .replace(/'/g, '"');
+  try {
+    const data = JSON.parse(asJson);
+    return normalizeImported(data);
+  } catch (e) { /* fall through */ }
+
+  // CSV / plain text lines
+  const pts = [];
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t || /^x\s*[,;\s]\s*y/i.test(t)) continue;
+    let m = t.match(/(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)(?:\s*[,;\s]\s*(-?\d+\.?\d*))?/);
+    if (!m) m = t.match(/x\s*[:=]\s*(-?\d+\.?\d*).*?y\s*[:=]\s*(-?\d+\.?\d*)(?:.*?brake\s*[:=]\s*(-?\d+\.?\d*))?/i);
+    if (m) {
+      const pt = { x: Number(m[1]), y: Number(m[2]), brake: 0 };
+      if (m[3] != null && m[3] !== '') pt.brake = normalizeBrakeTag(m[3]);
+      pts.push(pt);
+    }
+  }
+  if (pts.length >= 2) return { waypoints: pts };
+  throw new Error('Could not parse coordinates');
+}
+
+function normalizeImported(data) {
+  if (Array.isArray(data)) {
+    if (data.length && typeof data[0].x === 'number') return { waypoints: data };
+  }
+  if (data.waypoints) {
+    return {
+      waypoints: data.waypoints,
+      racingLine: data.racingLine || (data.meta && data.meta.racingLine) || [],
+      closed: data.closed !== false,
+      meta: data.meta || data
+    };
+  }
+  if (data.type === 'kartblitz-track-editor' && data.waypoints) {
+    return {
+      waypoints: data.waypoints,
+      racingLine: data.racingLine || [],
+      closed: data.closed !== false,
+      meta: data.meta
+    };
+  }
+  throw new Error('Unrecognized data shape');
+}
+
+function applyImport(parsed) {
+  pushUndo();
+  state.waypoints = clonePts(parsed.waypoints);
+  state.racingLine = Array.isArray(parsed.racingLine) ? clonePts(parsed.racingLine) : [];
+  if (parsed.closed != null) state.closed = parsed.closed;
+  state.selected.clear();
+  if (parsed.meta && (parsed.meta.startPos || parsed.meta.pitLane || parsed.meta.name || parsed.meta.racingLine || parsed.meta.sfGateHalfWidth != null)) {
+    applyMetaToForm(parsed.meta);
+    if (Array.isArray(parsed.meta.racingLine) && !parsed.racingLine) {
+      state.racingLine = clonePts(parsed.meta.racingLine);
+    }
+  } else {
+    loadPitPathFromForm();
+  }
+  syncUI(); fitEditorView(true); autosave();
+  setMsg('Imported ' + state.waypoints.length + ' track nodes' +
+    (state.racingLine.length ? ', ' + state.racingLine.length + 'AI line' : '') +
+    (state.pitPath.length ? ', ' + state.pitPath.length + ' pit' : ''));
+}
+
+(function bindImportExport() {
+  const importBtn = document.getElementById('te-btnImport');
+  if (importBtn) importBtn.onclick = () => {
+    try {
+      const text = (document.getElementById('te-importArea') || {}).value || '';
+      applyImport(parseCoordinateText(text));
+    } catch (err) {
+      setMsg('Import failed: ' + err.message);
+      alert('Import failed: ' + err.message);
+    }
+  };
+  const importFileBtn = document.getElementById('te-btnImportFile');
+  const fileImport = document.getElementById('te-fileImport');
+  if (importFileBtn && fileImport) {
+    importFileBtn.onclick = () => fileImport.click();
+    fileImport.onchange = async e => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      try {
+        applyImport(parseCoordinateText(await file.text()));
+      } catch (err) {
+        alert('Import failed: ' + err.message);
+      }
+    };
+  }
+})();
+
+function formatWaypointsJS(wps) {
+  const lines = wps.map((p, i) => {
+    const comma = i < wps.length - 1 ? ',' : '';
+    return `      ${formatWpJS(p)}${comma}`;
+  });
+  return 'waypoints:[\n' + lines.join('\n') + '\n    ]';
+}
+
+function formatTracksObject() {
+  const meta = readMetaFromForm();
+  const wps = state.waypoints.map(p => ({ x: Math.round(p.x), y: Math.round(p.y), brake: normalizeBrakeTag(p.brake) }));
+  const pitPath = (state.pitPath && state.pitPath.length ? state.pitPath : meta.pitLane.path);
+  const pit = pitPath.map(p => `{x:${Math.round(p.x)},y:${Math.round(p.y)}}`).join(',');
+  const entry = pitPath[0] || meta.startPos;
+  const exit = pitPath[pitPath.length - 1] || entry;
+  const garageIdx = Math.floor(pitPath.length / 2);
+  const garage = pitPath[garageIdx] || entry;
+  const garageAngle = pathAngleAt(pitPath, garageIdx);
+  const exitAngle = pathAngleAt(pitPath, pitPath.length - 1);
+  const rl = state.racingLine.length >= 3
+    ? `,\n  racingLine:[\n${state.racingLine.map((p, i) => `    {x:${Math.round(p.x)},y:${Math.round(p.y)}}${i < state.racingLine.length - 1 ? ',' : ''}`).join('\n')}\n  ]`
+    : '';
+  const sfLine = (meta.sfGateHalfWidth != null && meta.sfGateHalfWidth > 0)
+    ? `,\n  sfGateHalfWidth:${Math.round(meta.sfGateHalfWidth)}`
+    : '';
+  return `{
+  id:${meta.id}, name:'${meta.name.replace(/'/g, "\\'")}', difficulty:'${meta.difficulty}', diffClass:'${meta.diffClass}', diffLetter:'${meta.diffLetter}',
+  targetLap:${meta.targetLap}, laps:${meta.laps}, trackWidth:${meta.trackWidth}, lapDistance:0, coinMult:${meta.coinMult},
+  grassColor:'${meta.grassColor}', grassColor2:'${meta.grassColor2}',
+  trackColor:'${meta.trackColor}', borderColor:'${meta.borderColor}', lineColor:'${meta.lineColor}',
+  accentColor:'${meta.accentColor}', bgColor:'${meta.bgColor}',
+  waypoints:[
+${wps.map((p, i) => `    ${formatWpJS(p)}${i < wps.length - 1 ? ',' : ''}`).join('\n')}
+  ]${rl},
+  startPos:{x:${Math.round(meta.startPos.x)},y:${Math.round(meta.startPos.y)}}, startAngle:${meta.startAngle},
+  pitPos:{x:${Math.round(garage.x)},y:${Math.round(garage.y)}},
+  pitLane:{
+    path:[${pit}],
+    entryPt:{x:${Math.round(entry.x)},y:${Math.round(entry.y)}},
+    garagePos:{x:${Math.round(garage.x)},y:${Math.round(garage.y)}}, garageAngle:${Math.round(garageAngle * 1000) / 1000},
+    exitPos:{x:${Math.round(exit.x)},y:${Math.round(exit.y)}}, exitAngle:${Math.round(exitAngle * 1000) / 1000}, width:${meta.pitLane.width}
+  },
+  cpFracs:[${meta.cpFracs.join(', ')}],
+  drsFracs:[${meta.drsFracs.map(p => `[${p[0]}, ${p[1]}]`).join(', ')}]${sfLine},
+  surface:{offTrackMult:${meta.surface.offTrackMult}, label:'${meta.surface.label}'}
+}`;
+}
+
+function buildExport(fmt) {
+  const wps = state.waypoints;
+  if (fmt === 'tracks') return formatTracksObject();
+  if (fmt === 'waypoints-js') return formatWaypointsJS(wps);
+  if (fmt === 'json') return JSON.stringify(wps.map(p => ({ x: Math.round(p.x), y: Math.round(p.y), brake: normalizeBrakeTag(p.brake) })), null, 2);
+  if (fmt === 'csv') return 'x,y,brake\n' + wps.map(p => `${Math.round(p.x)},${Math.round(p.y)},${normalizeBrakeTag(p.brake)}`).join('\n');
+  if (fmt === 'text') return wps.map(p => `${Math.round(p.x)} ${Math.round(p.y)} ${normalizeBrakeTag(p.brake)}`).join('\n');
+  return '';
+}
+
+function refreshExport() {
+  document.getElementById('te-exportArea').value = buildExport(document.getElementById('te-exportFmt').value);
+}
+document.getElementById('te-exportFmt').onchange = refreshExport;
+document.getElementById('te-btnCopy').onclick = async () => {
+  refreshExport();
+  const text = document.getElementById('te-exportArea').value;
+  try {
+    await navigator.clipboard.writeText(text);
+    setMsg('Copied to clipboard');
+  } catch (e) {
+    document.getElementById('te-exportArea').select();
+    document.execCommand('copy');
+    setMsg('Copied');
+  }
+};
+document.getElementById('te-btnDownload').onclick = () => {
+  refreshExport();
+  const fmt = document.getElementById('te-exportFmt').value;
+  const ext = { tracks: 'js', 'waypoints-js': 'js', json: 'json', csv: 'csv', text: 'txt' }[fmt] || 'txt';
+  const blob = new Blob([document.getElementById('te-exportArea').value], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (document.getElementById('te-metaName').value || 'track').replace(/\s+/g, '_').toLowerCase() + '.' + ext;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setMsg('Download started');
+};
+
+// ── Project save / load ─────────────────────────────────────────────────────
+document.getElementById('te-btnSaveProj').onclick = () => {
+  const blob = new Blob([JSON.stringify(getProject(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (document.getElementById('te-metaName').value || 'track').replace(/\s+/g, '_').toLowerCase() + '.kbtrack.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  autosave();
+  setMsg('Project saved');
+};
+document.getElementById('te-btnLoadProj').onclick = () => document.getElementById('te-fileProject').click();
+document.getElementById('te-fileProject').onchange = async e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    loadProject(data.type === 'kartblitz-track-editor' ? data : {
+      waypoints: data.waypoints || data,
+      racingLine: data.racingLine || (data.meta && data.meta.racingLine) || [],
+      closed: data.closed !== false,
+      meta: data.meta || data
+    });
+    autosave();
+  } catch (err) {
+    alert('Load failed: ' + err.message);
+  }
+};
+document.getElementById('te-btnNew').onclick = () => {
+  if (!confirm('Clear the current track and start a new template?')) return;
+  pushUndo();
+  _editIndex = null;
+  const d = defaultProject();
+  const used = new Set(TRACKS.map(t => t.id));
+  let nid = 0;
+  while (used.has(nid)) nid++;
+  d.meta.id = nid;
+  d.meta.name = 'NEW CIRCUIT ' + nid;
+  state.waypoints = clonePts(d.waypoints);
+  state.racingLine = clonePts(d.racingLine || []);
+  state.pitPath = clonePts((d.meta.pitLane && d.meta.pitLane.path) || []);
+  state.closed = true;
+  state.selected.clear();
+  applyMetaToForm(d.meta);
+  syncUI(); fitEditorView(true); autosave();
+  setMsg('New template — Apply to add to game');
+};
+
+// ── Boot (controlled by outer API — no autosave restore into live game) ─────
+state.snap = !!(document.getElementById('te-togSnap') && document.getElementById('te-togSnap').checked);
+
+  // Override readMetaFromForm id from edit target
+  const _origReadMeta = readMetaFromForm;
+  readMetaFromForm = function() {
+    const m = _origReadMeta();
+    if (_editIndex != null && TRACKS[_editIndex]) m.id = TRACKS[_editIndex].id;
+    return m;
+  };
+
+  function boot() {
+    try {
+      bindPassUi();
+      ensureBound();
+      state.snap = !!(document.getElementById('te-togSnap') && document.getElementById('te-togSnap').checked);
+      const d = defaultProject();
+      state.waypoints = clonePts(d.waypoints);
+      state.racingLine = clonePts(d.racingLine || []);
+      state.pitPath = clonePts((d.meta.pitLane && d.meta.pitLane.path) || []);
+      applyMetaToForm(d.meta);
+      window.addEventListener('resize', () => { if (_open) fitEditorView(false); });
+    } catch (err) {
+      console.error('Track editor boot failed:', err);
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  api.isUiActive = function() {
+    const ed = document.getElementById('screen-te-editor');
+    const pk = document.getElementById('screen-te-picker');
+    const pm = document.getElementById('te-pass-modal');
+    return !!(
+      (ed && ed.classList.contains('open')) ||
+      (pk && pk.classList.contains('open')) ||
+      (pm && pm.classList.contains('open'))
+    );
+  };
+  api.applyToGame = applyToGame;
+  api.closeAll = closeAll;
+  return api;
+})();
+
 </script>
 </body>
 </html>
