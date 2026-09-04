@@ -8,7 +8,6 @@
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 <script src="online-codec.js"></script>
 <script src="online-sim.js"></script>
-<script src="sim/rl/policy-runtime.js"></script>
 <script src="online.js"></script>
 <script type="importmap">
 {
@@ -1181,8 +1180,12 @@ body::after{
         <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()"> GARAGE</button>
         <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');"> LEADERBOARD</button>
         <button class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();showControlsScreen()"> CONTROLS &amp; SETTINGS</button>
+<<<<<<< HEAD
         <a class="btn btn-sm" id="btn-track-editor" style="color:#3dd6c6;text-decoration:none;display:inline-flex;align-items:center;" href="admin.html" target="_blank" rel="noopener"> ADMIN</a>
         <a class="btn btn-sm" href="training.html" style="color:#b8a0ff;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;"> ML TRAINING LAB</a>
+=======
+        <button type="button" class="btn btn-sm" id="btn-track-editor" style="color:#3dd6c6;" onclick="openTrackEditorFromMenu()"> TRACK EDITOR</button>
+>>>>>>> parent of 942d919 (Machine learning)
       </div>
       <div class="menu-utility-card">
         <div class="menu-utility-title">Desktop Layout</div>
@@ -1314,11 +1317,6 @@ body::after{
     <div class="diff-pill medium sel" onclick="selectAIDiff('medium')"> MEDIUM</div>
     <div class="diff-pill hard" onclick="selectAIDiff('hard')"> HARD</div>
     <div class="diff-pill extreme" onclick="selectAIDiff('extreme')"> EXTREME</div>
-  </div>
-  <div class="diff-label" style="margin-top:14px;">AI DRIVER TYPE</div>
-  <div class="diff-pills" id="ai-driver-pills">
-    <div class="diff-pill medium sel" id="ai-driver-scripted" onclick="selectAIDriver('scripted')"> SCRIPTED</div>
-    <div class="diff-pill hard" id="ai-driver-ml" onclick="selectAIDriver('ml')"> ML POLICY</div>
   </div>
   <div class="diff-label" style="margin-top:14px;">NUMBER OF OPPONENTS</div>
   <div class="range-wrap">
@@ -1604,7 +1602,6 @@ body::after{
   <div class="pause-btns">
     <button class="btn btn-cyan" onclick="resumeGame()">RESUME</button>
     <button class="btn btn-gold btn-sm" onclick="pauseRestartRace()">RESTART RACE</button>
-    <button class="btn btn-sm" id="pause-export-ml-btn" style="display:none;color:#b8a0ff;" onclick="exportMLDemoFromTrial()">EXPORT ML DEMO</button>
     <button class="btn btn-orange btn-sm" id="pause-quit-btn" onclick="pauseQuit()">QUIT TO MENU</button>
   </div>
   <div style="margin-top:14px;font-size:10px;opacity:.35;letter-spacing:.2em;">ESC OR PAUSE TO RESUME</div>
@@ -2327,8 +2324,6 @@ class Kart {
     this._contactJamTimer = 0;
     this._contactLineTimer = 0;
     this._contactLineSign = 0;
-    // ML demo recording (Time Trial export)
-    this._mlDemoFrames = null;
   }
 
   update(dt, trackData, otherKarts) {
@@ -2397,19 +2392,6 @@ class Kart {
       const pitEntryInput = this._getPitEntryInput(trackData);
       if(pitEntryInput) inp = pitEntryInput;
     }
-
-    // Time Trial: record inputs + obs for ML demo export
-    if(!this.isAI && this._mlDemoFrames && this.lapStart !== null && !this.finished &&
-        typeof race !== 'undefined' && race && race.mode === 'trial' && window.KartBlitzML) {
-      const _curv = race._mlCurv || (race._mlCurv = window.KartBlitzML.precomputeCurvature(trackData));
-      const _obs = window.KartBlitzML.observe(this, trackData, _curv);
-      this._mlDemoFrames.push({
-        inputs: { up: !!inp.up, down: !!inp.down, left: !!inp.left, right: !!inp.right },
-        obs: _obs,
-        action: window.KartBlitzML.inputsToAction(inp),
-      });
-    }
-
     // Surface-specific off-track physics: each track has a unique offTrackMult
     const surfMult = (trackData && trackData.surface) ? trackData.surface.offTrackMult : 1.0;
     const applyOffTrackSlowdown = this.isOffTrack;
@@ -4469,37 +4451,6 @@ function fixAIKartOrientation(k, td) {
   }
 }
 
-// ── ML POLICY AI ────────────────────────────────────────
-let _mlPolicyCache = null;
-let _mlPolicyLoadPromise = null;
-
-function loadMLPolicy(path) {
-  path = path || 'sim/rl/policy.json';
-  if (_mlPolicyLoadPromise) return _mlPolicyLoadPromise;
-  _mlPolicyLoadPromise = fetch(path)
-    .then(r => { if(!r.ok) throw new Error('policy not found'); return r.json(); })
-    .then(j => { _mlPolicyCache = j; return j; })
-    .catch(e => { console.warn('ML policy load failed:', e); _mlPolicyCache = null; return null; });
-  return _mlPolicyLoadPromise;
-}
-
-function makeMLInput(track, policyPath) {
-  const curv = window.KartBlitzML ? window.KartBlitzML.precomputeCurvature(track) : null;
-  let kartRef = null;
-  loadMLPolicy(policyPath);
-  return {
-    set(k) { kartRef = k; },
-    fn() {
-      if (!kartRef || !window.KartBlitzML || !_mlPolicyCache) {
-        return { up: true, down: false, left: false, right: false, brakeMult: 1 };
-      }
-      const obs = window.KartBlitzML.observe(kartRef, track, curv);
-      const act = window.KartBlitzML.policyForward(_mlPolicyCache, obs);
-      return window.KartBlitzML.actionToInput(act);
-    },
-  };
-}
-
 function makeAIInput(track, difficulty, aiIndex, opts) {
   aiIndex = aiIndex || 0; // 0, 1, 2 for the three AI cars
   opts = opts || {};
@@ -5657,7 +5608,6 @@ class Race {
     if(mode === 'trial') {
       this.karts.push(new Kart(0, sp.x, sp.y+15, ang, p1pc.body, p1pc.shadow, getP1Input));
       this.karts[0].livery = p1Liv;
-      this.karts[0]._mlDemoFrames = [];
       applyUpgradesToKart(this.karts[0], 'p1');
     } else if(mode === 'ai') {
       this.aiDifficulty = window._aiDifficulty || 'medium';
@@ -5678,14 +5628,10 @@ class Race {
         {body:'#f5f5f5',shadow:'#7a7a7a'},
       ];
       for(let ai = 0; ai < numAI; ai++) {
-        const useML = (window._aiDriver === 'ml');
-        const ctrl = useML
-          ? makeMLInput(trackData, window._mlPolicyPath || 'sim/rl/policy.json')
-          : makeAIInput(trackData, this.aiDifficulty, ai);
+        const ctrl = makeAIInput(trackData, this.aiDifficulty, ai);
         const aiKart = new Kart(ai+1, sp.x - (ai+1)*30, sp.y + (ai+1)*18, ang,
           aiColors[ai % aiColors.length].body, aiColors[ai % aiColors.length].shadow, ctrl.fn);
         aiKart.isAI = true;
-        aiKart._mlDriver = useML;
         ctrl.set(aiKart);
         applyUpgradesToKart(aiKart, 'p1');
         this.karts.push(aiKart);
@@ -7793,12 +7739,6 @@ function pauseGame() {
     else if (race.mode === 'online') quitBtn.textContent = 'LEAVE RACE';
     else quitBtn.textContent = 'QUIT TO MENU';
   }
-  const mlExportBtn = document.getElementById('pause-export-ml-btn');
-  if (mlExportBtn) {
-    const pk = race.karts && race.karts[0];
-    const n = pk && pk._mlDemoFrames ? pk._mlDemoFrames.length : 0;
-    mlExportBtn.style.display = (race.mode === 'trial' && n > 60) ? 'inline-block' : 'none';
-  }
   if (restartBtn) {
     if (race.mode === 'trial') restartBtn.textContent = 'RESTART SESSION';
     else if (race.mode === 'online') restartBtn.textContent = 'BACK TO LOBBY';
@@ -9261,7 +9201,6 @@ function launchConfetti() {
 // ── AI DIFFICULTY UI ─────────────────────────────────────
 let aiDifficulty = 'medium';
 let aiCount = 3;
-let aiDriver = 'scripted';
 let shootoutDifficulty = 'medium';
 
 function setAICountFromSlider(v) {
@@ -9276,13 +9215,6 @@ function showAIDifficultyUI() {
   if(slider) slider.value = String(aiCount);
   setAICountFromSlider(aiCount);
   document.getElementById('ai-difficulty').style.display = 'flex';
-}
-
-function selectAIDriver(type) {
-  aiDriver = (type === 'ml') ? 'ml' : 'scripted';
-  document.querySelectorAll('#ai-driver-pills .diff-pill').forEach(p => p.classList.remove('sel'));
-  const el = document.getElementById(type === 'ml' ? 'ai-driver-ml' : 'ai-driver-scripted');
-  if(el) el.classList.add('sel');
 }
 
 function selectAIDiff(diff) {
@@ -9301,35 +9233,11 @@ function selectAICount(n) {
 function confirmAIMode() {
   window._aiDifficulty = aiDifficulty;
   window._aiCount = aiCount;
-  window._aiDriver = aiDriver;
-  if(aiDriver === 'ml') loadMLPolicy(window._mlPolicyPath || 'sim/rl/policy.json');
   currentMode = 'ai';
-  document.getElementById('track-mode-label').textContent = aiDriver === 'ml'
-    ? 'AI RACE (ML POLICY) — CHOOSE CIRCUIT'
-    : 'AI RACE — CHOOSE CIRCUIT';
+  document.getElementById('track-mode-label').textContent = 'AI RACE — CHOOSE CIRCUIT';
   document.getElementById('ai-difficulty').style.display = 'none';
   buildTrackGrid();
   showScreen('track');
-}
-
-function exportMLDemoFromTrial() {
-  if(!race || race.mode !== 'trial' || !race.karts[0] || !race.karts[0]._mlDemoFrames) return;
-  const frames = race.karts[0]._mlDemoFrames;
-  if(frames.length < 60) { alert('Drive at least one lap before exporting.'); return; }
-  const demo = {
-    version: 1,
-    trackId: race.track.id,
-    weather: race.weather || 'dry',
-    tyreId: race.karts[0].tyreId || 'med',
-    dt: 1/60,
-    frames: frames,
-  };
-  const blob = new Blob([JSON.stringify(demo, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'demo_track' + race.track.id + '_' + Date.now() + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
 }
 
 function showShootoutDiffUI() {

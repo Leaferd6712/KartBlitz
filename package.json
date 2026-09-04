@@ -12,8 +12,11 @@
     "test:live": "node sim/__tests__/online-live.integration.test.mjs",
     "test": "npm run test:sim && npm run test:display && npm run test:live",
     "rl:train": "node scripts/rl-train.mjs",
+<<<<<<< HEAD
     "ml:env": "node scripts/ml-env-server.mjs",
     "training": "npx --yes serve . -l 8080",
+=======
+>>>>>>> parent of 942d919 (Machine learning)
     "preparty:deploy": "npm run tracks:export && npm run sim:browser && npm run test:sim",
     "deploy:online": "npm run party:deploy",
     "backup:leaderboard": "node scripts/backup-leaderboard.mjs",
