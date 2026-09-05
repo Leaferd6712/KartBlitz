@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-09-05T09:52:04.323Z
-Registered devices: 8
-Saved scores: 457
+Generated (UTC): 2026-09-05T14:26:25.750Z
+Registered devices: 9
+Saved scores: 458
 Saved online wins: 4
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
@@ -20,6 +20,7 @@ SCOOPDOG        2026-08-20T11:40:23.168Z  2026-08-22T00:48:09.056Z
 NOTHECKER       2026-08-23T02:26:25.773Z  2026-08-23T02:43:27.435Z
 NOTHECKER       2026-08-23T08:00:25.629Z  2026-08-24T03:26:36.189Z
 SAMTHEMAN       2026-08-27T00:33:42.441Z  2026-08-27T00:35:12.794Z
+AAAA            2026-09-05T10:19:40.808Z  2026-09-05T10:21:40.821Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
@@ -332,6 +333,7 @@ trial     4       RIVIERA GP              LAP1983       1:00.111    3:03.288    
 trial     4       RIVIERA GP              SPEED3102     1:00.816    3:03.330    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              SPEED5258     1:01.202    3:05.169    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              RACER8097     1:01.738    3:06.446    -         2026-08-20T00:34:43.256Z
+trial     5       TITAN LOOP              AAAA          0:29.647    3:09.402    -         2026-09-05T10:19:40.946Z
 trial     5       TITAN LOOP              AAAAAAAAAAAA  0:32.331    0:32.331    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              NOTHECKER     0:35.651    3:08.581    -         2026-08-23T08:00:26.275Z
 trial     5       TITAN LOOP              SCOOPDOG      0:36.700    2:39.176    -         2026-08-20T11:40:23.786Z
@@ -497,9 +499,9 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-09-05T09:52:04.323Z",
-  "deviceCount": 8,
-  "scoreCount": 457,
+  "generatedAt": "2026-09-05T14:26:25.750Z",
+  "deviceCount": 9,
+  "scoreCount": 458,
   "onlineWinCount": 4,
   "devices": [
     {
@@ -541,6 +543,11 @@ MACHINE-READABLE JSON (for restore / import)
       "username": "SAMTHEMAN",
       "registeredAt": "2026-08-27T00:33:42.441Z",
       "lastSeenAt": "2026-08-27T00:35:12.794Z"
+    },
+    {
+      "username": "AAAA",
+      "registeredAt": "2026-09-05T10:19:40.808Z",
+      "lastSeenAt": "2026-09-05T10:21:40.821Z"
     }
   ],
   "scores": [
@@ -4534,6 +4541,19 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-20T00:34:43.256Z",
       "updatedAt": "2026-08-20T00:34:43.256Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "TITAN LOOP",
+      "username": "AAAA",
+      "bestLap": 29.64739999997616,
+      "bestLapText": "0:29.647",
+      "total": 189.40239999997615,
+      "totalText": "3:09.402",
+      "winner": null,
+      "createdAt": "2026-09-05T10:19:40.946Z",
+      "updatedAt": "2026-09-05T10:21:11.026Z"
     },
     {
       "mode": "trial",
