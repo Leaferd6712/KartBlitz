@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-09-06T10:08:50.499Z
-Registered devices: 9
-Saved scores: 458
+Generated (UTC): 2026-09-06T14:48:17.622Z
+Registered devices: 10
+Saved scores: 466
 Saved online wins: 4
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
@@ -21,11 +21,13 @@ NOTHECKER       2026-08-23T02:26:25.773Z  2026-08-23T02:43:27.435Z
 NOTHECKER       2026-08-23T08:00:25.629Z  2026-08-24T03:26:36.189Z
 SAMTHEMAN       2026-08-27T00:33:42.441Z  2026-08-27T00:35:12.794Z
 AAAA            2026-09-05T10:19:40.808Z  2026-09-05T10:21:40.821Z
+TESTNAME        2026-09-06T10:41:43.826Z  2026-09-06T10:51:22.968Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
 ------------------------------------------------------------------------------
 MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
+trial     0       Sunset Speedway         TESTNAME      0:00.500    0:00.500    -         2026-09-06T10:41:44.007Z
 trial     0       SUNSET SPEEDWAY         AAAAAAAAAAAA  0:20.185    0:20.183    -         2026-08-23T07:44:34.425Z
 trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.432    0:24.432    -         2026-08-18T10:21:10.193Z
 trial     0       SUNSET SPEEDWAY         SCOOPDOG      0:25.106    0:25.106    -         2026-08-20T00:20:17.123Z
@@ -155,6 +157,7 @@ trial     0       SUNSET SPEEDWAY         WHEEL3563     0:45.662    2:17.478    
 trial     0       SUNSET SPEEDWAY         LAP336        0:45.674    2:19.624    -         2026-08-20T00:33:53.353Z
 trial     0       SUNSET SPEEDWAY         NITRO2046     0:45.735    2:19.868    -         2026-08-20T00:33:21.836Z
 trial     0       SUNSET SPEEDWAY         WHEEL575      0:45.857    2:19.907    -         2026-08-20T00:33:45.010Z
+trial     1       Meadow Park             TESTNAME      0:18.334    0:18.334    -         2026-09-06T10:48:20.375Z
 trial     1       MEADOW PARK             AAAAAAAAAAAA  0:18.733    0:18.733    -         2026-08-23T07:39:08.296Z
 trial     1       MEADOW PARK             LEAFERD       0:22.682    0:22.682    -         2026-08-19T03:11:43.047Z
 trial     1       MEADOW PARK             POLE2657      0:34.038    1:44.691    -         2026-08-20T00:34:04.765Z
@@ -217,6 +220,7 @@ trial     1       MEADOW PARK             BOOST252      0:41.742    2:08.044    
 trial     1       MEADOW PARK             GRID7561      0:41.787    2:06.903    -         2026-08-20T00:33:33.375Z
 trial     1       MEADOW PARK             POLE6686      0:41.890    2:08.661    -         2026-08-20T00:33:33.375Z
 trial     1       MEADOW PARK             LAP227        0:41.932    2:08.691    -         2026-08-20T00:34:04.765Z
+trial     2       Blue Bay Run            TESTNAME      0:18.784    0:18.784    -         2026-09-06T10:49:39.258Z
 trial     2       BLUE BAY RUN            AAAAAAAAAAAA  0:19.683    0:19.683    -         2026-08-31T08:37:13.144Z
 trial     2       BLUE BAY RUN            SPEED3465     0:40.205    2:02.768    -         2026-08-20T00:34:15.621Z
 trial     2       BLUE BAY RUN            GRID1297      0:40.238    2:04.039    -         2026-08-20T00:34:13.346Z
@@ -272,6 +276,7 @@ trial     2       BLUE BAY RUN            BOOST7104     0:47.361    2:23.974    
 trial     2       BLUE BAY RUN            RACER256      0:47.493    2:24.892    -         2026-08-20T00:34:15.621Z
 trial     2       BLUE BAY RUN            POLE4127      0:47.619    2:23.116    -         2026-08-20T00:34:10.965Z
 trial     2       BLUE BAY RUN            POLE8028      0:47.983    2:27.318    -         2026-08-20T00:34:13.346Z
+trial     3       Blue Bay Run            TESTNAME      0:29.553    0:29.553    -         2026-09-06T10:50:03.866Z
 trial     3       HURRICANE PASS          AAAAAAAAAAAA  0:30.748    0:30.748    -         2026-08-31T08:38:30.454Z
 trial     3       HURRICANE PASS          LEAFERD       0:37.082    0:37.082    -         2026-08-21T00:44:01.766Z
 trial     3       HURRICANE PASS          DRIFT4471     0:48.069    2:24.275    -         2026-08-20T00:34:34.296Z
@@ -305,6 +310,7 @@ trial     3       HURRICANE PASS          SPEED4202     0:54.541    2:47.079    
 trial     3       HURRICANE PASS          DRIFT8698     0:55.332    2:46.475    -         2026-08-20T00:34:38.906Z
 trial     3       HURRICANE PASS          WHEEL8283     0:55.894    2:48.894    -         2026-08-20T00:34:34.296Z
 trial     3       HURRICANE PASS          TURBO2463     0:55.934    2:47.854    -         2026-08-20T00:34:34.296Z
+trial     4       Blue Bay Run            TESTNAME      0:33.245    0:33.245    -         2026-09-06T10:50:21.558Z
 trial     4       RIVIERA GP              AAAAAAAAAAAA  0:35.498    0:35.498    -         2026-08-31T08:39:58.114Z
 trial     4       RIVIERA GP              SCOOPDOG      0:44.347    0:44.347    -         2026-08-20T11:45:13.058Z
 trial     4       RIVIERA GP              DRIFT6796     0:54.202    2:44.004    -         2026-08-20T00:34:43.256Z
@@ -333,6 +339,7 @@ trial     4       RIVIERA GP              LAP1983       1:00.111    3:03.288    
 trial     4       RIVIERA GP              SPEED3102     1:00.816    3:03.330    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              SPEED5258     1:01.202    3:05.169    -         2026-08-20T00:34:43.256Z
 trial     4       RIVIERA GP              RACER8097     1:01.738    3:06.446    -         2026-08-20T00:34:43.256Z
+trial     5       Blue Bay Run            TESTNAME      0:28.564    0:28.564    -         2026-09-06T10:50:45.226Z
 trial     5       TITAN LOOP              AAAA          0:29.647    3:09.402    -         2026-09-05T10:19:40.946Z
 trial     5       TITAN LOOP              AAAAAAAAAAAA  0:32.331    0:32.331    -         2026-08-18T23:08:59.486Z
 trial     5       TITAN LOOP              NOTHECKER     0:35.651    3:08.581    -         2026-08-23T08:00:26.275Z
@@ -372,6 +379,7 @@ trial     5       TITAN LOOP              SPEED4330     1:06.401    3:20.452    
 trial     5       TITAN LOOP              BOOST8266     1:06.523    3:20.061    -         2026-08-19T22:10:48.527Z
 trial     5       TITAN LOOP              WHEEL2454     1:06.716    3:20.370    -         2026-08-19T22:10:48.527Z
 trial     5       TITAN LOOP              LAP2864       1:06.817    3:22.447    -         2026-08-19T22:10:48.527Z
+trial     6       Blue Bay Run            TESTNAME      0:41.384    0:41.384    -         2026-09-06T10:51:03.537Z
 trial     6       AMBER HIGHWAY           AAAAAAAAAAAA  0:42.031    0:42.031    -         2026-08-21T00:46:00.219Z
 trial     6       AMBER HIGHWAY           SCOOPDOG      0:51.344    1:43.955    -         2026-08-21T00:46:51.933Z
 trial     6       AMBER HIGHWAY           GRID6904      0:53.072    2:40.330    -         2026-08-20T00:34:52.852Z
@@ -384,6 +392,7 @@ trial     6       AMBER HIGHWAY           DRIFT6568     0:57.094    2:52.451    
 trial     6       AMBER HIGHWAY           BOOST7611     0:57.315    2:52.503    -         2026-08-20T00:34:52.852Z
 trial     6       AMBER HIGHWAY           WHEEL1202     0:57.900    2:57.484    -         2026-08-20T00:34:52.852Z
 trial     6       AMBER HIGHWAY           SPEED8379     0:57.961    2:54.404    -         2026-08-20T00:34:52.852Z
+trial     7       Blue Bay Run            TESTNAME      0:54.286    0:54.286    -         2026-09-06T10:51:22.968Z
 trial     7       NEON CITY GP            AAAAAAAAAAAA  0:54.631    0:54.631    -         2026-08-31T08:44:15.406Z
 trial     7       NEON CITY GP            TURBO7312     1:06.516    3:20.776    -         2026-08-20T00:34:55.963Z
 trial     7       NEON CITY GP            POLE1410      1:07.103    3:22.004    -         2026-08-20T00:34:55.963Z
@@ -499,9 +508,9 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-09-06T10:08:50.499Z",
-  "deviceCount": 9,
-  "scoreCount": 458,
+  "generatedAt": "2026-09-06T14:48:17.622Z",
+  "deviceCount": 10,
+  "scoreCount": 466,
   "onlineWinCount": 4,
   "devices": [
     {
@@ -548,9 +557,27 @@ MACHINE-READABLE JSON (for restore / import)
       "username": "AAAA",
       "registeredAt": "2026-09-05T10:19:40.808Z",
       "lastSeenAt": "2026-09-05T10:21:40.821Z"
+    },
+    {
+      "username": "TESTNAME",
+      "registeredAt": "2026-09-06T10:41:43.826Z",
+      "lastSeenAt": "2026-09-06T10:51:22.968Z"
     }
   ],
   "scores": [
+    {
+      "mode": "trial",
+      "trackId": 0,
+      "trackName": "Sunset Speedway",
+      "username": "TESTNAME",
+      "bestLap": 0.5,
+      "bestLapText": "0:00.500",
+      "total": 0.5,
+      "totalText": "0:00.500",
+      "winner": null,
+      "createdAt": "2026-09-06T10:41:44.007Z",
+      "updatedAt": "2026-09-06T10:41:44.007Z"
+    },
     {
       "mode": "trial",
       "trackId": 0,
@@ -2231,6 +2258,19 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "mode": "trial",
       "trackId": 1,
+      "trackName": "Meadow Park",
+      "username": "TESTNAME",
+      "bestLap": 18.334,
+      "bestLapText": "0:18.334",
+      "total": 18.334,
+      "totalText": "0:18.334",
+      "winner": null,
+      "createdAt": "2026-09-06T10:48:20.375Z",
+      "updatedAt": "2026-09-06T10:48:52.205Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 1,
       "trackName": "MEADOW PARK",
       "username": "AAAAAAAAAAAA",
       "bestLap": 18.732599999964236,
@@ -3037,6 +3077,19 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "mode": "trial",
       "trackId": 2,
+      "trackName": "Blue Bay Run",
+      "username": "TESTNAME",
+      "bestLap": 18.784,
+      "bestLapText": "0:18.784",
+      "total": 18.784,
+      "totalText": "0:18.784",
+      "winner": null,
+      "createdAt": "2026-09-06T10:49:39.258Z",
+      "updatedAt": "2026-09-06T10:49:39.258Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 2,
       "trackName": "BLUE BAY RUN",
       "username": "AAAAAAAAAAAA",
       "bestLap": 19.683299999952315,
@@ -3752,6 +3805,19 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "mode": "trial",
       "trackId": 3,
+      "trackName": "Blue Bay Run",
+      "username": "TESTNAME",
+      "bestLap": 29.553,
+      "bestLapText": "0:29.553",
+      "total": 29.553,
+      "totalText": "0:29.553",
+      "winner": null,
+      "createdAt": "2026-09-06T10:50:03.866Z",
+      "updatedAt": "2026-09-06T10:50:03.866Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 3,
       "trackName": "HURRICANE PASS",
       "username": "AAAAAAAAAAAA",
       "bestLap": 30.7485,
@@ -4181,6 +4247,19 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "mode": "trial",
       "trackId": 4,
+      "trackName": "Blue Bay Run",
+      "username": "TESTNAME",
+      "bestLap": 33.245,
+      "bestLapText": "0:33.245",
+      "total": 33.245,
+      "totalText": "0:33.245",
+      "winner": null,
+      "createdAt": "2026-09-06T10:50:21.558Z",
+      "updatedAt": "2026-09-06T10:50:21.558Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 4,
       "trackName": "RIVIERA GP",
       "username": "AAAAAAAAAAAA",
       "bestLap": 35.4985,
@@ -4541,6 +4620,19 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-20T00:34:43.256Z",
       "updatedAt": "2026-08-20T00:34:43.256Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 5,
+      "trackName": "Blue Bay Run",
+      "username": "TESTNAME",
+      "bestLap": 28.564,
+      "bestLapText": "0:28.564",
+      "total": 28.564,
+      "totalText": "0:28.564",
+      "winner": null,
+      "createdAt": "2026-09-06T10:50:45.226Z",
+      "updatedAt": "2026-09-06T10:50:45.226Z"
     },
     {
       "mode": "trial",
@@ -5052,6 +5144,19 @@ MACHINE-READABLE JSON (for restore / import)
     {
       "mode": "trial",
       "trackId": 6,
+      "trackName": "Blue Bay Run",
+      "username": "TESTNAME",
+      "bestLap": 41.384,
+      "bestLapText": "0:41.384",
+      "total": 41.384,
+      "totalText": "0:41.384",
+      "winner": null,
+      "createdAt": "2026-09-06T10:51:03.537Z",
+      "updatedAt": "2026-09-06T10:51:03.537Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 6,
       "trackName": "AMBER HIGHWAY",
       "username": "AAAAAAAAAAAA",
       "bestLap": 42.031,
@@ -5204,6 +5309,19 @@ MACHINE-READABLE JSON (for restore / import)
       "winner": null,
       "createdAt": "2026-08-20T00:34:52.852Z",
       "updatedAt": "2026-08-20T00:34:52.852Z"
+    },
+    {
+      "mode": "trial",
+      "trackId": 7,
+      "trackName": "Blue Bay Run",
+      "username": "TESTNAME",
+      "bestLap": 54.286,
+      "bestLapText": "0:54.286",
+      "total": 54.286,
+      "totalText": "0:54.286",
+      "winner": null,
+      "createdAt": "2026-09-06T10:51:22.968Z",
+      "updatedAt": "2026-09-06T10:51:22.968Z"
     },
     {
       "mode": "trial",
