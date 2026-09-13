@@ -11,7 +11,9 @@
 <script src="online.js"></script>
 <script type="module">
 import * as KartBlitzRewards from './sim/rewards.mjs';
+import * as KartBlitzRnD from './sim/rnd-progress.mjs';
 window.KartBlitzRewards = KartBlitzRewards;
+window.KartBlitzRnD = KartBlitzRnD;
 </script>
 <script type="importmap">
 {
@@ -456,6 +458,15 @@ body{
 #lb-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:220;background:rgba(20,16,40,0.92);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:12px;padding:10px 18px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;pointer-events:none;opacity:0;transition:opacity .2s ease;}
 #lb-toast.show{opacity:1;}
 #lb-toast.err{border-color:rgba(255,120,120,0.55);color:#ffb0b0;}
+#rnd-success-modal{display:none;position:fixed;inset:0;z-index:280;background:rgba(40,32,80,0.82);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px);}
+#rnd-success-modal.open{display:flex;}
+#rnd-success-modal .rnd-success-card{width:min(420px,92vw);background:rgba(24,18,48,0.96);border:1px solid rgba(255,215,0,0.45);border-radius:18px;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,0.35);text-align:center;}
+#rnd-success-modal .rnd-success-eyebrow{font-family:'Nunito',sans-serif;font-size:10px;letter-spacing:.16em;color:#ffd700;opacity:.9;margin-bottom:8px;font-weight:900;}
+#rnd-success-modal .rnd-success-title{font-family:'Orbitron',sans-serif;font-size:18px;letter-spacing:.08em;color:#fff;margin-bottom:14px;}
+#rnd-success-modal .rnd-success-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;text-align:left;}
+#rnd-success-modal .rnd-success-item{background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.22);border-radius:12px;padding:10px 12px;}
+#rnd-success-modal .rnd-success-item b{display:block;font-family:'Nunito',sans-serif;font-size:13px;color:#fff;letter-spacing:.04em;}
+#rnd-success-modal .rnd-success-item span{display:block;margin-top:3px;font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:.03em;}
 #patch-notes-card{background:rgba(40,35,70,0.96);border:3px solid rgba(245,197,24,0.5);border-radius:22px;padding:28px 32px 24px;max-width:520px;width:100%;color:#fff;font-family:'Nunito',sans-serif;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,0.3);}
 #patch-notes-card h2{color:#f5c518;margin:0 0 6px;font-size:18px;letter-spacing:.06em;font-weight:900;}
 #patch-notes-card .patch-date{color:rgba(255,255,255,0.7);font-size:12px;letter-spacing:.06em;margin-bottom:16px;font-weight:700;}
@@ -1620,6 +1631,14 @@ body::after{
   </div>
 </div>
 <div id="lb-toast" aria-live="polite"></div>
+<div id="rnd-success-modal" aria-hidden="true" role="dialog" aria-labelledby="rnd-success-title">
+  <div class="rnd-success-card">
+    <div class="rnd-success-eyebrow">R&amp;D PROGRAMME</div>
+    <div class="rnd-success-title" id="rnd-success-title">RESEARCH COMPLETE</div>
+    <div class="rnd-success-list" id="rnd-success-list"></div>
+    <button type="button" class="btn btn-gold btn-sm" onclick="dismissRnDSuccessPopup()">CONTINUE</button>
+  </div>
+</div>
 
 <!-- TOUCH OVERLAY -->
 <div id="touch-overlay">
@@ -12047,7 +12066,7 @@ function buildHowToPane(){
       <div class="info-kv"><span class="info-k">IMPLEMENT</span><span class="info-v">The second purchase fits the package to the kart. Only implemented parts affect performance.</span></div>
       <div class="info-kv"><span class="info-k">CUSTOM SETUP</span><span class="info-v">Choose the CUSTOM setup in Race Setup to manually tune Top Speed Trim, Downforce Grip Bias, and Mechanical Traction Assist before a race.</span></div>
       <div class="info-kv"><span class="info-k">PAINT</span><span class="info-v">Cosmetic only. P1 and P2 can still use different liveries.</span></div>
-      <p class="howto-tip">There is one shared team build and R&amp;D programme — both karts always get the same performance upgrades.</p>
+      <p class="howto-tip">There is one shared team build and R&amp;D programme — both karts always get the same performance upgrades. R&amp;D HQ project timers only advance after a valid session: Time Trial needs at least one completed lap; AI / Versus / Shootout / Online need a real race finish (not a zero-activity exit).</p>
     </div>
 
     <div class="howto-section" style="border-bottom:none">
@@ -13318,6 +13337,8 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     const pd = getRnDState();
     const rnd = pd.rnd;
     let changed = false;
+    const successes = [];
+    const failures = [];
 
     startQueuedProjects(rnd);
 
@@ -13346,6 +13367,12 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
         });
         const dept = RND_DEPTS.find(d => d.id === node.deptId);
         unlockNextNodes(rnd, dept);
+        successes.push({
+          nodeId: node.id,
+          name: node.name,
+          deptName: node.deptName,
+          detail: `CONFIRMED · ${baseChance}%`
+        });
       } else {
         state.status = 'failed';
         state.lastResult = 'FAILURE';
@@ -13356,6 +13383,12 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
           nodeId: node.id,
           nodeName: node.name,
           result: 'FAIL',
+          detail: `RISK OVERRAN · ${baseChance}%`
+        });
+        failures.push({
+          nodeId: node.id,
+          name: node.name,
+          deptName: node.deptName,
           detail: `RISK OVERRAN · ${baseChance}%`
         });
       }
@@ -13377,6 +13410,68 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
         buildGarageContent();
       }
     }
+    return { changed, successes, failures };
+  }
+
+  function showRnDSuccessPopups(successes) {
+    if (!successes || !successes.length) return;
+    const modal = document.getElementById('rnd-success-modal');
+    const list = document.getElementById('rnd-success-list');
+    const title = document.getElementById('rnd-success-title');
+    if (!modal || !list) {
+      try {
+        successes.forEach(s => showLbToast(`RESEARCH COMPLETE · ${s.name}`));
+      } catch (e) {}
+      return;
+    }
+    if (title) {
+      title.textContent = successes.length > 1 ? 'RESEARCH COMPLETE' : 'UPGRADE RESEARCHED';
+    }
+    list.innerHTML = successes.map(s =>
+      `<div class="rnd-success-item"><b>${s.deptName} · ${s.name}</b><span>${s.detail || 'Now available in the R&D tree.'}</span></div>`
+    ).join('');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    try {
+      beep(880, 0.12, 0.5, 'square');
+      beep(1175, 0.18, 0.45, 'sine', 0.08);
+      beep(1568, 0.24, 0.55, 'sine', 0.16);
+    } catch (e) {}
+  }
+
+  function dismissRnDSuccessPopup() {
+    const modal = document.getElementById('rnd-success-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    const list = document.getElementById('rnd-success-list');
+    if (list) list.innerHTML = '';
+  }
+
+  function queueRnDSuccessPopups(successes) {
+    if (!successes || !successes.length) return;
+    const screen = document.getElementById('screen-results');
+    const reveal = () => showRnDSuccessPopups(successes);
+    if (screen && !screen.classList.contains('hidden')) {
+      reveal();
+      return;
+    }
+    if (!screen) {
+      setTimeout(reveal, 400);
+      return;
+    }
+    const obs = new MutationObserver(() => {
+      if (!screen.classList.contains('hidden')) {
+        obs.disconnect();
+        reveal();
+      }
+    });
+    obs.observe(screen, { attributes: true, attributeFilter: ['class'] });
+    setTimeout(() => {
+      obs.disconnect();
+      const modal = document.getElementById('rnd-success-modal');
+      if (!modal || !modal.classList.contains('open')) reveal();
+    }, 10000);
   }
 
   function renderRnDTabs(activeTab) {
@@ -13527,7 +13622,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
           </div>
           <div class="rnd-summary-card">
             <div class="rnd-summary-title">RESEARCH PIPELINE</div>
-            <div class="rnd-summary-line">Up to ${RND_MAX_ACTIVE} projects can be active at once. Time advances on race completion.</div>
+            <div class="rnd-summary-line">Up to ${RND_MAX_ACTIVE} projects can be active at once. Progress advances only after a valid race session (Time Trial: ≥1 lap; fixed races: a real finish).</div>
             <div class="rnd-summary-note">Failures stay in the history log so you can relaunch the same concept as a redevelopment project.</div>
           </div>
         </div>
@@ -13673,7 +13768,15 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
   };
 
   window.advanceRnDSession = function() {
-    advanceRnDSession();
+    return advanceRnDSession();
+  };
+
+  window.dismissRnDSuccessPopup = function() {
+    dismissRnDSuccessPopup();
+  };
+
+  window.isValidRnDCompletion = function(session) {
+    return !!(window.KartBlitzRnD && KartBlitzRnD.isValidRnDCompletion(session));
   };
 
   window.applyUpgradesToKart = function(kart, player) {
@@ -13729,8 +13832,29 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
 
   if (window.Race && window.Race.prototype && _kbOrigRaceShowResults) {
     window.Race.prototype.showResults = function() {
-      advanceRnDSession();
-      return _kbOrigRaceShowResults.apply(this, arguments);
+      let outcomes = null;
+      try {
+        const RnD = window.KartBlitzRnD;
+        if (RnD && typeof RnD.isValidRnDCompletion === 'function') {
+          let localIndex;
+          try {
+            if (this.mode === 'online' && typeof onlineCameraIndex === 'function') {
+              localIndex = onlineCameraIndex();
+            }
+          } catch (e) {}
+          const session = RnD.snapshotRaceForRnD(this, { localIndex });
+          if (RnD.isValidRnDCompletion(session)) {
+            outcomes = advanceRnDSession();
+          }
+        }
+      } catch (e) {
+        console.warn('R&D session advance skipped', e);
+      }
+      const ret = _kbOrigRaceShowResults.apply(this, arguments);
+      if (outcomes && outcomes.successes && outcomes.successes.length) {
+        queueRnDSuccessPopups(outcomes.successes);
+      }
+      return ret;
     };
   }
 
