@@ -9,6 +9,10 @@
 <script src="online-codec.js"></script>
 <script src="online-sim.js"></script>
 <script src="online.js"></script>
+<script type="module">
+import * as KartBlitzRewards from './sim/rewards.mjs';
+window.KartBlitzRewards = KartBlitzRewards;
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -188,6 +192,10 @@ body{
 .stat-bar-bg{flex:1;height:5px;background:rgba(255,255,255,.1);border-radius:2px;}
 .stat-bar-fill{height:5px;border-radius:2px;background:var(--sky);}
 .coins-earn{font-family:'Nunito',sans-serif;font-size:14px;color:var(--gold);text-align:center;padding:10px 20px;border:none;background:rgba(245,197,24,.1);margin-top:10px;letter-spacing:.06em;border-radius:14px;font-weight:900;}
+.coins-breakdown{width:min(420px,90%);margin:10px auto 0;font-family:'Nunito',sans-serif;}
+.coins-part{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:rgba(255,255,255,.7);padding:4px 12px;letter-spacing:.04em;}
+.coins-part.coins-mult{color:rgba(255,255,255,.45);font-size:10px;}
+.coins-breakdown .coins-earn{margin-top:6px;}
 .garage-header{
   display:flex;
   align-items:center;
@@ -8827,14 +8835,15 @@ class Race {
       }
 
       resultsWrap.innerHTML = html;
-      window._lastResult = {mode:'trial', trackId:t.id, trackName:t.name, bestLap:k.bestLap, total:k.finishTime||null, laps:k.lapTimes.length};
-      const earned = awardCoins(window._lastResult);
+      window._lastResult = KartBlitzRewards.buildTrialResult({
+        trackId: t.id, trackName: t.name, bestLap: k.bestLap, laps: k.lapTimes.length
+      });
+      showCoinsEarned(awardCoins(window._lastResult));
       // Auto-save best lap to CG global leaderboard (no user action required)
       if (k.bestLap < Infinity) {
         const minPossible = t.lapDistance ? t.lapDistance / 640 : 8;
         if (k.bestLap >= minPossible) CG.saveScore(`track_${t.id}_lap`, Math.round(k.bestLap * 1000));
       }
-      document.getElementById('coins-earned-display').innerHTML = earned>0 ? `<div class="coins-earn">COINS +${earned} COINS EARNED!</div>` : '';
 
     } else if(this.mode === 'ai') {
       const k = this.karts[0];
@@ -8873,14 +8882,19 @@ class Race {
       });
       html += '</div>';
       resultsWrap.innerHTML += html;
-      window._lastResult = {mode:'trial', trackId:t.id, trackName:t.name, bestLap:k.bestLap, total:k.finishTime||null, laps:k.lapTimes.length, aiDiff: this.aiDifficulty};
-      const earnedAI = awardCoins(window._lastResult);
+      window._lastResult = KartBlitzRewards.buildAiResult({
+        trackId: t.id, trackName: t.name,
+        bestLap: k.bestLap, total: k.finishTime || null, laps: k.lapTimes.length,
+        finished: !!(k.finished && k.finishTime != null),
+        position: humanRank, fieldSize: this.karts.length,
+        aiDiff: this.aiDifficulty
+      });
+      showCoinsEarned(awardCoins(window._lastResult));
       // Auto-save best lap to CG global leaderboard
       if (k.bestLap < Infinity) {
         const minPossible = t.lapDistance ? t.lapDistance / 640 : 8;
         if (k.bestLap >= minPossible) CG.saveScore(`track_${t.id}_lap`, Math.round(k.bestLap * 1000));
       }
-      document.getElementById('coins-earned-display').innerHTML = earnedAI>0 ? `<div class="coins-earn">COINS +${earnedAI} COINS EARNED!</div>` : '';
 
     } else if(this.mode === 'shootout') {
       const t = this.track;
@@ -8908,19 +8922,12 @@ class Race {
       </div>`;
       resultsWrap.innerHTML += html;
 
-      window._lastResult = {
-        mode:'shootout',
-        trackId:t.id,
-        trackName:t.name,
-        bestLap:pLap,
-        aiLap:aLap,
-        aiDiff:this.shootoutDifficulty,
-        win:playerWon,
-        laps:1,
-        total:pLap
-      };
-      const earnedS = awardCoins(window._lastResult);
-      document.getElementById('coins-earned-display').innerHTML = earnedS>0 ? `<div class="coins-earn">COINS +${earnedS} COINS EARNED!</div>` : '';
+      window._lastResult = KartBlitzRewards.buildShootoutResult({
+        trackId: t.id, trackName: t.name,
+        bestLap: pLap, aiLap: aLap,
+        aiDiff: this.shootoutDifficulty, win: playerWon
+      });
+      showCoinsEarned(awardCoins(window._lastResult));
 
     } else if(this.mode === 'online') {
       const t = this.track;
@@ -8952,7 +8959,11 @@ class Race {
       });
       html += '</div>';
       resultsWrap.innerHTML += html;
-      window._lastResult = {mode:'online', trackId:t.id, trackName:t.name, bestLap:k.bestLap, total:k.finishTime||null, laps:k.lapTimes.length};
+      window._lastResult = KartBlitzRewards.buildOnlineResult({
+        trackId: t.id, trackName: t.name,
+        bestLap: k.bestLap, total: k.finishTime || null, laps: k.lapTimes.length,
+        position: humanRank, fieldSize: this.karts.length
+      });
       document.getElementById('coins-earned-display').innerHTML = '';
       try {
         const sess = getOnlineSession();
@@ -9001,13 +9012,14 @@ class Race {
       };
 
       resultsWrap.innerHTML += makeCard(k1,0) + makeCard(k2,1);
-      window._lastResult = {
-        mode:'versus', trackId:t.id, trackName:t.name,
-        p1Best:k1.bestLap, p2Best:k2.bestLap,
-        winner:winner, p1Total:k1.finishTime, p2Total:k2.finishTime
-      };
-      const earnedV = awardCoins(window._lastResult);
-      document.getElementById('coins-earned-display').innerHTML = earnedV>0 ? `<div class="coins-earn">COINS +${earnedV} COINS EARNED!</div>` : '';
+      window._lastResult = KartBlitzRewards.buildVersusResult({
+        trackId: t.id, trackName: t.name,
+        p1Best: k1.bestLap, p2Best: k2.bestLap,
+        p1Total: k1.finishTime, p2Total: k2.finishTime,
+        p1Laps: k1.lapTimes.length, p2Laps: k2.lapTimes.length,
+        winner
+      });
+      showCoinsEarned(awardCoins(window._lastResult));
     }
 
     // Show mid-roll ad then reveal the results screen
@@ -10903,12 +10915,14 @@ async function confirmSave() {
     } else if(r.mode === 'versus') {
       const bestTime = Math.min(r.p1Best||Infinity, r.p2Best||Infinity);
       if(bestTime < Infinity) {
+        const totals = [r.p1Total, r.p2Total].filter(t => t != null && Number.isFinite(t));
+        const versusTotal = totals.length ? Math.min(...totals) : null;
         await submitCloudScore({
           mode: 'versus',
           trackId: r.trackId,
           trackName: track ? track.name : r.trackName,
           bestLap: bestTime,
-          total: r.total,
+          total: versusTotal,
           winner: r.winner!==null ? `P${r.winner+1}` : 'TIE'
         });
       }
@@ -12038,8 +12052,11 @@ function buildHowToPane(){
 
     <div class="howto-section" style="border-bottom:none">
       <div class="howto-heading">COINS COINS &amp; TRACK UNLOCKS</div>
-      <p>Earn coins from every race. Spend them in the Garage on upgrades or unlock premium circuits.</p>
-      <div class="info-kv"><span class="info-k">EARNINGS</span><span class="info-v">3 coins per lap + 10 for finishing + 8 bonus for beating the target time. Multiplied by the track's coin rate.</span></div>
+      <p>Earn coins from offline races. Spend them in the Garage on upgrades or unlock premium circuits. Online races award wins on the leaderboard instead of coins.</p>
+      <div class="info-kv"><span class="info-k">TIME TRIAL</span><span class="info-v">3 coins per lap + 8 bonus for beating the target time. Multiplied by the track's coin rate.</span></div>
+      <div class="info-kv"><span class="info-k">AI RACE</span><span class="info-v">3 per lap + 10 finish + 8 target bonus + place bonus (P1:20 … P4:4, else 2). Then track rate × difficulty multiplier.</span></div>
+      <div class="info-kv"><span class="info-k">VERSUS</span><span class="info-v">2 coins per completed lap (both players) + 8 participation, × track rate.</span></div>
+      <div class="info-kv"><span class="info-k">SHOOTOUT</span><span class="info-v">8 participation + 14 win + 4 for a valid lap, × track rate × difficulty.</span></div>
       <div class="info-kv"><span class="info-k">CIRCUITS</span><span class="info-v">${TRACKS.length} tracks: a starter pack (Sunset, Meadow, Blue Bay, Hurricane, Riviera) plus challenge circuits (Titan, Amber, Neon).</span></div>
       <div class="info-kv"><span class="info-k">COST RANGE</span><span class="info-v">Starter tracks are free. Amber Highway unlocks for 200 COINS and Neon City GP for 450 COINS .</span></div>
       <p class="howto-tip">For AI races, pick the wider starter circuits (Sunset, Meadow, Blue Bay, Hurricane, Riviera) so the field races cleanly. Save Titan, Amber, and Neon for when you want a tougher layout.</p>
@@ -12807,29 +12824,25 @@ function applyShootoutBoost(kart) {
   kart.tyreGripPct = 1.0;
 }
 
+function showCoinsEarned(reward) {
+  const el = document.getElementById('coins-earned-display');
+  if (!el) return;
+  if (!reward || !reward.total) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = KartBlitzRewards.formatRewardBreakdown(reward);
+}
+
 function awardCoins(result) {
   const pd = getPlayerData();
-  const track = TRACKS.find(t=>t.id===result.trackId);
-  const mult = (track && track.coinMult) ? track.coinMult : 1.0;
-  // AI difficulty coin multiplier — rewards skilled play on harder settings
-  const diffMultMap = {ultraeasy:0.75, easy:1.0, medium:1.25, hard:1.5, extreme:2.0};
-  const diffMult = (result.aiDiff && diffMultMap[result.aiDiff]) ? diffMultMap[result.aiDiff] : 1.0;
-  let earned = 0;
-  if(result.mode==='trial') {
-    earned += (result.laps||0) * 3;          // 3 per lap
-    if(result.total) earned += 10;            // 10 for finishing
-    if(track && result.bestLap < track.targetLap) earned += 8; // 8 for beating target
-  } else if(result.mode==='shootout') {
-    earned += 8; // participation
-    if(result.win) earned += 14;
-    if(result.bestLap < Infinity) earned += 4;
-  } else {
-    earned += (result.laps||0) * 2;           // 2 per lap (both players)
-    earned += 8;                               // 8 participation
+  const track = TRACKS.find(t => t.id === result.trackId) || null;
+  const reward = KartBlitzRewards.calculateRaceRewards(result, track);
+  if (reward.total > 0) {
+    pd.coins += reward.total;
+    savePlayerData(pd);
   }
-  earned = Math.round(earned * mult * diffMult);
-  pd.coins += earned; savePlayerData(pd);
-  return earned;
+  return reward;
 }
 
 // ── LOCKED TRACK HANDLING ───────────────────────────────
