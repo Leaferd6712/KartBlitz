@@ -1,7 +1,7 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-09-13T20:11:06.635Z
+Generated (UTC): 2026-09-13T23:56:48.312Z
 Registered devices: 10
-Saved scores: 466
+Saved scores: 465
 Saved online wins: 4
 
 This file is a full snapshot of cloud leaderboard records (usernames and times).
@@ -27,7 +27,6 @@ TESTNAME        2026-09-06T10:41:43.826Z  2026-09-06T10:51:22.968Z
 SCORES (best lap first within each mode/track)
 ------------------------------------------------------------------------------
 MODE      TRACK   TRACK NAME              USERNAME      BEST LAP    TOTAL       WINNER    CREATED (UTC)
-trial     0       Sunset Speedway         TESTNAME      0:00.500    0:00.500    -         2026-09-06T10:41:44.007Z
 trial     0       SUNSET SPEEDWAY         AAAAAAAAAAAA  0:20.185    0:20.183    -         2026-08-23T07:44:34.425Z
 trial     0       SUNSET SPEEDWAY         LEAFERD       0:24.432    0:24.432    -         2026-08-18T10:21:10.193Z
 trial     0       SUNSET SPEEDWAY         SCOOPDOG      0:25.106    0:25.106    -         2026-08-20T00:20:17.123Z
@@ -508,9 +507,9 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-09-13T20:11:06.635Z",
+  "generatedAt": "2026-09-13T23:56:48.312Z",
   "deviceCount": 10,
-  "scoreCount": 466,
+  "scoreCount": 465,
   "onlineWinCount": 4,
   "devices": [
     {
@@ -565,19 +564,6 @@ MACHINE-READABLE JSON (for restore / import)
     }
   ],
   "scores": [
-    {
-      "mode": "trial",
-      "trackId": 0,
-      "trackName": "Sunset Speedway",
-      "username": "TESTNAME",
-      "bestLap": 0.5,
-      "bestLapText": "0:00.500",
-      "total": 0.5,
-      "totalText": "0:00.500",
-      "winner": null,
-      "createdAt": "2026-09-06T10:41:44.007Z",
-      "updatedAt": "2026-09-06T10:41:44.007Z"
-    },
     {
       "mode": "trial",
       "trackId": 0,
