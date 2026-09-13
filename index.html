@@ -188,6 +188,23 @@ body{
 .stat-bar-bg{flex:1;height:5px;background:rgba(255,255,255,.1);border-radius:2px;}
 .stat-bar-fill{height:5px;border-radius:2px;background:var(--sky);}
 .coins-earn{font-family:'Nunito',sans-serif;font-size:14px;color:var(--gold);text-align:center;padding:10px 20px;border:none;background:rgba(245,197,24,.1);margin-top:10px;letter-spacing:.06em;border-radius:14px;font-weight:900;}
+.garage-header{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  flex-wrap:wrap;
+  width:min(1120px, 96vw);
+  margin:8px 0 6px;
+  z-index:2;
+}
+#screen-garage .coins-disp{
+  position:static;
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
 .garage-tabs{display:flex;gap:6px;margin-bottom:16px;}
 .gtab{font-family:'Nunito',sans-serif;font-size:12px;padding:7px 18px;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,0.08);color:rgba(255,255,255,.7);cursor:pointer;letter-spacing:.04em;transition:all .2s;font-weight:800;}
 .gtab.active{border-color:rgba(255,255,255,0.7);color:#fff;background:rgba(155,89,232,0.4);}
@@ -462,7 +479,7 @@ body{
 #pause-overlay .pause-btns .btn{width:100%;min-width:260px;}
 
 /* ── RACE PAUSE / EXIT HUD ─────────────────────────── */
-#race-controls-hud{display:none;position:fixed;top:72px;right:12px;z-index:105;flex-direction:column;gap:8px;pointer-events:auto;}
+#race-controls-hud{display:none;position:fixed;top:118px;right:12px;z-index:105;flex-direction:column;gap:8px;pointer-events:auto;}
 #race-controls-hud .race-ctrl-btn{font-family:'Nunito',sans-serif;font-size:10px;font-weight:900;letter-spacing:.12em;padding:8px 14px;border-radius:10px;border:2px solid rgba(255,255,255,.35);background:rgba(50,42,90,.88);color:#fff;cursor:pointer;min-width:88px;text-align:center;}
 #race-controls-hud .race-ctrl-btn:hover{background:rgba(70,60,120,.95);}
 #race-controls-hud .race-ctrl-exit{border-color:rgba(255,107,53,.65);color:#ffb088;}
@@ -739,11 +756,19 @@ body::after{
   color:rgba(255,255,255,0.75);
 }
 
+.menu-hero-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
 .menu-coins{
-  position:absolute;
-  top:34px;
-  right:38px;
-  z-index:5;
+  position:static;
+  top:auto;
+  right:auto;
+  z-index:2;
   display:flex;
   align-items:center;
   gap:10px;
@@ -752,6 +777,7 @@ body::after{
   border:none;
   box-shadow:none;
   letter-spacing:0;
+  flex-shrink:0;
 }
 
 .menu-currency-chip{
@@ -1062,8 +1088,6 @@ body::after{
   }
 
   .menu-coins{
-    top:20px;
-    right:20px;
     gap:8px;
   }
 
@@ -1198,7 +1222,13 @@ body::after{
   <div class="glow-orb" style="width:400px;height:400px;background:#ff6b35;bottom:-100px;right:-80px;"></div>
   <div class="menu-shell">
     <div class="menu-hero-panel">
-      <div class="portal-tag">BROWSER ARCADE RACER</div>
+      <div class="menu-hero-top">
+        <div class="portal-tag">BROWSER ARCADE RACER</div>
+        <div id="menu-coins" class="menu-coins">
+          <div class="menu-currency-chip" id="menu-coins-chip">COINS 0</div>
+          <div class="menu-currency-chip gems" id="menu-gems-chip">GEMS 0</div>
+        </div>
+      </div>
       <div class="title-wrap">
         <div class="title-logo">KART<br>BLITZ</div>
         <div class="title-sub">PORTAL-READY CHAMPIONSHIP RACING</div>
@@ -1206,7 +1236,7 @@ body::after{
       </div>
       <div class="menu-car-stage" id="menu-car-stage">
         <canvas id="menu-car-canvas"></canvas>
-        <div class="menu-car-hint">DRAG TO SPIN · CHASSIS/ACCENTS TINT 3D · STOCK = ORIGINAL</div>
+        <div class="menu-car-hint">DRAG TO SPIN · PAINT PARTS TINT 3D · STOCK = ORIGINAL</div>
         <div class="menu-car-status" id="menu-car-status">LOADING CAR…</div>
       </div>
       <div class="menu-paint-strip" id="menu-paint-strip">
@@ -1237,10 +1267,6 @@ body::after{
         <div class="menu-utility-copy">Keyboard: P1 WASD, P2 arrows. Touch: on-screen joysticks — versus uses face-to-face seating.</div>
       </div>
     </div>
-  </div>
-  <div id="menu-coins" class="menu-coins">
-    <div class="menu-currency-chip" id="menu-coins-chip">COINS 0</div>
-    <div class="menu-currency-chip gems" id="menu-gems-chip">GEMS 0</div>
   </div>
 </div>
 
@@ -1374,7 +1400,7 @@ body::after{
 <!-- TRACK SELECT -->
 <div id="screen-track" class="screen hidden">
   <div class="scanlines"></div>
-  <button class="back-btn" onclick="showScreen('mode')">← BACK</button>
+  <button class="back-btn" onclick="backFromTrackSelect()">← BACK</button>
   <div class="section-title">SELECT TRACK</div>
   <div class="section-sub" id="track-mode-label">CHOOSE YOUR CIRCUIT</div>
   <div class="track-grid" id="track-grid"></div>
@@ -1383,6 +1409,7 @@ body::after{
 <!-- QUALIFYING RESULTS -->
 <div id="screen-quali-results" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
+  <button class="back-btn" onclick="returnToMainMenu()">← BACK</button>
   <div class="section-title"> QUALIFYING RESULTS</div>
   <div class="section-sub" id="quali-results-sub">STARTING GRID</div>
   <div class="results-wrap" id="quali-results-wrap"></div>
@@ -1396,6 +1423,7 @@ body::after{
 <!-- RESULTS -->
 <div id="screen-results" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
+  <button class="back-btn" onclick="returnToMainMenu()">← BACK</button>
   <div class="section-title" id="results-title">RACE COMPLETE</div>
   <div class="results-wrap" id="results-wrap"></div>
   <div id="coins-earned-display"></div>
@@ -1454,10 +1482,12 @@ body::after{
 <div id="screen-garage" class="screen hidden" style="overflow-y:auto;padding:20px 0;">
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('menu')">← BACK</button>
-  <div class="section-title"> GARAGE</div>
-  <div class="coins-disp" id="garage-coins" style="position:absolute;top:20px;right:24px;margin:0;z-index:5;">
-    <span id="garage-coins-chip">COINS 0</span>
-    <span id="garage-gems-chip" style="color:#7dd3fc;">GEMS 0</span>
+  <div class="garage-header">
+    <div class="section-title"> GARAGE</div>
+    <div class="coins-disp" id="garage-coins">
+      <span id="garage-coins-chip">COINS 0</span>
+      <span id="garage-gems-chip" style="color:#7dd3fc;">GEMS 0</span>
+    </div>
   </div>
   <div style="text-align:center;margin-bottom:8px;">
     <button class="btn btn-sm btn-cyan" onclick="watchAdForCoins()" id="garage-ad-btn" title="Optional: watch a short video ad for +50 coins. You can also earn coins by racing.">VIDEO · +50 COINS</button>
@@ -9061,6 +9091,10 @@ function updateRaceControlsHud(visible) {
     else exitBtn.textContent = 'EXIT';
   }
   hud.style.display = 'flex';
+  const narrow = window.innerWidth < 700;
+  const timerH = race.mode === 'trial' ? 140 : (narrow ? 86 : 100);
+  hud.style.top = (12 + timerH + 8) + 'px';
+  hud.style.right = '12px';
 }
 function pauseGame() {
   if (!race || isPaused) return;
@@ -9551,6 +9585,10 @@ function selectMode(m) {
   document.getElementById('track-mode-label').textContent = labels[m] || 'CHOOSE CIRCUIT';
   buildTrackGrid();
   showScreen('track');
+}
+
+function backFromTrackSelect() {
+  showScreen(currentMode === 'trial' ? 'menu' : 'mode');
 }
 
 // ── ONLINE LOBBY ────────────────────────────────────────
@@ -11108,14 +11146,27 @@ document.addEventListener('keydown', e => {
     return;
   }
   if(e.key==='Escape') {
-    const menus=['mode','track','results','save','leaderboard','garage','setup','controls','quali-results'];
+    const aiEl = document.getElementById('ai-difficulty');
+    if(aiEl && aiEl.style.display === 'flex') {
+      e.preventDefault();
+      aiEl.style.display = 'none';
+      return;
+    }
+    const soEl = document.getElementById('shootout-difficulty');
+    if(soEl && soEl.style.display === 'flex') {
+      e.preventDefault();
+      soEl.style.display = 'none';
+      return;
+    }
+    const menus=['mode','track','results','save','leaderboard','garage','setup','controls','quali-results','online'];
     const active = menus.find(m=>!document.getElementById('screen-'+m).classList.contains('hidden'));
     if(active==='mode') showScreen('menu');
-    else if(active==='track') showScreen('mode');
+    else if(active==='track') backFromTrackSelect();
     else if(active==='results') showScreen('menu');
     else if(active==='save') showScreen('results');
     else if(active==='leaderboard' || active==='garage' || active==='controls' || active==='quali-results') showScreen('menu');
     else if(active==='setup') showScreen('track');
+    else if(active==='online') leaveOnlineLobby();
     else if(canvas.style.display==='block' && race && race.phase==='finished') race.showResults();
   }
 });
@@ -12230,13 +12281,19 @@ function buildGarageContent() {
   if(garageTab === 'paint') {
     const stageWrap = document.createElement('div');
     stageWrap.className = 'garage-car-stage';
-    stageWrap.innerHTML = '<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">P1 LIVERY · CHASSIS/ACCENTS · STOCK = ORIGINAL</div>';
+    const previewPl = window._garagePaintPreview === 'p2' ? 'p2' : 'p1';
+    stageWrap.innerHTML = `<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">${previewPl.toUpperCase()} LIVERY · DRAG TO SPIN · STOCK = ORIGINAL</div>`;
     content.appendChild(stageWrap);
 
     ['p1','p2'].forEach(pl => {
       const label = document.createElement('div');
       label.className = 'setup-section-label';
-      label.textContent = pl.toUpperCase() + ' — MULTI-PART LIVERY';
+      label.style.cursor = 'pointer';
+      label.textContent = pl.toUpperCase() + ' — MULTI-PART LIVERY' + (pl === previewPl ? ' · PREVIEW' : '');
+      label.onclick = () => {
+        window._garagePaintPreview = pl;
+        buildGarageContent();
+      };
       content.appendChild(label);
 
       const grid = document.createElement('div');
@@ -12244,7 +12301,7 @@ function buildGarageContent() {
       const liv = getPlayerLivery(pl);
       PAINT_PARTS.forEach(part => {
         const card = document.createElement('div');
-        card.className = 'paint-part-card' + (pl === 'p1' && window._menuPaintPart === part.id ? ' active' : '');
+        card.className = 'paint-part-card' + (pl === previewPl && window._menuPaintPart === part.id ? ' active' : '');
         card.innerHTML = `<div class="paint-part-name">${part.label}</div>`;
         const row = document.createElement('div');
         row.className = 'paint-row';
@@ -12255,7 +12312,8 @@ function buildGarageContent() {
           sw.title = pc.label;
           sw.onclick = () => {
             setPlayerLiveryPart(pl, part.id, pc.id);
-            if(pl === 'p1') window._menuPaintPart = part.id;
+            window._menuPaintPart = part.id;
+            window._garagePaintPreview = pl;
             buildGarageContent();
           };
           row.appendChild(sw);
@@ -13706,6 +13764,99 @@ function paintMat(hex, opts = {}) {
   });
 }
 
+function stashStockMaterial(mat) {
+  if (!mat || mat.userData.stockCaptured) return;
+  mat.userData.stockCaptured = true;
+  mat.userData.stockMap = mat.map || null;
+  mat.userData.stockColor = mat.color ? mat.color.clone() : new THREE.Color(0xffffff);
+  mat.userData.stockEmissive = mat.emissive ? mat.emissive.clone() : null;
+}
+
+function glbMatName(mat) {
+  return ((mat && mat.name) || '').toLowerCase();
+}
+
+// RB6 GLB: +Y is nose/front, -Y is tail, -Z is up, +X is right. Body21 is one
+// livery shader covering chassis + wings + nose — split by triangle centroid.
+function classifyBodyPaintPoint(x, y, z, box) {
+  const ySpan = Math.max(box.max.y - box.min.y, 1e-6);
+  const zSpan = Math.max(box.max.z - box.min.z, 1e-6);
+  const yN = (y - box.min.y) / ySpan;
+  const zN = (z - box.min.z) / zSpan;
+  const ax = Math.abs(x);
+  if (yN > 0.78 && zN > 0.48) return 'frontWing';
+  if (yN > 0.72 && ax < 1.85 && zN < 0.75) return 'nose';
+  if (yN < 0.22 && zN < 0.38) return 'rearWing';
+  return 'chassis';
+}
+
+function cloneLiveryMaterial(srcMat) {
+  const mat = srcMat.clone();
+  mat.userData = {};
+  stashStockMaterial(mat);
+  return mat;
+}
+
+function splitBodyPaintMesh(mesh, mats) {
+  const src = mesh.geometry;
+  if (!src || !src.getAttribute('position')) {
+    mats.chassis.push(mesh.material);
+    return;
+  }
+  src.computeBoundingBox();
+  const box = src.boundingBox;
+  const pos = src.getAttribute('position');
+  const idx = src.index;
+  const buckets = { chassis: [], frontWing: [], nose: [], rearWing: [] };
+  const pushTri = (a, b, c) => {
+    const cx = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3;
+    const cy = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3;
+    const cz = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3;
+    buckets[classifyBodyPaintPoint(cx, cy, cz, box)].push(a, b, c);
+  };
+  if (idx) {
+    for (let i = 0; i < idx.count; i += 3) {
+      pushTri(idx.getX(i), idx.getX(i + 1), idx.getX(i + 2));
+    }
+  } else {
+    for (let i = 0; i < pos.count; i += 3) {
+      pushTri(i, i + 1, i + 2);
+    }
+  }
+
+  const parent = mesh.parent;
+  if (!parent) {
+    mats.chassis.push(mesh.material);
+    return;
+  }
+  const group = new THREE.Group();
+  group.name = (mesh.name || 'body') + '_paintParts';
+  group.position.copy(mesh.position);
+  group.quaternion.copy(mesh.quaternion);
+  group.scale.copy(mesh.scale);
+
+  ['chassis', 'frontWing', 'nose', 'rearWing'].forEach((part) => {
+    const indices = buckets[part];
+    if (!indices.length) return;
+    const geo = new THREE.BufferGeometry();
+    for (const name of Object.keys(src.attributes)) {
+      geo.setAttribute(name, src.getAttribute(name));
+    }
+    if (src.morphAttributes) geo.morphAttributes = src.morphAttributes;
+    geo.setIndex(indices);
+    geo.computeBoundingSphere();
+    const partMesh = new THREE.Mesh(geo, cloneLiveryMaterial(mesh.material));
+    partMesh.castShadow = true;
+    partMesh.receiveShadow = true;
+    partMesh.name = part;
+    group.add(partMesh);
+    mats[part].push(partMesh.material);
+  });
+
+  parent.add(group);
+  parent.remove(mesh);
+}
+
 // Footprints from Kart.draw (2D race car). Mapping: 2D x→+Z, 2D y→+X, height→+Y.
 const CAR2D_SCALE = 1 / 12;
 const CAR2D = {
@@ -14125,47 +14276,35 @@ function createCarStage(canvas, opts = {}) {
     obj.position.y -= minY;
   }
 
-  function stashStockMaterial(mat) {
-    if (!mat || mat.userData.stockCaptured) return;
-    mat.userData.stockCaptured = true;
-    mat.userData.stockMap = mat.map || null;
-    mat.userData.stockColor = mat.color ? mat.color.clone() : new THREE.Color(0xffffff);
-    mat.userData.stockEmissive = mat.emissive ? mat.emissive.clone() : null;
-  }
-
-  // RB6 GLB only has a few named materials — map each to a paint slot so
-  // Chassis / Nose / Front Wing / Rear Wing / Accents all recolor something.
   function mapGlbMaterials(rootObj) {
     const mats = emptyPartMats();
-    const seen = new Set();
+    const bodyMeshes = [];
     rootObj.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = true;
       o.receiveShadow = true;
       const list = Array.isArray(o.material) ? o.material : [o.material];
       list.forEach((mat) => {
-        if (!mat || seen.has(mat.uuid)) return;
-        seen.add(mat.uuid);
+        if (!mat) return;
         stashStockMaterial(mat);
-        const name = (mat.name || '').toLowerCase();
+        const name = glbMatName(mat);
         if (name.startsWith('window')) return;
-        if (name.startsWith('body21')) {
-          mats.chassis.push(mat);
-        } else if (name.startsWith('chassis1')) {
-          mats.nose.push(mat);
-        } else if (name.startsWith('meshpart1')) {
-          mats.accents.push(mat);
-        } else if (name.startsWith('meshpart3')) {
-          mats.frontWing.push(mat);
-        } else if (name.startsWith('meshpart4')) {
-          mats.rearWing.push(mat);
-        } else if (name.startsWith('meshpart')) {
-          mats.accents.push(mat);
-        } else {
-          mats.chassis.push(mat);
+        if (name.startsWith('meshpart')) {
+          mats.wheels.push(mat);
+          return;
         }
+        if (name.startsWith('chassis1')) {
+          mats.accents.push(mat);
+          return;
+        }
+        if (name.startsWith('body21')) {
+          if (!bodyMeshes.includes(o)) bodyMeshes.push(o);
+          return;
+        }
+        mats.chassis.push(mat);
       });
     });
+    bodyMeshes.forEach((mesh) => splitBodyPaintMesh(mesh, mats));
     return mats;
   }
 
@@ -14302,7 +14441,7 @@ function createCarStage(canvas, opts = {}) {
       try {
         const mode = await prepareCar();
         applyLivery(livery || (typeof window.getPlayerLivery === 'function' ? window.getPlayerLivery('p1') : null));
-        setStatus(mode === 'glb' ? 'DRAG TO SPIN' : 'PROCEDURAL FALLBACK');
+        setStatus(mode === 'glb' ? '' : 'PROCEDURAL FALLBACK');
         this.resume();
       } catch (err) {
         console.error(err);
@@ -14338,6 +14477,7 @@ function createCarStage(canvas, opts = {}) {
 let menuStage = null;
 let garageStage = null;
 window._menuPaintPart = window._menuPaintPart || 'chassis';
+window._garagePaintPreview = window._garagePaintPreview || 'p1';
 
 window.buildMenuPaintStrip = function buildMenuPaintStrip() {
   const partsEl = document.getElementById('menu-paint-parts');
@@ -14396,7 +14536,8 @@ window.mountGarageCarStage = async function mountGarageCarStage() {
     garageStage = null;
   }
   garageStage = createCarStage(canvas);
-  await garageStage.mount(window.getPlayerLivery('p1'));
+  const preview = window._garagePaintPreview === 'p2' ? 'p2' : 'p1';
+  await garageStage.mount(window.getPlayerLivery(preview));
 };
 
 window.disposeGarageCarStage = function disposeGarageCarStage() {
@@ -14407,9 +14548,11 @@ window.disposeGarageCarStage = function disposeGarageCarStage() {
 };
 
 window.refreshCarStages = function refreshCarStages() {
-  const liv = window.getPlayerLivery('p1');
-  if(menuStage) menuStage.setLivery(liv);
-  if(garageStage) garageStage.setLivery(liv);
+  if(menuStage) menuStage.setLivery(window.getPlayerLivery('p1'));
+  if(garageStage) {
+    const preview = window._garagePaintPreview === 'p2' ? 'p2' : 'p1';
+    garageStage.setLivery(window.getPlayerLivery(preview));
+  }
   if(typeof window.buildMenuPaintStrip === 'function') window.buildMenuPaintStrip();
 };
 
