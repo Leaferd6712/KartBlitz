@@ -11,7 +11,7 @@ export {
   STEPS_PER_INPUT,
   GAME_SPEED_MULT,
 } from "./constants";
-export { defaultUpgrades, sanitizeUpgrades, computeBaseStats, type UpgradeStats } from "./upgrades";
+export { defaultUpgrades, sanitizeUpgrades, computeBaseStats, resolveOnlineUpgrades, competitiveStandardUpgrades, type UpgradeStats } from "./upgrades";
 export { updateTyres, tyreTempWearMult, tyreDriveLoadWearMult, seedTyreTemp } from "./tyres";
 export {
   createKart,

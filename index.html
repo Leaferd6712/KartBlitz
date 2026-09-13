@@ -64,6 +64,7 @@ body{
 .mode-card .m-desc{font-size:13px;opacity:.8;margin-top:8px;line-height:1.5;color:rgba(255,255,255,0.85);}
 .mode-card .m-tag{font-size:10px;opacity:.6;margin-top:12px;letter-spacing:.1em;color:rgba(255,255,255,0.7);}
 .online-shell{width:min(720px,92vw);margin-top:24px;display:flex;flex-direction:column;gap:16px;z-index:2;}
+.online-equal-banner{width:min(720px,92vw);margin:10px auto 0;z-index:2;text-align:center;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;letter-spacing:.04em;color:#ffd700;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.35);border-radius:12px;padding:10px 14px;line-height:1.45;}
 .online-panel{border:none;background:rgba(40,35,70,0.82);padding:18px 20px;border-radius:18px;clip-path:none;box-shadow:0 6px 18px rgba(0,0,0,0.18);}
 .online-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;}
 .online-code{font-family:'Nunito',sans-serif;font-size:28px;letter-spacing:.2em;color:var(--gold);text-align:center;font-weight:900;}
@@ -1329,6 +1330,7 @@ body::after{
   <button class="back-btn" onclick="leaveOnlineLobby()">← BACK</button>
   <div class="section-title">ONLINE LOBBY</div>
   <div class="section-sub">HOST OR JOIN · UP TO 6 PLAYERS</div>
+  <div class="online-equal-banner" id="online-equal-banner">EQUAL CARS · Garage / R&amp;D upgrades are disabled online until progression is verified server-side. Name and paint stay yours.</div>
   <div class="online-shell">
     <div class="online-panel" id="online-connect-panel">
       <div class="online-row" style="margin-bottom:12px;">
@@ -7034,7 +7036,7 @@ class Race {
     if(mode === 'trial') {
       this.karts.push(new Kart(0, sp.x, sp.y+15, ang, p1pc.body, p1pc.shadow, getP1Input));
       this.karts[0].livery = p1Liv;
-      applyUpgradesToKart(this.karts[0], 'p1');
+      applyStockPerformanceToKart(this.karts[0]);
     } else if(mode === 'ai') {
       this.aiDifficulty = window._aiDifficulty || 'medium';
       const numAI = Math.max(1, Math.min(10, window._aiCount || 3));
@@ -7101,8 +7103,9 @@ class Race {
         kart.onlineConnId = connId;
         kart.onlineName = plist.name || ('P'+(i+1));
         kart.isOnlineRemote = i !== this.localOnlineSlot;
-        // Display shell only — shared OnlineSim owns local physics; remotes are interpolated
-        if(i === this.localOnlineSlot) applyUpgradesToKart(kart, 'p1');
+        // Display shell only — shared OnlineSim owns local physics; remotes are interpolated.
+        // Competitive online uses equal stock cars (ignore garage for the shell too).
+        if(i === this.localOnlineSlot) applyStockPerformanceToKart(kart);
         this.karts.push(kart);
       }
       if(cfg.weather) this.weather = normalizeWeatherId(cfg.weather);
@@ -9638,11 +9641,11 @@ function selectMode(m) {
     return;
   }
   const labels = {
-    trial:'TIME TRIAL — CHOOSE CIRCUIT',
+    trial:'TIME TRIAL — EQUAL STOCK CAR · CHOOSE CIRCUIT',
     versus:'VERSUS RACE — CHOOSE CIRCUIT',
     ai:'AI RACE — CHOOSE CIRCUIT',
     shootout:'ONE LAP SHOOTOUT — CHOOSE CIRCUIT',
-    online:'ONLINE RACE — HOST PICKS CIRCUIT'
+    online:'ONLINE RACE — EQUAL CARS · HOST PICKS CIRCUIT'
   };
   document.getElementById('track-mode-label').textContent = labels[m] || 'CHOOSE CIRCUIT';
   buildTrackGrid();
@@ -9999,29 +10002,19 @@ function beginOnlineRaceFromNet(msg) {
   }
 }
 
-/** Compact upgrade/setup blob for Worker + shared OnlineSim (matches applyUpgradesToKart). */
+/** Compact upgrade blob for Worker + shared OnlineSim.
+ * Competitive online currently uses stock performance (ignores garage/R&D claims). */
 function getOnlineUpgrades() {
   try {
-    const pd = getPlayerData();
-    const devBonus = getTeamDevelopmentBonuses(pd);
-    const setup = resolvePlayerSetup(pd, 'p1');
-    let tyreWearMult = 1;
-    try {
-      if (typeof window.computeRnDTyreWearMult === 'function') {
-        tyreWearMult = window.computeRnDTyreWearMult();
-      }
-    } catch (e) {}
+    if (typeof OnlineSim !== 'undefined' && typeof OnlineSim.resolveOnlineUpgrades === 'function') {
+      return OnlineSim.resolveOnlineUpgrades(null);
+    }
+    if (typeof OnlineSim !== 'undefined' && typeof OnlineSim.defaultUpgrades === 'function') {
+      return OnlineSim.defaultUpgrades();
+    }
     return {
-      speed: devBonus.speed || 0,
-      accel: devBonus.accel || 0,
-      handling: devBonus.handling || 0,
-      braking: devBonus.braking || 0,
-      traction: devBonus.traction || 0,
-      speedMult: setup.speedMult || 1,
-      turnMult: setup.turnMult || 1,
-      brakeMult: setup.brakeMult != null ? setup.brakeMult : 1,
-      tractBonus: setup.tractBonus || 0,
-      tyreWearMult
+      speed: 0, accel: 0, handling: 0, braking: 0, traction: 0,
+      speedMult: 1, turnMult: 1, brakeMult: 1, tractBonus: 0, tyreWearMult: 1
     };
   } catch(e) {
     return null;
@@ -12166,7 +12159,7 @@ function buildHowToPane(){
       <div class="info-kv"><span class="info-k">IMPLEMENT</span><span class="info-v">The second purchase fits the package to the kart. Only implemented parts affect performance.</span></div>
       <div class="info-kv"><span class="info-k">CUSTOM SETUP</span><span class="info-v">Choose the CUSTOM setup in Race Setup to manually tune Top Speed Trim, Downforce Grip Bias, and Mechanical Traction Assist before a race.</span></div>
       <div class="info-kv"><span class="info-k">PAINT</span><span class="info-v">Cosmetic only. P1 and P2 can still use different liveries.</span></div>
-      <p class="howto-tip">There is one shared team build and R&amp;D programme — both karts always get the same performance upgrades. R&amp;D HQ project timers only advance after a valid session: Time Trial needs at least one completed lap; AI / Versus / Shootout / Online need a real race finish (not a zero-activity exit).</p>
+      <p class="howto-tip">There is one shared team build and R&amp;D programme for AI, Versus, and Shootout. Online races and Time Trial currently use equal stock performance (garage upgrades ignored) until progression can be verified server-side. Paint and name stay personal. R&amp;D HQ timers only advance after a valid session.</p>
     </div>
 
     <div class="howto-section" style="border-bottom:none">
@@ -12485,7 +12478,7 @@ function buildGarageContent() {
     <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;">
       <div>
         <div class="upgrade-name">TEAM BUILD</div>
-        <div style="font-size:12px;opacity:.7;line-height:1.5;margin-top:6px;">One development package for the whole garage — applies to every kart in every mode.</div>
+        <div style="font-size:12px;opacity:.7;line-height:1.5;margin-top:6px;">One development package for the whole garage — applies to AI, Versus, and Shootout. Online and Time Trial currently use equal stock performance.</div>
       </div>
       <div style="font-family:'Nunito',sans-serif;font-size:11px;letter-spacing:.12em;color:var(--gold);text-align:right;">
         <div>IMPLEMENTED ${implemented}/${DEV_PARTS.length}</div>
@@ -12873,6 +12866,31 @@ function applyUpgradesToKart(kart, player) {
   kart._baseBrakeForce = kart.brakeForce;
   // Store raw values for pit stop tyre re-application
   kart._upgradeBase = { maxSpeed: kart.maxSpeed, turnRate: kart.turnRate, accel: kart.accel, grip: kart.grip, brakeForce: kart.brakeForce };
+}
+
+/** Equalized stock performance (garage/setup/R&D ignored). Used by Time Trial while progression is unverified. */
+function applyStockPerformanceToKart(kart) {
+  kart._stockCompetitive = true;
+  kart.maxSpeed = 469 * GAME_SPEED_MULT;
+  kart.accel = 304 * GLOBAL_ACCEL_MULT;
+  kart.brakeForce = 620;
+  kart.turnRate = 2.22;
+  kart.offTrackMaxSpd = Math.max(30, 80) * GAME_SPEED_MULT;
+  kart.grip = 0.78;
+  kart._baseGrip = kart.grip;
+  kart._baseAccel = kart.accel;
+  kart._baseBrakeForce = kart.brakeForce;
+  kart._rndTyreWearMult = 1;
+  kart._rndERSRegen = 0;
+  kart._rndERSBoost = 0;
+  kart._rndReliability = 1;
+  kart._upgradeBase = {
+    maxSpeed: kart.maxSpeed,
+    turnRate: kart.turnRate,
+    accel: kart.accel,
+    grip: kart.grip,
+    brakeForce: kart.brakeForce
+  };
 }
 
 function applyWeatherToKart(kart, weather, tyreId) {
@@ -13886,6 +13904,11 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
   };
 
   window.applyUpgradesToKart = function(kart, player) {
+    // Time Trial / equalized modes: keep stock stats (skip garage + R&D boosts)
+    if (kart && kart._stockCompetitive) {
+      applyStockPerformanceToKart(kart);
+      return;
+    }
     if (_kbOrigApplyUpgradesToKart) _kbOrigApplyUpgradesToKart(kart, player);
     const pd = getPlayerData();
     const rnd = pd.rnd || createDefaultRnDState();

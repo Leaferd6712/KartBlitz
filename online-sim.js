@@ -141,6 +141,7 @@ function applyCornerCutSlowdown(kart, opts) {
 }
 
 // ---- upgrades.ts ----
+const TRUST_CLIENT_PROGRESSION_UPGRADES = false;
 function defaultUpgrades() {
     return {
         speed: 0,
@@ -154,6 +155,9 @@ function defaultUpgrades() {
         tractBonus: 0,
         tyreWearMult: 1,
     };
+}
+function competitiveStandardUpgrades() {
+    return defaultUpgrades();
 }
 function sanitizeUpgrades(raw) {
     const d = defaultUpgrades();
@@ -176,6 +180,14 @@ function sanitizeUpgrades(raw) {
         tractBonus: num("tractBonus", 0, 40),
         tyreWearMult: num("tyreWearMult", 0.7, 1.08),
     };
+}
+function resolveOnlineUpgrades(claimed, opts) {
+    const trust = opts && typeof opts.trustClientProgression === "boolean"
+        ? opts.trustClientProgression
+        : TRUST_CLIENT_PROGRESSION_UPGRADES;
+    if (!trust)
+        return competitiveStandardUpgrades();
+    return sanitizeUpgrades(claimed);
 }
 function computeBaseStats(upgrades, weather, tyreId) {
     const u = sanitizeUpgrades(upgrades);
@@ -968,7 +980,7 @@ class OnlineRaceSim {
                 y: slot.y,
                 angle: slot.a,
                 color: plist.color || "#00f5ff",
-                upgrades: sanitizeUpgrades(plist.upgrades || defaultUpgrades()),
+                upgrades: resolveOnlineUpgrades(plist.upgrades || defaultUpgrades()),
                 weather: this.weather,
                 tyreId: this.tyres,
                 totalLaps: this.lapCount,
@@ -1163,6 +1175,10 @@ function loadTrackBake(trackId) {
     STEPS_PER_INPUT: typeof STEPS_PER_INPUT !== "undefined" ? STEPS_PER_INPUT : 2,
     defaultUpgrades: defaultUpgrades,
     sanitizeUpgrades: sanitizeUpgrades,
+    resolveOnlineUpgrades: resolveOnlineUpgrades,
+    competitiveStandardUpgrades: competitiveStandardUpgrades,
+    TRUST_CLIENT_PROGRESSION_UPGRADES: TRUST_CLIENT_PROGRESSION_UPGRADES,
+    computeBaseStats: computeBaseStats,
     updateTyres: updateTyres,
     tyreDriveLoadWearMult: tyreDriveLoadWearMult,
     localSplineCurvature: localSplineCurvature,

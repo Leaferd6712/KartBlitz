@@ -9,7 +9,7 @@ import {
   type SimInput,
   SimKart,
 } from "./kart";
-import { defaultUpgrades, sanitizeUpgrades, type UpgradeStats } from "./upgrades";
+import { defaultUpgrades, resolveOnlineUpgrades, type UpgradeStats } from "./upgrades";
 
 export type RacePlayer = {
   id: string;
@@ -114,7 +114,7 @@ export class OnlineRaceSim {
         y: slot.y,
         angle: slot.a,
         color: plist.color || "#00f5ff",
-        upgrades: sanitizeUpgrades(plist.upgrades || defaultUpgrades()),
+        upgrades: resolveOnlineUpgrades(plist.upgrades || defaultUpgrades()),
         weather: this.weather,
         tyreId: this.tyres,
         totalLaps: this.lapCount,
