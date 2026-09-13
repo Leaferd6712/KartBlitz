@@ -7,13 +7,16 @@ import {
   loadTrackBake,
   ONLINE_PROTOCOL,
   OnlineRaceSim,
-  sanitizeUpgrades,
   TRACK_BAKE_VERSION,
   type BakedTrack,
   type SimInput,
   type UpgradeStats,
 } from "../sim";
-import { defaultUpgrades } from "../sim/upgrades";
+import {
+  defaultUpgrades,
+  resolveOnlineUpgrades,
+  TRUST_CLIENT_PROGRESSION_UPGRADES,
+} from "../sim/upgrades";
 
 const MAX_PLAYERS = 6;
 const SIM_STEP_MS = Math.round(FIXED_DT * 1000);
@@ -214,7 +217,8 @@ export class KartBlitzRoom extends Server<Env> {
       case "ready": {
         if (!player || this.phase !== "lobby") return;
         player.ready = !!msg.ready;
-        if (msg.upgrades) player.upgrades = sanitizeUpgrades(msg.upgrades);
+        // Competitive: ignore client-claimed progression until ownership is verified server-side.
+        player.upgrades = resolveOnlineUpgrades(msg.upgrades);
         this.broadcastRoster();
         break;
       }
@@ -284,14 +288,16 @@ export class KartBlitzRoom extends Server<Env> {
         const order = this.roster().map((p) => p.id);
         this.phase = "racing";
         this._raceEndTimer = 0;
+        // Force standardized performance for every starter (do not trust lobby-stored claims).
+        const equalCars = this.roster().map((p) => ({
+          id: p.id,
+          name: p.name,
+          color: p.color,
+          upgrades: resolveOnlineUpgrades(p.upgrades),
+        }));
         this.raceSim = new OnlineRaceSim({
           track,
-          players: this.roster().map((p) => ({
-            id: p.id,
-            name: p.name,
-            color: p.color,
-            upgrades: p.upgrades,
-          })),
+          players: equalCars,
           order,
           laps: this.settings.laps,
           weather: this.settings.weather,
@@ -306,11 +312,12 @@ export class KartBlitzRoom extends Server<Env> {
             type: "startRace",
             settings: this.settings,
             order,
-            players: this.roster(),
+            players: equalCars,
             hostId: this.hostId,
             authority: "server",
             protocol: ONLINE_PROTOCOL,
             trackBakeVersion: TRACK_BAKE_VERSION,
+            equalPerformance: !TRUST_CLIENT_PROGRESSION_UPGRADES,
           })
         );
         const boot = this.raceSim.buildStatePacket(true);
@@ -560,8 +567,14 @@ export class KartBlitzRoom extends Server<Env> {
 
     player.name = name;
     player.color = color;
-    if (msg.upgrades) player.upgrades = sanitizeUpgrades(msg.upgrades);
-    sender.send(json({ type: "identity", name: player.name }));
+    player.upgrades = resolveOnlineUpgrades(msg.upgrades);
+    sender.send(
+      json({
+        type: "identity",
+        name: player.name,
+        equalPerformance: !TRUST_CLIENT_PROGRESSION_UPGRADES,
+      })
+    );
     this.broadcastRoster();
     void this.syncDirectory();
   }

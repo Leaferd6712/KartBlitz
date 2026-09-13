@@ -97,6 +97,48 @@ function linesCross(ax, ay, bx, by, cx, cy, dx, dy) {
     const D = { x: dx, y: dy };
     return cross(A, B, C) * cross(A, B, D) < 0 && cross(C, D, A) * cross(C, D, B) < 0;
 }
+function localSplineCurvature(spl, idx, span = 5) {
+    const n = spl.length;
+    if (!spl || n < 8)
+        return 0;
+    const i = ((idx % n) + n) % n;
+    const a = spl[(i - span + n) % n];
+    const b = spl[i];
+    const c = spl[(i + span) % n];
+    const dx1 = b.x - a.x;
+    const dy1 = b.y - a.y;
+    const dx2 = c.x - b.x;
+    const dy2 = c.y - b.y;
+    const l1 = Math.hypot(dx1, dy1) || 1;
+    const l2 = Math.hypot(dx2, dy2) || 1;
+    return Math.abs((dx1 / l1) * (dy2 / l2) - (dy1 / l1) * (dx2 / l2));
+}
+function applyCornerCutSlowdown(kart, opts) {
+    const CORNER_THRESH = 0.10;
+    const MIN_SNAP_SPEED = 90;
+    const HOLD_CAP = 125;
+    const dt = Math.max(0, opts.dt || 0);
+    const active = !!opts.offTrack &&
+        (opts.curvature || 0) >= CORNER_THRESH &&
+        Math.abs(kart.speed) > 35;
+    if (!active) {
+        kart._cornerCutLatched = false;
+        return { snapped: false, active: false };
+    }
+    let snapped = false;
+    if (!kart._cornerCutLatched && Math.abs(kart.speed) >= MIN_SNAP_SPEED) {
+        kart.speed *= 0.55;
+        kart._cornerCutLatched = true;
+        snapped = true;
+    }
+    kart.speed *= Math.pow(0.935, dt * 60);
+    if (Math.abs(kart.speed) > HOLD_CAP) {
+        const over = Math.abs(kart.speed) - HOLD_CAP;
+        const sign = kart.speed >= 0 ? 1 : -1;
+        kart.speed -= sign * Math.min(over, Math.max(over * 3.4 * dt, 24 * dt));
+    }
+    return { snapped, active: true };
+}
 
 // ---- upgrades.ts ----
 function defaultUpgrades() {
@@ -110,6 +152,7 @@ function defaultUpgrades() {
         turnMult: 1,
         brakeMult: 1,
         tractBonus: 0,
+        tyreWearMult: 1,
     };
 }
 function sanitizeUpgrades(raw) {
@@ -131,6 +174,7 @@ function sanitizeUpgrades(raw) {
         turnMult: num("turnMult", 0.7, 1.35),
         brakeMult: num("brakeMult", 0.7, 1.5),
         tractBonus: num("tractBonus", 0, 40),
+        tyreWearMult: num("tyreWearMult", 0.7, 1.08),
     };
 }
 function computeBaseStats(upgrades, weather, tyreId) {
@@ -209,7 +253,28 @@ function tyreTempBrakeMult(temp, tyreDef) {
 function tyreTempTractMult(temp, tyreDef) {
     return tyreTempGripMult(temp, tyreDef);
 }
-function updateTyres(state, dt, speed, maxSpeed, throttleInput, brakeInput, steering) {
+function tyreDriveLoadWearMult(throttleInput, brakeInput, steerAbs, speedRatio) {
+    const th = Math.max(0, Math.min(1, Number(throttleInput) || 0));
+    const br = Math.max(0, Math.min(1, Number(brakeInput) || 0));
+    const st = Math.max(0, Math.min(1, Number(steerAbs) || 0));
+    const sr = Math.max(0, Math.min(1.2, Number(speedRatio) || 0));
+    if (th < 0.08 && br < 0.08 && st < 0.08)
+        return 0;
+    let load = 0;
+    if (th >= 0.08)
+        load += 0.32 + th * 0.48;
+    if (br >= 0.08)
+        load += 0.38 + br * 0.55;
+    if (st >= 0.08) {
+        const turn = st * (0.55 + sr * 0.95);
+        const aggressive = st > 0.45 && sr > 0.35
+            ? (st - 0.45) * 1.35 + (sr - 0.35) * 0.9
+            : 0;
+        load += turn * 1.2 + aggressive;
+    }
+    return Math.min(1.85, Math.max(0, load));
+}
+function updateTyres(state, dt, speed, maxSpeed, throttleInput, brakeInput, steerAbs) {
     const tDef = getTyre(state.tyreId);
     let wear = state.tyreWear;
     let temp = state.tyreTemp;
@@ -218,6 +283,15 @@ function updateTyres(state, dt, speed, maxSpeed, throttleInput, brakeInput, stee
         temp = amb + 8;
     const spdAbs = Math.abs(speed);
     const spdRatio = spdAbs / Math.max(1, maxSpeed);
+    const wearMult = state.tyreWearMult != null && Number.isFinite(state.tyreWearMult)
+        ? Math.max(0.7, Math.min(1.08, state.tyreWearMult))
+        : 1;
+    const steer = typeof steerAbs === "boolean"
+        ? steerAbs
+            ? 1
+            : 0
+        : Math.max(0, Math.min(1, Number(steerAbs) || 0));
+    const steering = steer > 0.05;
     if (!state.tyreWrongWeather) {
         const heatScale = (tDef.heatRate != null ? tDef.heatRate : 1) * 0.72;
         const coolScale = (tDef.coolRate != null ? tDef.coolRate : 1) * 0.78;
@@ -226,7 +300,7 @@ function updateTyres(state, dt, speed, maxSpeed, throttleInput, brakeInput, stee
         if (brakeInput > 0.12 && spdAbs > 35)
             heat += brakeInput * (0.28 + spdRatio * 0.7) * 3.1;
         if (steering && spdRatio > 0.25)
-            heat += spdRatio * 1.2;
+            heat += spdRatio * 1.2 * (0.65 + steer * 0.35);
         if (throttleInput > 0.12 && spdAbs > 18)
             heat += throttleInput * (0.18 + spdRatio * 0.42) * 1.45;
         if (!steering && spdRatio > 0.45)
@@ -240,7 +314,8 @@ function updateTyres(state, dt, speed, maxSpeed, throttleInput, brakeInput, stee
         temp = Math.max(40, Math.min(128, temp + net + ambPull));
         const distTick = spdAbs * dt;
         const wearRate = 1 / (tDef.lifespan * 4200);
-        wear = Math.min(1, wear + distTick * wearRate * tyreTempWearMult(temp, tDef));
+        const loadMult = tyreDriveLoadWearMult(throttleInput, brakeInput, steer, spdRatio);
+        wear = Math.min(1, wear + distTick * wearRate * tyreTempWearMult(temp, tDef) * wearMult * loadMult);
     }
     return {
         wear,
@@ -333,6 +408,7 @@ class SimKart {
         this.tyreWear = 0;
         this.tyreTemp = 55;
         this.tyreWrongWeather = false;
+        this.tyreWearMult = 1;
         this.inPit = false;
         this.pitPhase = null;
         this.ersCharge = 1.0;
@@ -348,6 +424,7 @@ class SimKart {
         this._brakeAssist = 0;
         this._penaltyTimer = 0;
         this._isCompletelyOff = false;
+        this._cornerCutLatched = false;
         this._onlineDisconnected = false;
         this.onlineConnId = "";
         this.onlineName = "";
@@ -367,6 +444,10 @@ class SimKart {
         this.onlineConnId = opts.onlineConnId || "";
         this.onlineName = opts.onlineName || "";
         this.applySetup(opts.weather, opts.tyreId || "med");
+        this.tyreWearMult =
+            this.upgrades.tyreWearMult != null && Number.isFinite(this.upgrades.tyreWearMult)
+                ? this.upgrades.tyreWearMult
+                : 1;
     }
     applySetup(weather, tyreId) {
         this.weather = weather;
@@ -384,6 +465,10 @@ class SimKart {
         this._baseBrakeForce = stats.brakeForce;
         this.baseMaxSpeed = stats.maxSpeed;
         this.baseTurnRate = stats.turnRate;
+        this.tyreWearMult =
+            this.upgrades.tyreWearMult != null && Number.isFinite(this.upgrades.tyreWearMult)
+                ? this.upgrades.tyreWearMult
+                : 1;
         const tyre = getTyre(tyreId);
         this.tyreWrongWeather =
             (normalizeWeatherId(weather) === "dry" && !!tyre.dryPenalty) ||
@@ -435,6 +520,17 @@ class SimKart {
         const strictHw = track.trackWidth / 2 + 18;
         const nearP = track.spline[this._nearestSplineIdx || 0];
         this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
+        if (this.isOffTrack || this._isCompletelyOff) {
+            const curv = localSplineCurvature(track.spline, this._nearestSplineIdx || 0);
+            applyCornerCutSlowdown(this, {
+                offTrack: true,
+                curvature: curv,
+                dt,
+            });
+        }
+        else {
+            this._cornerCutLatched = false;
+        }
         if (this._isCompletelyOff) {
             this.speed *= Math.pow(0.978, dt * 60);
             const offCap = 100;
@@ -453,6 +549,7 @@ class SimKart {
                 this.speed = 0;
                 this._penaltyTimer = 0;
                 this._isCompletelyOff = false;
+                this._cornerCutLatched = false;
             }
         }
         else {
@@ -635,6 +732,11 @@ function stepKart(kart, inp, dt, track, otherKarts, flags = {}) {
     }
     kart.speed = Math.max(-maxSpd * 0.3, kart.speed);
     const steering = hasAnalogSteer ? Math.abs(inp.steer) > 0.05 : !!(inp.left || inp.right);
+    const steerAbs = hasAnalogSteer
+        ? Math.max(0, Math.min(1, Math.abs(inp.steer || 0)))
+        : steering
+            ? 1
+            : 0;
     if (Math.abs(kart.speed) > 4) {
         const speedRatio = Math.abs(kart.speed) / Math.max(1, kart.maxSpeed);
         const grip = Math.max(0.35, Math.min(1.25, kart.grip == null ? 1 : kart.grip));
@@ -664,7 +766,8 @@ function stepKart(kart, inp, dt, track, otherKarts, flags = {}) {
         tyreTemp: kart.tyreTemp,
         tyreWrongWeather: kart.tyreWrongWeather,
         weather: kart.weather,
-    }, dt, kart.speed, kart.baseMaxSpeed, throttleInput, brakeInput, steering);
+        tyreWearMult: kart.tyreWearMult,
+    }, dt, kart.speed, kart.baseMaxSpeed, throttleInput, brakeInput, steerAbs);
     kart.tyreWear = tyreTick.wear;
     kart.tyreTemp = tyreTick.temp;
     const wear = kart.tyreWear;
@@ -715,6 +818,7 @@ function copyKartState(dst, src) {
     dst.finishOrder = src.finishOrder;
     dst.tyreWear = src.tyreWear;
     dst.tyreTemp = src.tyreTemp;
+    dst.tyreWearMult = src.tyreWearMult;
     dst.ersCharge = src.ersCharge;
     dst.ersActive = src.ersActive;
     dst._ersPower = src._ersPower;
@@ -727,6 +831,8 @@ function copyKartState(dst, src) {
     dst._throttleAssist = src._throttleAssist;
     dst._brakeAssist = src._brakeAssist;
     dst._penaltyTimer = src._penaltyTimer;
+    dst._isCompletelyOff = src._isCompletelyOff;
+    dst._cornerCutLatched = !!src._cornerCutLatched;
     dst.maxSpeed = src.maxSpeed;
     dst.accel = src.accel;
     dst.turnRate = src.turnRate;
@@ -1057,6 +1163,10 @@ function loadTrackBake(trackId) {
     STEPS_PER_INPUT: typeof STEPS_PER_INPUT !== "undefined" ? STEPS_PER_INPUT : 2,
     defaultUpgrades: defaultUpgrades,
     sanitizeUpgrades: sanitizeUpgrades,
+    updateTyres: updateTyres,
+    tyreDriveLoadWearMult: tyreDriveLoadWearMult,
+    localSplineCurvature: localSplineCurvature,
+    applyCornerCutSlowdown: applyCornerCutSlowdown,
     createKart: createKart,
     stepKart: stepKart,
     emptyInput: emptyInput,

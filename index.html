@@ -3707,6 +3707,7 @@ class Kart {
     // Off-track reset timer (human drivers only)
     this._offTrackTimer       = 0;   // seconds spent continuously off-track
     this._offTrackEntrySpeed  = 0;   // speed at the moment they left the track
+    this._cornerCutLatched    = false; // one-shot corner-cut speed snap
     this._isCompletelyOff     = false; // strict boundary flag (player only)
     this._penaltyTimer        = 0;   // countdown seconds before reset (player only)
     // Ghost recording (Time Trial)
@@ -4125,7 +4126,14 @@ class Kart {
       // Total track distance ~3200 units/lap; lifespan in laps
       const wearRate = 1 / (tDef.lifespan * 4200);
       const tempWear = getTyreTempWearMult(this.tyreTemp, tDef);
-      this.tyreWear = Math.min(1.0, this.tyreWear + distTick * wearRate * tempWear);
+      const wearMult = (this._rndTyreWearMult != null) ? this._rndTyreWearMult : 1;
+      const steerAbs = hasAnalogSteerYaw
+        ? Math.max(0, Math.min(1, Math.abs(inp.steer || 0)))
+        : (steeringInput ? 1 : 0);
+      const loadMult = (typeof OnlineSim !== 'undefined' && OnlineSim.tyreDriveLoadWearMult)
+        ? OnlineSim.tyreDriveLoadWearMult(throttleInput, brakeInput, steerAbs, _spdRatio)
+        : tyreDriveLoadWearMultFallback(throttleInput, brakeInput, steerAbs, _spdRatio);
+      this.tyreWear = Math.min(1.0, this.tyreWear + distTick * wearRate * tempWear * wearMult * loadMult);
     }
     // Wear degrades: speed -35%, handling -25%, accel -18% at 100% worn
     const wear = this.noTyreWear ? 0 : this.tyreWear;
@@ -4254,6 +4262,27 @@ class Kart {
       }
       this._isCompletelyOff = !nearPitLane && Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
 
+      // Corner cut: off asphalt near a bend → speed snap (no facing change)
+      const offForCut = !nearPitLane && !this.inPit && (this.isOffTrack || this._isCompletelyOff);
+      if (offForCut && trackData.spline) {
+        const curv = (typeof OnlineSim !== 'undefined' && OnlineSim.localSplineCurvature)
+          ? OnlineSim.localSplineCurvature(trackData.spline, this._nearestSplineIdx || 0)
+          : localSplineCurvatureFallback(trackData.spline, this._nearestSplineIdx || 0);
+        const angleBefore = this.angle;
+        const cut = (typeof OnlineSim !== 'undefined' && OnlineSim.applyCornerCutSlowdown)
+          ? OnlineSim.applyCornerCutSlowdown(this, { offTrack: true, curvature: curv, dt })
+          : applyCornerCutSlowdownFallback(this, { offTrack: true, curvature: curv, dt });
+        this.angle = angleBefore; // never let a cut penalty rewrite heading
+        if (cut && cut.snapped && !this.isAI) {
+          spawnSpark(this.x, this.y);
+          try { playCollision(0.35); } catch(e){}
+          this.flashTimer = Math.max(this.flashTimer || 0, 1.1);
+          this.rankFlash = 'CORNER CUT!';
+        }
+      } else {
+        this._cornerCutLatched = false;
+      }
+
       if (this._isCompletelyOff) {
         // Gradual bleed toward off-track cap — no instant snap to 80 km/h
         this.speed *= Math.pow(0.978, dt * 60);
@@ -4282,6 +4311,7 @@ class Kart {
             this.speed = 0;
             this._penaltyTimer    = 0;
             this._isCompletelyOff = false;
+            this._cornerCutLatched = false;
             this.flashTimer = 2.2;
             this.rankFlash  = 'TRACK LIMIT — RESET!';
           }
@@ -7547,6 +7577,7 @@ class Race {
     k._qualiPushTarget = null;
     k._penaltyTimer = 0;
     k._isCompletelyOff = false;
+    k._cornerCutLatched = false;
     k.slipstreamBoost = false;
     k.slipstreamStrength = 0;
     k.ersActive = false;
@@ -9974,6 +10005,12 @@ function getOnlineUpgrades() {
     const pd = getPlayerData();
     const devBonus = getTeamDevelopmentBonuses(pd);
     const setup = resolvePlayerSetup(pd, 'p1');
+    let tyreWearMult = 1;
+    try {
+      if (typeof window.computeRnDTyreWearMult === 'function') {
+        tyreWearMult = window.computeRnDTyreWearMult();
+      }
+    } catch (e) {}
     return {
       speed: devBonus.speed || 0,
       accel: devBonus.accel || 0,
@@ -9983,7 +10020,8 @@ function getOnlineUpgrades() {
       speedMult: setup.speedMult || 1,
       turnMult: setup.turnMult || 1,
       brakeMult: setup.brakeMult != null ? setup.brakeMult : 1,
-      tractBonus: setup.tractBonus || 0
+      tractBonus: setup.tractBonus || 0,
+      tyreWearMult
     };
   } catch(e) {
     return null;
@@ -11728,6 +11766,68 @@ function getTyreTempWearMult(temp, tyreDef) {
   return 1.12 + Math.min(0.28, (over - 12) / 20 * 0.28); // overheated: up to +40%
 }
 
+/** Offline fallback — mirrors sim/math.ts localSplineCurvature. */
+function localSplineCurvatureFallback(spl, idx, span) {
+  span = span == null ? 5 : span;
+  const n = spl && spl.length;
+  if (!n || n < 8) return 0;
+  const i = ((idx % n) + n) % n;
+  const a = spl[(i - span + n) % n];
+  const b = spl[i];
+  const c = spl[(i + span) % n];
+  const dx1 = b.x - a.x, dy1 = b.y - a.y;
+  const dx2 = c.x - b.x, dy2 = c.y - b.y;
+  const l1 = Math.hypot(dx1, dy1) || 1;
+  const l2 = Math.hypot(dx2, dy2) || 1;
+  return Math.abs((dx1 / l1) * (dy2 / l2) - (dy1 / l1) * (dx2 / l2));
+}
+
+/** Offline fallback — mirrors sim/math.ts applyCornerCutSlowdown. */
+function applyCornerCutSlowdownFallback(kart, opts) {
+  const CORNER_THRESH = 0.10;
+  const MIN_SNAP_SPEED = 90;
+  const HOLD_CAP = 125;
+  const dt = Math.max(0, (opts && opts.dt) || 0);
+  const active = !!(opts && opts.offTrack) && ((opts.curvature || 0) >= CORNER_THRESH) && Math.abs(kart.speed) > 35;
+  if (!active) {
+    kart._cornerCutLatched = false;
+    return { snapped: false, active: false };
+  }
+  let snapped = false;
+  if (!kart._cornerCutLatched && Math.abs(kart.speed) >= MIN_SNAP_SPEED) {
+    kart.speed *= 0.55;
+    kart._cornerCutLatched = true;
+    snapped = true;
+  }
+  kart.speed *= Math.pow(0.935, dt * 60);
+  if (Math.abs(kart.speed) > HOLD_CAP) {
+    const over = Math.abs(kart.speed) - HOLD_CAP;
+    const sign = kart.speed >= 0 ? 1 : -1;
+    kart.speed -= sign * Math.min(over, Math.max(over * 3.4 * dt, 24 * dt));
+  }
+  return { snapped, active: true };
+}
+
+/** Offline fallback — mirrors sim/tyres.ts tyreDriveLoadWearMult (lift/coast=0, hard turns high). */
+function tyreDriveLoadWearMultFallback(throttleInput, brakeInput, steerAbs, speedRatio) {
+  const th = Math.max(0, Math.min(1, Number(throttleInput) || 0));
+  const br = Math.max(0, Math.min(1, Number(brakeInput) || 0));
+  const st = Math.max(0, Math.min(1, Number(steerAbs) || 0));
+  const sr = Math.max(0, Math.min(1.2, Number(speedRatio) || 0));
+  if (th < 0.08 && br < 0.08 && st < 0.08) return 0;
+  let load = 0;
+  if (th >= 0.08) load += 0.32 + th * 0.48;
+  if (br >= 0.08) load += 0.38 + br * 0.55;
+  if (st >= 0.08) {
+    const turn = st * (0.55 + sr * 0.95);
+    const aggressive = st > 0.45 && sr > 0.35
+      ? (st - 0.45) * 1.35 + (sr - 0.35) * 0.9
+      : 0;
+    load += turn * 1.2 + aggressive;
+  }
+  return Math.min(1.85, Math.max(0, load));
+}
+
 /** Brake effectiveness from temp (cold & overheated = longer stopping distance). */
 function getTyreTempBrakeMult(temp, tyreDef) {
   const lo = tyreDef && tyreDef.idealMin != null ? tyreDef.idealMin : 85;
@@ -11975,7 +12075,7 @@ function buildHowToPane(){
       <div class="info-kv"><span class="info-k">BRAKE</span><span class="info-v">Hold to slow down. Hold when already stopped to reverse slowly.</span></div>
       <div class="info-kv"><span class="info-k">STEER</span><span class="info-v">Turn left or right. Steering becomes less responsive at very high speeds — this is intentional.</span></div>
       <div class="info-kv"><span class="info-k">COAST</span><span class="info-v">Release the accelerator without braking and the car slows down gently due to friction.</span></div>
-      <p class="howto-tip">Off-track grass applies heavy drag. Cutting corners usually costs more time than it saves.</p>
+      <p class="howto-tip">Off-track grass applies heavy drag. Cutting a corner (off asphalt on a bend) triggers a speed scrub that removes the time gain without spinning you around.</p>
     </div>
 
     <div class="howto-section">
@@ -13767,6 +13867,12 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     queueRnDProject(nodeId, !!redevelop);
   };
 
+  window.computeRnDTyreWearMult = function() {
+    const pd = getRnDState();
+    const b = computeRnDBonuses(pd.rnd || createDefaultRnDState());
+    return clamp(1 - ((b.tyreWear || 0) + (b.reliability || 0)), 0.70, 1.08);
+  };
+
   window.advanceRnDSession = function() {
     return advanceRnDSession();
   };
@@ -13812,10 +13918,6 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
   if (window.Kart && window.Kart.prototype && _kbOrigKartUpdate) {
     window.Kart.prototype.update = function(dt, trackData, otherKarts) {
       _kbOrigKartUpdate.call(this, dt, trackData, otherKarts);
-      if (this._rndTyreWearMult && this.tyreWear > 0) {
-        const keep = clamp(this._rndTyreWearMult, 0.88, 1.02);
-        this.tyreWear = Math.max(0, this.tyreWear * (1 - (1 - keep) * 0.05));
-      }
       if (this._rndERSRegen && !this.ersActive) {
         this.ersCharge = Math.min(1, this.ersCharge + this._rndERSRegen * dt);
       }

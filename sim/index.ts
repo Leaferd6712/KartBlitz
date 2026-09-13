@@ -16,6 +16,6 @@ export {
   ONLINE_PROTOCOL,
   TRACK_BAKE_VERSION,
 } from "./constants";
-export { defaultUpgrades, sanitizeUpgrades, type UpgradeStats } from "./upgrades";
+export { defaultUpgrades, sanitizeUpgrades, resolveOnlineUpgrades, competitiveStandardUpgrades, TRUST_CLIENT_PROGRESSION_UPGRADES, type UpgradeStats } from "./upgrades";
 export { loadTrackBake, listTrackIds } from "./tracks";
 export { resolveKartCollisions } from "./collision";

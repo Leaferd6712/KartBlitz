@@ -11,7 +11,15 @@ export type UpgradeStats = {
   turnMult: number;
   brakeMult: number;
   tractBonus: number;
+  /** Multiplier on incremental tyre wear (R&D durability). 1 = stock. */
+  tyreWearMult: number;
 };
+
+/**
+ * Temporary: competitive online ignores client-claimed garage/R&D ownership.
+ * Flip to true once the server can verify progression / ownership.
+ */
+export const TRUST_CLIENT_PROGRESSION_UPGRADES = false;
 
 export function defaultUpgrades(): UpgradeStats {
   return {
@@ -24,7 +32,13 @@ export function defaultUpgrades(): UpgradeStats {
     turnMult: 1,
     brakeMult: 1,
     tractBonus: 0,
+    tyreWearMult: 1,
   };
+}
+
+/** Canonical stock blob used for equalized competitive / Time Trial performance. */
+export function competitiveStandardUpgrades(): UpgradeStats {
+  return defaultUpgrades();
 }
 
 export function sanitizeUpgrades(raw: unknown): UpgradeStats {
@@ -45,7 +59,25 @@ export function sanitizeUpgrades(raw: unknown): UpgradeStats {
     turnMult: num("turnMult", 0.7, 1.35),
     brakeMult: num("brakeMult", 0.7, 1.5),
     tractBonus: num("tractBonus", 0, 40),
+    tyreWearMult: num("tyreWearMult", 0.7, 1.08),
   };
+}
+
+/**
+ * Resolve upgrades for competitive online races.
+ * When TRUST_CLIENT_PROGRESSION_UPGRADES is false, claimed blobs are ignored
+ * (still sanitized only for future enablement / logging callers).
+ */
+export function resolveOnlineUpgrades(
+  claimed: unknown,
+  opts?: { trustClientProgression?: boolean }
+): UpgradeStats {
+  const trust =
+    opts && typeof opts.trustClientProgression === "boolean"
+      ? opts.trustClientProgression
+      : TRUST_CLIENT_PROGRESSION_UPGRADES;
+  if (!trust) return competitiveStandardUpgrades();
+  return sanitizeUpgrades(claimed);
 }
 
 export type KartBaseStats = {

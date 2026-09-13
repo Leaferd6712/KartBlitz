@@ -12,6 +12,7 @@ export {
   GAME_SPEED_MULT,
 } from "./constants";
 export { defaultUpgrades, sanitizeUpgrades, computeBaseStats, type UpgradeStats } from "./upgrades";
+export { updateTyres, tyreTempWearMult, tyreDriveLoadWearMult, seedTyreTemp } from "./tyres";
 export {
   createKart,
   stepKart,

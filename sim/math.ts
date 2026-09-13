@@ -56,3 +56,64 @@ export function linesCross(
   const D = { x: dx, y: dy };
   return cross(A, B, C) * cross(A, B, D) < 0 && cross(C, D, A) * cross(C, D, B) < 0;
 }
+
+/** Local bend strength at a spline index (same cross-product style as AI curvature). */
+export function localSplineCurvature(spl: Vec2[], idx: number, span = 5): number {
+  const n = spl.length;
+  if (!spl || n < 8) return 0;
+  const i = ((idx % n) + n) % n;
+  const a = spl[(i - span + n) % n];
+  const b = spl[i];
+  const c = spl[(i + span) % n];
+  const dx1 = b.x - a.x;
+  const dy1 = b.y - a.y;
+  const dx2 = c.x - b.x;
+  const dy2 = c.y - b.y;
+  const l1 = Math.hypot(dx1, dy1) || 1;
+  const l2 = Math.hypot(dx2, dy2) || 1;
+  return Math.abs((dx1 / l1) * (dy2 / l2) - (dy1 / l1) * (dx2 / l2));
+}
+
+export type CornerCutKart = {
+  speed: number;
+  _cornerCutLatched?: boolean;
+};
+
+/**
+ * When off asphalt near a corner: one facing-preserving speed snap, then hard drag.
+ * Removes cut advantage without spinning the kart around.
+ */
+export function applyCornerCutSlowdown(
+  kart: CornerCutKart,
+  opts: { offTrack: boolean; curvature: number; dt: number }
+): { snapped: boolean; active: boolean } {
+  const CORNER_THRESH = 0.10;
+  const MIN_SNAP_SPEED = 90;
+  const HOLD_CAP = 125;
+  const dt = Math.max(0, opts.dt || 0);
+  const active =
+    !!opts.offTrack &&
+    (opts.curvature || 0) >= CORNER_THRESH &&
+    Math.abs(kart.speed) > 35;
+
+  if (!active) {
+    kart._cornerCutLatched = false;
+    return { snapped: false, active: false };
+  }
+
+  let snapped = false;
+  if (!kart._cornerCutLatched && Math.abs(kart.speed) >= MIN_SNAP_SPEED) {
+    kart.speed *= 0.55;
+    kart._cornerCutLatched = true;
+    snapped = true;
+  }
+
+  // Sustained scrub while still cutting — heavier than normal grass drag
+  kart.speed *= Math.pow(0.935, dt * 60);
+  if (Math.abs(kart.speed) > HOLD_CAP) {
+    const over = Math.abs(kart.speed) - HOLD_CAP;
+    const sign = kart.speed >= 0 ? 1 : -1;
+    kart.speed -= sign * Math.min(over, Math.max(over * 3.4 * dt, 24 * dt));
+  }
+  return { snapped, active: true };
+}

@@ -5,7 +5,7 @@ import {
   isWetWeather,
   normalizeWeatherId,
 } from "./constants";
-import { linesCross, splineTangent, type Vec2 } from "./math";
+import { linesCross, splineTangent, localSplineCurvature, applyCornerCutSlowdown, type Vec2 } from "./math";
 import { seedTyreTemp, updateTyres } from "./tyres";
 import { computeBaseStats, defaultUpgrades, sanitizeUpgrades, type UpgradeStats } from "./upgrades";
 import { resolveKartCollisions } from "./collision";
@@ -101,6 +101,8 @@ export class SimKart {
   tyreWear = 0;
   tyreTemp = 55;
   tyreWrongWeather = false;
+  /** Applied only to incremental wear (from upgrades / R&D). */
+  tyreWearMult = 1;
   inPit = false;
   pitPhase: string | null = null;
 
@@ -119,6 +121,7 @@ export class SimKart {
   _brakeAssist = 0;
   _penaltyTimer = 0;
   _isCompletelyOff = false;
+  _cornerCutLatched = false;
   _onlineDisconnected = false;
   onlineConnId = "";
   onlineName = "";
@@ -140,6 +143,10 @@ export class SimKart {
     this.onlineConnId = opts.onlineConnId || "";
     this.onlineName = opts.onlineName || "";
     this.applySetup(opts.weather, opts.tyreId || "med");
+    this.tyreWearMult =
+      this.upgrades.tyreWearMult != null && Number.isFinite(this.upgrades.tyreWearMult)
+        ? this.upgrades.tyreWearMult
+        : 1;
   }
 
   applySetup(weather: string, tyreId: string) {
@@ -158,6 +165,10 @@ export class SimKart {
     this._baseBrakeForce = stats.brakeForce;
     this.baseMaxSpeed = stats.maxSpeed;
     this.baseTurnRate = stats.turnRate;
+    this.tyreWearMult =
+      this.upgrades.tyreWearMult != null && Number.isFinite(this.upgrades.tyreWearMult)
+        ? this.upgrades.tyreWearMult
+        : 1;
     const tyre = getTyre(tyreId);
     this.tyreWrongWeather =
       (normalizeWeatherId(weather) === "dry" && !!tyre.dryPenalty) ||
@@ -209,6 +220,19 @@ export class SimKart {
     const strictHw = track.trackWidth / 2 + 18;
     const nearP = track.spline[this._nearestSplineIdx || 0];
     this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
+
+    // Soft off-track near a bend: speed snap + hold drag (facing unchanged)
+    if (this.isOffTrack || this._isCompletelyOff) {
+      const curv = localSplineCurvature(track.spline, this._nearestSplineIdx || 0);
+      applyCornerCutSlowdown(this, {
+        offTrack: true,
+        curvature: curv,
+        dt,
+      });
+    } else {
+      this._cornerCutLatched = false;
+    }
+
     if (this._isCompletelyOff) {
       this.speed *= Math.pow(0.978, dt * 60);
       const offCap = 100;
@@ -227,6 +251,7 @@ export class SimKart {
         this.speed = 0;
         this._penaltyTimer = 0;
         this._isCompletelyOff = false;
+        this._cornerCutLatched = false;
       }
     } else {
       this._penaltyTimer = 0;
@@ -410,6 +435,11 @@ export function stepKart(
   kart.speed = Math.max(-maxSpd * 0.3, kart.speed);
 
   const steering = hasAnalogSteer ? Math.abs(inp.steer) > 0.05 : !!(inp.left || inp.right);
+  const steerAbs = hasAnalogSteer
+    ? Math.max(0, Math.min(1, Math.abs(inp.steer || 0)))
+    : steering
+      ? 1
+      : 0;
   if (Math.abs(kart.speed) > 4) {
     const speedRatio = Math.abs(kart.speed) / Math.max(1, kart.maxSpeed);
     const grip = Math.max(0.35, Math.min(1.25, kart.grip == null ? 1 : kart.grip));
@@ -438,13 +468,14 @@ export function stepKart(
       tyreTemp: kart.tyreTemp,
       tyreWrongWeather: kart.tyreWrongWeather,
       weather: kart.weather,
+      tyreWearMult: kart.tyreWearMult,
     },
     dt,
     kart.speed,
     kart.baseMaxSpeed,
     throttleInput,
     brakeInput,
-    steering
+    steerAbs
   );
   kart.tyreWear = tyreTick.wear;
   kart.tyreTemp = tyreTick.temp;
@@ -500,6 +531,7 @@ export function copyKartState(dst: SimKart, src: SimKart) {
   dst.finishOrder = src.finishOrder;
   dst.tyreWear = src.tyreWear;
   dst.tyreTemp = src.tyreTemp;
+  dst.tyreWearMult = src.tyreWearMult;
   dst.ersCharge = src.ersCharge;
   dst.ersActive = src.ersActive;
   dst._ersPower = src._ersPower;
@@ -512,6 +544,8 @@ export function copyKartState(dst: SimKart, src: SimKart) {
   dst._throttleAssist = src._throttleAssist;
   dst._brakeAssist = src._brakeAssist;
   dst._penaltyTimer = src._penaltyTimer;
+  dst._isCompletelyOff = src._isCompletelyOff;
+  dst._cornerCutLatched = !!src._cornerCutLatched;
   dst.maxSpeed = src.maxSpeed;
   dst.accel = src.accel;
   dst.turnRate = src.turnRate;
