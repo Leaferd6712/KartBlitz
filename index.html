@@ -1140,7 +1140,352 @@ body::after{
   .winner-banner{font-size:18px;padding:10px 18px;letter-spacing:.06em;}
 }
 
-@media (max-width: 720px){
+/* Setup sticky CTA (desktop: normal flow; short landscape: pinned) */
+.setup-cta-bar{
+  margin-top:20px;
+  text-align:center;
+  padding:12px 16px 20px;
+}
+
+/* Arcade touch chrome — hidden until short/landscape race mode */
+.touch-arcade{display:none;pointer-events:none;}
+.touch-steer,.touch-pedal{
+  pointer-events:all;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+  border:3px solid rgba(255,255,255,0.5);
+  color:#fff;
+  font-family:'Nunito',sans-serif;
+  font-weight:900;
+  background:rgba(255,255,255,0.12);
+  border-radius:16px;
+}
+.touch-steer:active,.touch-steer.pressed,
+.touch-pedal:active,.touch-pedal.pressed{background:rgba(110,231,247,0.45);}
+.touch-pedal-brake.pressed{background:rgba(248,113,113,0.45);border-color:rgba(248,113,113,0.7);}
+.touch-pedal-accel.pressed{background:rgba(74,222,128,0.4);border-color:rgba(74,222,128,0.75);}
+
+/*
+ * Short landscape phones (844×390, 740×360, 932×430…):
+ * side-by-side menu, compact mode/track, sticky setup CTA, edge arcade controls.
+ * Prefer reflow + hiding chrome over globally shrinking all buttons.
+ */
+@media (max-height: 460px) and (min-width: 600px),
+       (max-height: 460px) and (orientation: landscape){
+  :root{
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+  }
+
+  .screen{
+    padding-left:max(10px, var(--safe-l));
+    padding-right:max(10px, var(--safe-r));
+    overflow-x:hidden;
+  }
+
+  #screen-menu{
+    justify-content:center;
+    padding:max(6px, var(--safe-t)) max(10px, var(--safe-r)) max(8px, var(--safe-b)) max(10px, var(--safe-l));
+    overflow-y:auto;
+  }
+  .menu-shell{
+    grid-template-columns:minmax(200px, 0.72fr) minmax(280px, 1.15fr) !important;
+    width:min(1100px, 96vw) !important;
+    gap:12px;
+    max-height:calc(100dvh - 14px);
+    align-items:center;
+  }
+  .menu-hero-panel,
+  .menu-action-panel{
+    padding:12px 14px;
+    border-radius:16px;
+    gap:8px;
+  }
+  .menu-hero-panel{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    min-height:0;
+    text-align:center;
+  }
+  .menu-hero-top,
+  .title-wrap,
+  .menu-copy{
+    text-align:center;
+    width:100%;
+  }
+  .menu-coins{
+    justify-content:center;
+  }
+  .menu-action-panel{
+    justify-content:center;
+  }
+  .menu-hero-top{
+    margin-bottom:0;
+  }
+  .portal-tag,
+  .title-sub,
+  .title-decor,
+  .menu-car-hint,
+  .menu-car-status,
+  .menu-panel-kicker,
+  .menu-panel-sub,
+  .menu-utility-card,
+  .portal-pill-row,
+  .menu-paint-strip{
+    display:none !important;
+  }
+  .title-wrap{
+    margin-top:0;
+  }
+  .title-logo{
+    font-size:clamp(34px, 12vh, 52px);
+    line-height:.9;
+    -webkit-text-stroke-width:2px;
+  }
+  /* Logo stays; drop the 3D car stage so CTAs fit without scroll */
+  .menu-car-stage{
+    display:none !important;
+  }
+  .glow-orb{
+    display:none !important;
+  }
+  #btn-track-editor{
+    display:none !important;
+  }
+  .menu-coins{
+    gap:6px;
+  }
+  .menu-currency-chip{
+    padding:6px 10px;
+    font-size:11px;
+  }
+  .menu-panel-title{
+    font-size:clamp(14px, 3.2vh, 18px);
+    margin:0;
+  }
+  .menu-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .menu-actions .btn{
+    width:100%;
+    min-height:44px;
+    padding:10px 12px;
+    font-size:12px;
+    letter-spacing:.04em;
+  }
+  .menu-actions .btn-cyan{
+    grid-column:1 / -1;
+    min-height:48px;
+    font-size:13px;
+  }
+
+  /* Mode select — 4 compact cards in one row when possible */
+  #screen-mode{
+    justify-content:flex-start;
+    overflow-y:auto;
+    padding-top:max(28px, calc(8px + var(--safe-t)));
+    padding-bottom:max(10px, var(--safe-b));
+  }
+  #screen-mode .section-sub{
+    display:none;
+  }
+  #screen-mode .section-title{
+    margin-top:0;
+    padding:6px 16px;
+    font-size:clamp(14px, 3.5vh, 20px);
+  }
+  .mode-grid{
+    margin-top:10px;
+    gap:8px;
+    grid-template-columns:repeat(4, minmax(0, 1fr)) !important;
+    width:min(96vw, 1100px);
+  }
+  .mode-card{
+    width:auto !important;
+    min-height:0;
+    padding:12px 8px !important;
+  }
+  .mode-card .m-icon,
+  .mode-card .m-desc,
+  .mode-card .m-tag{
+    display:none;
+  }
+  .mode-card .m-name{
+    font-size:13px;
+  }
+
+  /* Track select — denser grid, shorter previews */
+  #screen-track{
+    padding:max(28px, calc(8px + var(--safe-t))) max(10px, var(--safe-r)) max(10px, var(--safe-b)) max(10px, var(--safe-l)) !important;
+  }
+  #screen-track .section-sub{
+    display:none;
+  }
+  #screen-track .section-title{
+    margin-top:0;
+    padding:6px 16px;
+    font-size:clamp(14px, 3.5vh, 20px);
+  }
+  .track-grid{
+    margin-top:8px;
+    gap:8px;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    max-height:none;
+    width:min(96vw, 1100px);
+  }
+  .track-card{
+    width:auto;
+  }
+  .track-preview{
+    width:100%;
+    height:58px;
+  }
+  .track-info{
+    padding:6px 8px;
+  }
+  .track-name{
+    font-size:10px;
+  }
+  .track-diff,.track-target{
+    font-size:9px;
+  }
+
+  /* Setup — tighter form + sticky primary CTA */
+  #screen-setup{
+    padding:max(28px, calc(6px + var(--safe-t))) max(10px, var(--safe-r)) max(72px, calc(56px + var(--safe-b))) max(10px, var(--safe-l)) !important;
+  }
+  #screen-setup .section-title{
+    margin-top:0;
+    padding:6px 14px;
+    font-size:clamp(14px, 3.4vh, 18px);
+  }
+  #screen-setup .section-sub{
+    margin-top:4px;
+    font-size:11px;
+  }
+  .setup-section-label{
+    margin:8px 0 2px;
+    font-size:10px;
+  }
+  .setup-slider-card{
+    padding:10px 12px;
+  }
+  .setup-slider-sub,
+  .setup-slider-extremes{
+    display:none;
+  }
+  .tyre-card{
+    padding:8px 10px;
+    min-width:96px;
+  }
+  .tyre-card .tyre-life,
+  #tyre-section .setup-section-label span{
+    display:none;
+  }
+  #screen-setup > .setup-cta-bar{
+    position:sticky;
+    bottom:0;
+    z-index:30;
+    margin-top:10px;
+    padding:10px 12px max(12px, var(--safe-b));
+    background:linear-gradient(180deg, rgba(60,50,110,0), rgba(45,38,85,0.96) 28%, rgba(40,35,70,0.98));
+  }
+  #screen-setup > .setup-cta-bar .btn{
+    min-height:48px;
+    min-width:min(280px, 70vw);
+    font-size:14px;
+    padding:12px 28px;
+  }
+
+  .back-btn{
+    width:48px;
+    height:48px;
+  }
+  .back-btn::after{
+    top:10px;
+    left:10px;
+    font-size:14px;
+  }
+
+  .online-equal-banner{
+    font-size:11px;
+    padding:8px 10px;
+    margin-top:6px;
+  }
+}
+
+/* Arcade race controls (class toggled in JS for landscape solo): edge ◀▶ + pedals */
+#touch-overlay.touch-arcade-layout .touch-stick{
+  display:none;
+}
+#touch-overlay.touch-arcade-layout .touch-arcade{
+  display:block;
+  pointer-events:none;
+}
+#touch-overlay.touch-arcade-layout .touch-steer-left{
+  position:absolute;
+  left:max(10px, env(safe-area-inset-left, 0px));
+  top:50%;
+  transform:translateY(-50%);
+  width:64px;
+  height:min(132px, 42vh);
+  font-size:28px;
+  border-radius:18px;
+  background:rgba(0,0,0,0.28);
+}
+#touch-overlay.touch-arcade-layout .touch-steer-right{
+  position:absolute;
+  right:max(10px, env(safe-area-inset-right, 0px));
+  top:50%;
+  transform:translateY(-50%);
+  width:64px;
+  height:min(132px, 42vh);
+  font-size:28px;
+  border-radius:18px;
+  background:rgba(0,0,0,0.28);
+}
+#touch-overlay.touch-arcade-layout .touch-pedals{
+  position:absolute;
+  right:max(84px, calc(74px + env(safe-area-inset-right, 0px)));
+  bottom:max(12px, env(safe-area-inset-bottom, 0px));
+  display:flex;
+  flex-direction:row;
+  gap:8px;
+  pointer-events:none;
+}
+#touch-overlay.touch-arcade-layout .touch-pedal{
+  width:72px;
+  height:52px;
+  font-size:11px;
+  letter-spacing:.06em;
+}
+#touch-overlay.touch-arcade-layout .touch-actions{
+  right:max(84px, calc(74px + env(safe-area-inset-right, 0px)));
+  bottom:max(72px, calc(60px + env(safe-area-inset-bottom, 0px)));
+  gap:6px;
+}
+#touch-overlay.touch-arcade-layout .touch-btn{
+  width:52px;
+  height:40px;
+  font-size:10px;
+  border-radius:12px;
+}
+#touch-overlay.touch-versus-face.touch-arcade-layout .touch-stick{
+  display:block;
+}
+#touch-overlay.touch-versus-face.touch-arcade-layout .touch-arcade{
+  display:none;
+}
+
+/* Portrait / tall phones only — do not override short-landscape compact layout */
+@media (max-width: 720px) and (min-height: 461px){
   .back-btn{
     width:52px;
     height:52px;
@@ -1566,7 +1911,7 @@ body::after{
     <div class="setup-section-label">PIT STOPS (TIME TRIAL)</div>
     <div class="lap-row" id="trial-pit-row"></div>
   </div>
-  <div style="margin-top:20px;text-align:center;padding-bottom:20px;">
+  <div class="setup-cta-bar" id="setup-cta-bar">
     <button class="btn btn-cyan" id="setup-start-btn" onclick="confirmSetupAndStart()">RACE!</button>
   </div>
 </div>
@@ -1649,6 +1994,14 @@ body::after{
       <div class="touch-stick-base"></div>
       <div class="touch-stick-knob" id="touch-knob-p1"></div>
     </div>
+    <div class="touch-arcade" data-player="p1">
+      <button type="button" class="touch-steer touch-steer-left" data-player="p1" data-steer="-1" aria-label="Steer left">◀</button>
+      <button type="button" class="touch-steer touch-steer-right" data-player="p1" data-steer="1" aria-label="Steer right">▶</button>
+      <div class="touch-pedals">
+        <button type="button" class="touch-pedal touch-pedal-brake" data-player="p1" data-pedal="brake">BRAKE</button>
+        <button type="button" class="touch-pedal touch-pedal-accel" data-player="p1" data-pedal="accel">GO</button>
+      </div>
+    </div>
     <div class="touch-actions">
       <div class="touch-btn" data-action="ers" data-player="p1">ERS</div>
       <div class="touch-btn" data-action="drs" data-player="p1">DRS</div>
@@ -1659,6 +2012,14 @@ body::after{
     <div class="touch-stick" id="touch-stick-p2" data-player="p2">
       <div class="touch-stick-base"></div>
       <div class="touch-stick-knob" id="touch-knob-p2"></div>
+    </div>
+    <div class="touch-arcade" data-player="p2">
+      <button type="button" class="touch-steer touch-steer-left" data-player="p2" data-steer="-1" aria-label="Steer left">◀</button>
+      <button type="button" class="touch-steer touch-steer-right" data-player="p2" data-steer="1" aria-label="Steer right">▶</button>
+      <div class="touch-pedals">
+        <button type="button" class="touch-pedal touch-pedal-brake" data-player="p2" data-pedal="brake">BRAKE</button>
+        <button type="button" class="touch-pedal touch-pedal-accel" data-player="p2" data-pedal="accel">GO</button>
+      </div>
     </div>
     <div class="touch-actions">
       <div class="touch-btn" data-action="ers" data-player="p2">ERS</div>
@@ -9100,7 +9461,7 @@ function showCountdown(n) {
     if (n === 3 && getRaceCount() <= 3) {
       if (touchMode) {
         document.getElementById('ftue-hint-text').innerHTML =
-          `JOYSTICK: steer · throttle/brake &nbsp;&nbsp;|&nbsp;&nbsp; ERS · DRS · PIT on the right &nbsp;&nbsp;|&nbsp;&nbsp; PAUSE (top-right)`;
+          `◀ ▶ on the sides to steer · GO / BRAKE pedals · ERS · DRS · PIT · PAUSE (top-right)`;
       } else {
         const ersKey = keyLabel(BINDINGS.p1.ers).toUpperCase();
         const drsKey = keyLabel(BINDINGS.p1.drs).toUpperCase();
@@ -10317,11 +10678,15 @@ function showTouchOverlay(visible) {
     let versus = false;
     try { versus = !!(race && race.mode === 'versus'); } catch(e) { versus = false; }
     ov.classList.toggle('touch-versus-face', versus);
+    const landscape = window.innerWidth >= window.innerHeight;
+    // Edge ◀▶ + pedals on short/landscape solo races; versus face-to-face keeps sticks.
+    ov.classList.toggle('touch-arcade-layout', landscape && !versus);
     const p2 = document.getElementById('touch-pad-p2');
     if(p2) p2.style.display = versus ? 'block' : 'none';
     scaleTouchOverlay();
   } else {
     ov.classList.remove('touch-versus-face');
+    ov.classList.remove('touch-arcade-layout');
   }
   try { updateLandscapeHint(show); } catch(e) {}
 }
@@ -10410,19 +10775,72 @@ function setupTouchControls() {
     el.addEventListener('lostpointercapture', () => setPressed(false));
   }
 
+  function bindHoldControl(el, onDown, onUp) {
+    if(!el) return;
+    let active = false;
+    const down = e => {
+      e.preventDefault();
+      active = true;
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      el.classList.add('pressed');
+      onDown();
+    };
+    const up = e => {
+      if(!active) return;
+      e.preventDefault();
+      active = false;
+      el.classList.remove('pressed');
+      onUp();
+    };
+    el.addEventListener('pointerdown', down, {passive:false});
+    el.addEventListener('pointerup', up, {passive:false});
+    el.addEventListener('pointercancel', up, {passive:false});
+    el.addEventListener('lostpointercapture', () => {
+      if(!active) return;
+      active = false;
+      el.classList.remove('pressed');
+      onUp();
+    });
+  }
+
+  function bindArcadePad(player) {
+    const ts = touchState[player];
+    if(!ts) return;
+    const left = document.querySelector(`.touch-steer-left[data-player="${player}"]`);
+    const right = document.querySelector(`.touch-steer-right[data-player="${player}"]`);
+    const brake = document.querySelector(`.touch-pedal-brake[data-player="${player}"]`);
+    const accel = document.querySelector(`.touch-pedal-accel[data-player="${player}"]`);
+    let leftOn = false, rightOn = false;
+    const syncSteer = () => {
+      if(leftOn && !rightOn) ts.steer = -1;
+      else if(rightOn && !leftOn) ts.steer = 1;
+      else ts.steer = 0;
+    };
+    bindHoldControl(left, () => { leftOn = true; syncSteer(); }, () => { leftOn = false; syncSteer(); });
+    bindHoldControl(right, () => { rightOn = true; syncSteer(); }, () => { rightOn = false; syncSteer(); });
+    bindHoldControl(brake, () => { ts.brake = 1; ts.throttle = 0; }, () => { ts.brake = 0; });
+    bindHoldControl(accel, () => { ts.throttle = 1; ts.brake = 0; }, () => { ts.throttle = 0; });
+  }
+
   bindStick('p1');
   bindStick('p2');
+  bindArcadePad('p1');
+  bindArcadePad('p2');
   overlay.querySelectorAll('.touch-btn').forEach(bindActionBtn);
 
   window.addEventListener('resize', () => {
-    scaleTouchOverlay();
-    updateLandscapeHint(touchMode && canvas.style.display === 'block' && !!race && !isPaused);
+    const racing = touchMode && canvas.style.display === 'block' && !!race && !isPaused;
+    if(racing) showTouchOverlay(true);
+    else scaleTouchOverlay();
+    updateLandscapeHint(racing);
   });
   window.addEventListener('orientationchange', () => {
     setTimeout(() => {
-      scaleTouchOverlay();
+      const racing = touchMode && canvas.style.display === 'block' && !!race && !isPaused;
+      if(racing) showTouchOverlay(true);
+      else scaleTouchOverlay();
       resizeCanvas();
-      updateLandscapeHint(touchMode && canvas.style.display === 'block' && !!race && !isPaused);
+      updateLandscapeHint(racing);
     }, 120);
   });
   scaleTouchOverlay();
