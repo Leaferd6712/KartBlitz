@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KartBlitz Leaderboard Admin</title>
+  <title>KartBlitz Admin Station</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
@@ -99,6 +99,15 @@
     }
     .tab.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0, 245, 255, 0.1); }
     .panel { margin-bottom: 20px; }
+    .tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .tool-card {
+      text-align: left;
+      padding: 16px;
+      border-color: rgba(255, 215, 0, 0.35);
+      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(0,245,255,0.06));
+    }
+    .tool-card strong { display: block; color: var(--gold); font-family: Orbitron, sans-serif; margin-bottom: 5px; }
+    .tool-card span { display: block; color: var(--muted); font-size: 0.8rem; letter-spacing: 0; text-transform: none; }
     .panel-head {
       display: flex;
       flex-wrap: wrap;
@@ -136,6 +145,7 @@
     .track-tab.active { border-color: var(--pink); color: var(--pink); }
     .empty { color: var(--muted); padding: 16px 0; text-align: center; }
     @media (max-width: 720px) {
+      .tool-grid { grid-template-columns: 1fr; }
       table, thead, tbody, th, td, tr { display: block; }
       thead { display: none; }
       tr { margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; }
@@ -156,7 +166,7 @@
   <div id="login-screen" class="wrap">
     <div class="login-card">
       <div class="brand">KartBlitz Admin</div>
-      <div class="sub">Leaderboard editor — password required</div>
+      <div class="sub">Admin station — password required</div>
       <input id="login-password" type="password" placeholder="Admin password" autocomplete="current-password">
       <button id="login-btn" class="btn" style="width:100%;margin-top:12px;">Unlock</button>
       <div id="login-error" class="err"></div>
@@ -166,14 +176,25 @@
   <div id="app-screen" class="wrap hidden">
     <div class="topbar">
       <div>
-        <div class="brand">Leaderboard Admin</div>
-        <div class="sub" style="margin:0;">Edits auto-sync to the cloud leaderboard</div>
+        <div class="brand">KartBlitz Admin Station</div>
+        <div class="sub" style="margin:0;">Leaderboards, tracks, and patch notes</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <div id="sync-status" class="status">Ready</div>
         <button id="reload-btn" class="btn btn-sm">Reload</button>
         <button id="logout-btn" class="btn btn-sm btn-danger">Lock</button>
       </div>
+    </div>
+
+    <div class="tool-grid" aria-label="Admin tools">
+      <button type="button" class="btn tool-card" data-admin-tool="track">
+        <strong>Track Editor</strong>
+        <span>Open the track picker and embedded circuit editor.</span>
+      </button>
+      <button type="button" class="btn tool-card" data-admin-tool="patch">
+        <strong>Patch Notes Editor</strong>
+        <span>Edit, preview, and save the in-game patch notes.</span>
+      </button>
     </div>
 
     <div class="tabs" id="main-tabs">
@@ -470,12 +491,34 @@
   function enterApp() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
+    const destination = requestedReturn();
+    if (destination) {
+      location.replace(withCurrentHost(destination));
+      return;
+    }
     loadData();
+  }
+
+  function withCurrentHost(path) {
+    let customHost = '';
+    try { customHost = new URLSearchParams(location.search).get('lbHost') || ''; } catch (e) {}
+    if (!customHost) return path;
+    const join = path.includes('?') ? '&' : '?';
+    return path + join + 'lbHost=' + encodeURIComponent(customHost);
+  }
+
+  function requestedReturn() {
+    let value = '';
+    try { value = new URLSearchParams(location.search).get('return') || ''; } catch (e) {}
+    if (value === 'patch-notes-editor.html') return value;
+    if (value === 'index.html?admin=track') return value;
+    return '';
   }
 
   function logout() {
     password = '';
     try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
+    try { sessionStorage.removeItem('kartblitz_te_unlocked'); } catch (e) {}
     document.getElementById('app-screen').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('login-error').textContent = '';
@@ -507,6 +550,15 @@
 
   document.getElementById('logout-btn').addEventListener('click', logout);
   document.getElementById('reload-btn').addEventListener('click', loadData);
+
+  document.querySelectorAll('[data-admin-tool]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const path = btn.dataset.adminTool === 'track'
+        ? 'index.html?admin=track'
+        : 'patch-notes-editor.html';
+      location.href = withCurrentHost(path);
+    });
+  });
 
   document.querySelectorAll('#main-tabs .tab').forEach(function (btn) {
     btn.addEventListener('click', function () { showSection(btn.dataset.section); });

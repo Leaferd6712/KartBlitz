@@ -2,9 +2,9 @@
 
 These text files are optional "fake data" helpers for local development / testing.
 
-## Recommended: `leaderboard-admin.html`
+## Admin station: `leaderboard-admin.html`
 
-For live editing with auto-sync to the cloud leaderboard, use the password-protected admin page:
+For live leaderboard editing and access to the track and patch-notes editors, use the password-protected admin station:
 
 1. Set the admin password on the Worker (production):
    ```bash
@@ -14,11 +14,11 @@ For live editing with auto-sync to the cloud leaderboard, use the password-prote
 3. Host `leaderboard-admin.html` next to `index.html` (Netlify or local static server)
 4. Open `https://yoursite/leaderboard-admin.html` and log in
 
-The admin page can edit **Online Wins**, **Time Trial** lap times, and **Versus** lap times. Changes save automatically and appear in the in-game leaderboard on refresh.
+The admin station can edit **Online Wins**, **Time Trial** lap times, and **Versus** lap times. Changes save automatically and appear in the in-game leaderboard on refresh.
 
 Local dev: copy `.dev.vars.example` to `.dev.vars` and set `LEADERBOARD_ADMIN_PASSWORD`. Do not commit `.dev.vars`.
 
-**Keep the admin URL private** — it is not linked from the game menu.
+The game menu links to the station through its **Admin** button. Access still requires the server-verified admin password.
 
 ## `online-wins.txt` (legacy / fallback)
 

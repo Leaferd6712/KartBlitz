@@ -30,6 +30,7 @@
     }
     h1, .brand { font-family: Orbitron, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
     .wrap { max-width: 960px; margin: 0 auto; padding: 28px 16px 60px; }
+    .auth-pending .wrap { visibility: hidden; }
 
     /* ── Header ── */
     .header {
@@ -233,7 +234,7 @@
     .hint strong { color: var(--gold); }
   </style>
 </head>
-<body>
+<body class="auth-pending">
 <div class="wrap">
 
   <div class="header">
@@ -241,6 +242,7 @@
       <h1 class="brand">KartBlitz</h1>
       <p class="header-sub">Patch Notes Editor</p>
     </div>
+    <button type="button" class="btn" id="btn-admin-home" style="margin-left:auto;padding:8px 14px;">Admin Station</button>
   </div>
 
   <!-- Step 1: pick index.html -->
@@ -298,8 +300,48 @@
 </div>
 
 <script>
-  const LB_API = 'https://kartblitz-online.kartblitz.workers.dev';
   const PW_KEY = 'kartblitz_admin_pw';
+
+  function adminApiBase() {
+    let host = 'kartblitz-online.kartblitz.workers.dev';
+    try {
+      const q = new URLSearchParams(location.search).get('lbHost');
+      if (q) host = String(q).replace(/^https?:\/\//, '').replace(/\/$/, '');
+    } catch (e) {}
+    const secure = !(host.includes('localhost') || host.includes('127.0.0.1'));
+    return (secure ? 'https://' : 'http://') + host;
+  }
+
+  function adminLoginUrl() {
+    let url = 'leaderboard-admin.html?return=' + encodeURIComponent('patch-notes-editor.html');
+    try {
+      const host = new URLSearchParams(location.search).get('lbHost');
+      if (host) url += '&lbHost=' + encodeURIComponent(host);
+    } catch (e) {}
+    return url;
+  }
+
+  async function requireAdminSession() {
+    let saved = '';
+    try { saved = sessionStorage.getItem(PW_KEY) || ''; } catch (e) {}
+    if (!saved) {
+      location.replace(adminLoginUrl());
+      return;
+    }
+    try {
+      const res = await fetch(adminApiBase() + '/api/admin/leaderboard', {
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': saved }
+      });
+      if (!res.ok) throw new Error('Unauthorized');
+      document.body.classList.remove('auth-pending');
+      document.getElementById('input-password').value = saved;
+    } catch (e) {
+      try { sessionStorage.removeItem(PW_KEY); } catch (storageError) {}
+      location.replace(adminLoginUrl());
+    }
+  }
+
+  requireAdminSession();
 
   let fileHandle = null;
   let originalContent = '';
@@ -471,7 +513,7 @@ ${liItems.join('\n')}
 
     // Verify password against the leaderboard API
     try {
-      const res = await fetch(LB_API + '/api/admin/leaderboard', {
+      const res = await fetch(adminApiBase() + '/api/admin/leaderboard', {
         headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }
       });
       if (!res.ok) {
@@ -518,6 +560,15 @@ ${liItems.join('\n')}
 
   document.getElementById('input-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('btn-save').click();
+  });
+
+  document.getElementById('btn-admin-home').addEventListener('click', () => {
+    let target = 'leaderboard-admin.html';
+    try {
+      const host = new URLSearchParams(location.search).get('lbHost');
+      if (host) target += '?lbHost=' + encodeURIComponent(host);
+    } catch (e) {}
+    location.href = target;
   });
 
   // Pre-fill password from session if available

@@ -1515,9 +1515,6 @@ body::after{
   .glow-orb{
     display:none !important;
   }
-  #btn-track-editor{
-    display:none !important;
-  }
   .menu-coins{
     gap:6px;
   }
@@ -1918,7 +1915,7 @@ body::after{
         <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()"> GARAGE</button>
         <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');"> LEADERBOARD</button>
         <button class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();showControlsScreen()"> CONTROLS &amp; SETTINGS</button>
-        <button type="button" class="btn btn-sm" id="btn-track-editor" style="color:#3dd6c6;" onclick="openTrackEditorFromMenu()"> TRACK EDITOR</button>
+        <button type="button" class="btn btn-sm" id="btn-admin" style="color:#3dd6c6;" onclick="openAdminStation()"> ADMIN</button>
       </div>
       <div class="menu-utility-card">
         <div class="menu-utility-title">Desktop Layout</div>
@@ -2386,10 +2383,10 @@ body::after{
 </div>
 
 
-<!-- TRACK EDITOR PASSCODE -->
+<!-- TRACK EDITOR ADMIN PASSWORD -->
 <div id="te-pass-modal" aria-hidden="true">
-  <h2>AUTHOR ACCESS</h2>
-  <p>ENTER PASSCODE TO OPEN TRACK EDITOR</p>
+  <h2>ADMIN ACCESS</h2>
+  <p>ENTER ADMIN PASSWORD TO OPEN TRACK EDITOR</p>
   <input type="password" id="te-pass-input" autocomplete="off" placeholder="••••••••" />
   <div class="te-pass-err" id="te-pass-err"></div>
   <div class="te-pass-btns">
@@ -15083,15 +15080,10 @@ function unlockTrack(trackId) {
   const el = document.getElementById('portal-track-count');
   if(el) el.textContent = TRACKS.length + 'TRACKS';
 })();
-function openTrackEditorFromMenu() {
+function openAdminStation() {
   try { if (typeof initAudio === 'function') initAudio(); } catch (e) {}
   try { if (typeof playUIClick === 'function') playUIClick(); } catch (e) {}
-  // Prefer full editor API; fall back to direct passcode UI so the button never dead-ends.
-  if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.requestOpen === 'function') {
-    KartBlitzTrackEditor.requestOpen();
-    return;
-  }
-  openTrackEditorPassFallback();
+  window.location.href = 'leaderboard-admin.html';
 }
 
 function openTrackEditorPassFallback() {
@@ -15108,60 +15100,6 @@ function openTrackEditorPassFallback() {
   modal.setAttribute('aria-hidden', 'false');
   setTimeout(() => { if (inp) inp.focus(); }, 30);
 }
-
-(function bindTrackEditorFallbackUi() {
-  const TE_PASS = 'kartblitz';
-  const TE_SESSION_KEY = 'kartblitz_te_unlocked';
-  function unlocked() {
-    try { return sessionStorage.getItem(TE_SESSION_KEY) === '1'; } catch (e) { return false; }
-  }
-  function setUnlocked(v) {
-    try { sessionStorage.setItem(TE_SESSION_KEY, v ? '1' : '0'); } catch (e) {}
-  }
-  function hidePass() {
-    const modal = document.getElementById('te-pass-modal');
-    if (!modal) return;
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden', 'true');
-  }
-  function showPicker() {
-    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    hidePass();
-    if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.openPicker === 'function') {
-      KartBlitzTrackEditor.openPicker();
-      return;
-    }
-    const el = document.getElementById('screen-te-picker');
-    if (el) {
-      el.classList.add('open');
-      el.setAttribute('aria-hidden', 'false');
-      if (window.KartBlitzTrackEditor && typeof KartBlitzTrackEditor.buildPicker === 'function') {
-        KartBlitzTrackEditor.buildPicker();
-      }
-    }
-  }
-  function tryPass() {
-    const inp = document.getElementById('te-pass-input');
-    const err = document.getElementById('te-pass-err');
-    const val = ((inp && inp.value) || '').trim().toLowerCase();
-    if (val === TE_PASS || unlocked()) {
-      setUnlocked(true);
-      showPicker();
-    } else if (err) {
-      err.textContent = 'INCORRECT PASSCODE';
-      if (inp) { inp.value = ''; inp.focus(); }
-    }
-  }
-  const ok = document.getElementById('te-pass-ok');
-  const cancel = document.getElementById('te-pass-cancel');
-  const inp = document.getElementById('te-pass-input');
-  if (ok) ok.addEventListener('click', tryPass);
-  if (cancel) cancel.addEventListener('click', hidePass);
-  if (inp) inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') tryPass();
-    if (e.key === 'Escape') hidePass();
-  });
-})();
 console.log('%cKART BLITZ  LOADED', 'color:#00f5ff;font-family:Orbitron;font-size:20px;font-weight:bold;');
 console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
 console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [AI]' : '')).join(' | '));
@@ -16228,7 +16166,7 @@ if(document.getElementById('screen-menu') && !document.getElementById('screen-me
 
 window.KartBlitzTrackEditor = (function(){
   const LS_KEY = 'kartblitz_track_editor_project';
-  const TE_PASS = 'kartblitz';
+  const PW_KEY = 'kartblitz_admin_pw';
   const TE_SESSION_KEY = 'kartblitz_te_unlocked';
   let _open = false;
   let _editIndex = null; // null = new track
@@ -16247,6 +16185,28 @@ window.KartBlitzTrackEditor = (function(){
   window.KartBlitzTrackEditor = api;
 
   function $(id) { return document.getElementById(id); }
+
+  function adminApiBase() {
+    let host = 'kartblitz-online.kartblitz.workers.dev';
+    try {
+      const q = new URLSearchParams(location.search).get('lbHost');
+      if (q) host = String(q).replace(/^https?:\/\//, '').replace(/\/$/, '');
+    } catch (e) {}
+    const secure = !(host.includes('localhost') || host.includes('127.0.0.1'));
+    return (secure ? 'https://' : 'http://') + host;
+  }
+
+  async function verifyAdminPassword(pw) {
+    if (!pw) return false;
+    try {
+      const res = await fetch(adminApiBase() + '/api/admin/leaderboard', {
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  }
 
   function showPassModal(show) {
     const m = $('te-pass-modal');
@@ -16606,27 +16566,34 @@ window.KartBlitzTrackEditor = (function(){
     if (typeof showScreen === 'function') showScreen('menu');
   }
 
-  function requestOpen() {
+  async function requestOpen() {
     if (typeof window.pauseMenuCarStage === 'function') window.pauseMenuCarStage();
-    if (api.isUnlocked()) {
+    let saved = '';
+    try { saved = sessionStorage.getItem(PW_KEY) || ''; } catch (e) {}
+    if (await verifyAdminPassword(saved)) {
+      api.setUnlocked(true);
       openPicker();
       return;
     }
+    api.setUnlocked(false);
+    try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
     showPassModal(true);
   }
   api.requestOpen = requestOpen;
   api.openPicker = openPicker;
   api.buildPicker = buildPicker;
 
-  function tryPass() {
+  async function tryPass() {
     const inp = $('te-pass-input');
     const err = $('te-pass-err');
-    const val = (inp && inp.value || '').trim().toLowerCase();
-    if (val === TE_PASS) {
+    const val = (inp && inp.value || '').trim();
+    if (err) err.textContent = 'VERIFYING…';
+    if (await verifyAdminPassword(val)) {
+      try { sessionStorage.setItem(PW_KEY, val); } catch (e) {}
       api.setUnlocked(true);
       openPicker();
     } else {
-      if (err) err.textContent = 'INCORRECT PASSCODE';
+      if (err) err.textContent = 'INCORRECT ADMIN PASSWORD';
       if (inp) { inp.value = ''; inp.focus(); }
     }
   }
@@ -18211,6 +18178,15 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
   api.applyToGame = applyToGame;
   api.closeAll = closeAll;
   return api;
+})();
+
+(function openRequestedAdminTool() {
+  let requested = false;
+  try { requested = new URLSearchParams(location.search).get('admin') === 'track'; } catch (e) {}
+  if (!requested) return;
+  const open = () => window.KartBlitzTrackEditor && window.KartBlitzTrackEditor.requestOpen();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', open, { once: true });
+  else open();
 })();
 
 </script>
