@@ -108,6 +108,7 @@ const root = path.join(__dirname, "../..");
 
 // ── Sim: disconnect / resume / forfeit / finish gate ──────
 function ensureBundle() {
+  if (process.env.KARTBLITZ_SIM_PREBUILT === "1") return;
   const r = spawnSync(process.execPath, [path.join(root, "scripts/build-online-sim.mjs")], {
     cwd: root,
     encoding: "utf8",

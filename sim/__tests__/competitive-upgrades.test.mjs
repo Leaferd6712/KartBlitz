@@ -14,6 +14,7 @@ const root = path.join(__dirname, "../..");
 const simJs = path.join(root, "online-sim.js");
 
 function ensureBundle() {
+  if (process.env.KARTBLITZ_SIM_PREBUILT === "1") return;
   const r = spawnSync(process.execPath, [path.join(root, "scripts/build-online-sim.mjs")], {
     cwd: root,
     encoding: "utf8",

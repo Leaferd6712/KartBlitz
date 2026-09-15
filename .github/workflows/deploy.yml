@@ -1,4 +1,4 @@
-name: Deploy Game And Worker
+name: Deploy Game
 
 on:
   push:
@@ -20,11 +20,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prepare static site
         run: |
-          mkdir public
+          mkdir -p public/ml/models public/ml_training public/sim/tracks
           cp index.html public/
           cp leaderboard-admin.html public/
           cp patch-notes-editor.html public/
@@ -32,9 +32,33 @@ jobs:
           cp online-codec.js public/
           cp online-sim.js public/
           cp rb6.glb public/
+          cp ml/lab.css ml/lab.js ml/runtime.js public/ml/
+          cp ml/models/our-model.json public/ml/models/
+          cp ml_training/__init__.py public/ml_training/
+          cp ml_training/environment.py public/ml_training/
+          cp ml_training/model.py public/ml_training/
+          cp ml_training/train.py public/ml_training/
+          cp ml_training/server.py public/ml_training/
+          cp ml_training/requirements.txt public/ml_training/
+          cp ml_training/install.ps1 public/ml_training/
+          cp ml_training/start.ps1 public/ml_training/
+          cp ml_training/README.md public/ml_training/
+          cp ml_training/KartBlitz-ML-Setup.txt public/ml_training/
+          cp sim/tracks/bakes.json public/sim/tracks/
+
+      - name: Verify required game assets
+        run: |
+          test -f public/index.html
+          test -f public/ml/lab.js
+          test -f public/ml/lab.css
+          test -f public/ml/runtime.js
+          test -f public/ml/models/our-model.json
+          test -f public/ml_training/train.py
+          test -f public/ml_training/KartBlitz-ML-Setup.txt
+          test -f public/sim/tracks/bakes.json
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: public
 
@@ -48,27 +72,5 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
-
-  deploy-worker:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Deploy Cloudflare Worker
-        run: npm run deploy:online
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        uses: actions/deploy-pages@v5
 
