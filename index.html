@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="stylesheet" href="ml/lab.css?v=20260915c">
+<link rel="stylesheet" href="ml/lab.css?v=20260915d">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
@@ -13646,6 +13646,7 @@ function buildSettingsPane(){
   const engPct = Math.round((a11y.engineVolume != null ? a11y.engineVolume : 1) * 100);
   const scale = a11y.uiScale || 1;
   pane.innerHTML = `
+    ${window.KartBlitzMLLab ? window.KartBlitzMLLab.settingsMarkup() : ''}
     <div class="howto-section" style="width:min(560px,94vw);">
       <div class="howto-heading"> CONTROL MODE</div>
       <p>Keyboard uses remappable bindings. Touch enables on-screen joysticks (face-to-face layout in 2-player).</p>
@@ -18215,7 +18216,7 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
 })();
 
 </script>
-<script src="ml/runtime.js?v=20260915c"></script>
-<script src="ml/lab.js?v=20260915c"></script>
+<script src="ml/runtime.js?v=20260915d"></script>
+<script src="ml/lab.js?v=20260915d"></script>
 </body>
 </html>

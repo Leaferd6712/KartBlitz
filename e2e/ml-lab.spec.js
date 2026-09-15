@@ -82,4 +82,12 @@ test('ML Lab stays hidden when the setting is disabled', async ({ page }) => {
   await dismissOnboarding(page);
   await waitForMenu(page);
   await expect(page.locator('#ml-lab-menu-btn')).toBeHidden();
+
+  await page.getByRole('button', { name: 'CONTROLS & SETTINGS' }).click();
+  await page.getByRole('button', { name: 'SETTINGS' }).click();
+  const toggle = page.getByRole('button', { name: 'ML LAB: OFF' });
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await page.getByRole('button', { name: 'BACK' }).click();
+  await expect(page.locator('#ml-lab-menu-btn')).toBeVisible();
 });
