@@ -9,7 +9,7 @@ import {
   getAdminLeaderboard,
   upsertAdminEntry,
 } from "./leaderboard-admin";
-import { exportLeaderboardBackup, getDeviceStatus, getLeaderboard, registerDevice, submitScore } from "./leaderboard";
+import { exportLeaderboardBackup, getDeviceStatus, getLeaderboard, getLeaderboardGhost, registerDevice, submitScore } from "./leaderboard";
 import { completeTrialRun, startTrialRun } from "./trial-runs";
 import { ONLINE_PROTOCOL, TRACK_BAKE_VERSION } from "../sim/constants";
 import { LEADERBOARD_RULES_VERSION } from "../sim/trial-run";
@@ -80,6 +80,17 @@ export default {
       );
       if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
       return withCors(Response.json(res));
+    }
+    if (url.pathname === "/api/ghost") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(Response.json({ error: "leaderboard_unconfigured" }, { status: 503 }));
+      }
+      if (request.method !== "GET") {
+        return withCors(Response.json({ error: "method_not_allowed" }, { status: 405 }));
+      }
+      const res = await getLeaderboardGhost(env.LEADERBOARD_DB, url.searchParams.get("runId"));
+      if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
+      return withCors(Response.json(res, { headers: { "Cache-Control": "public, max-age=60" } }));
     }
     if (url.pathname === "/api/leaderboard-backup.txt" || url.pathname === "/api/leaderboard-backup") {
       if (!env.LEADERBOARD_DB) {

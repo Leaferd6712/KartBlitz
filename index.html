@@ -224,6 +224,7 @@ button.track-card{
 .lb-name{font-size:15px;letter-spacing:.04em;font-weight:800;}
 .lb-time{font-family:'Nunito',sans-serif;font-size:13px;color:var(--sky);font-weight:900;}
 .lb-meta{font-size:11px;opacity:.6;letter-spacing:.02em;}
+.lb-ghost-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.lb-ghost-btn{border:1px solid rgba(103,232,249,.5);border-radius:999px;background:rgba(0,245,255,.08);color:#bdfaff;padding:4px 7px;font:900 8px 'Nunito',sans-serif;letter-spacing:.04em;cursor:pointer}.lb-ghost-btn.ml{border-color:rgba(249,168,212,.55);color:#fbcfe8;background:rgba(236,72,153,.08)}.lb-ghost-btn:hover{filter:brightness(1.3)}
 .lb-date{font-size:11px;opacity:.5;text-align:right;letter-spacing:.02em;}
 .lb-empty{text-align:center;padding:48px 24px;opacity:.6;}
 .lb-empty-title{font-family:'Nunito',sans-serif;font-size:14px;letter-spacing:.06em;margin-bottom:8px;font-weight:900;}
@@ -233,7 +234,7 @@ button.track-card{
 @media (max-width:640px){
   .lb-head,.lb-row{grid-template-columns:32px minmax(56px,1fr) minmax(78px,.9fr) minmax(54px,.7fr);gap:8px;padding-left:12px;padding-right:12px;}
   .lb-h-date,.lb-date{display:none;}
-  .lb-filter-label{display:none;}
+  .lb-filter-label{display:none;}.lb-ghost-actions{gap:3px}.lb-ghost-btn{padding:4px 5px;font-size:7px}
 }
 .name-box{margin-top:20px;text-align:center;}
 .name-input{background:rgba(40,35,70,0.7);border:3px solid rgba(255,255,255,0.5);color:#fff;font-family:'Nunito',sans-serif;font-size:22px;text-align:center;padding:10px 20px;width:180px;letter-spacing:.3em;text-transform:uppercase;outline:none;border-radius:14px;font-weight:900;}
@@ -2102,6 +2103,7 @@ body::after{
   <div class="section-sub" id="save-name-status" style="min-height:18px;color:rgba(255,255,255,0.75)">3-12 LETTERS OR NUMBERS</div>
   <div style="height:20px"></div>
   <button class="btn btn-gold" onclick="confirmSave()">SAVE TO LEADERBOARD</button>
+  <div class="section-sub" style="max-width:560px;margin-top:14px;line-height:1.5;">VERIFIED TOP-10 TIME TRIAL REPLAYS BECOME PUBLIC GHOSTS. OTHER PLAYERS MAY RACE THEM OR USE THEIR DRIVING CONTROLS AS ML LAB IMITATION EXAMPLES.</div>
 </div>
 
 <!-- LEADERBOARD -->
@@ -2109,7 +2111,7 @@ body::after{
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('menu')">← BACK</button>
   <div class="section-title">LEADERBOARD</div>
-  <div class="section-sub">CLOUD RECORDS · USERNAME LOCKED PER DEVICE</div>
+  <div class="section-sub">CLOUD RECORDS · VERIFIED TOP-10 LAPS INCLUDE PUBLIC GHOST DATA</div>
   <div class="lb-shell">
     <div class="lb-filters">
       <div class="lb-filter-row">
@@ -7574,6 +7576,13 @@ function loadTrialPbGhostOntoKart(kart, trackId) {
   const Ghost = window.KartBlitzGhost;
   if (!Ghost) return;
   try {
+    const rival = window._leaderboardGhostSelection;
+    if (rival && Number(rival.trackId) === Number(trackId) && Array.isArray(rival.frames) && rival.frames.length >= 2) {
+      kart._bestGhost = rival.frames;
+      kart._ghostRefLap = Number(rival.lapTime) || null;
+      kart._ghostSourceName = String(rival.username || 'TOP 10');
+      return;
+    }
     const pd = getPlayerData();
     const got = Ghost.getStoredPbGhost(pd.pbGhosts, trackId);
     if (!got || !got.frames || got.frames.length < 2) return;
@@ -7667,7 +7676,7 @@ function drawGhost(ctx, kart, camX, camY, W, H) {
   ctx.globalAlpha = 0.28;
   ctx.translate(sx, sy);
   ctx.rotate(ga);
-  ctx.fillStyle = '#00f5ff';
+  ctx.fillStyle = kart._ghostSourceName ? '#f9a8d4' : '#00f5ff';
   // body
   ctx.beginPath();
   ctx.moveTo(-12,-4); ctx.lineTo(8,-3); ctx.lineTo(13,-1.5); ctx.lineTo(13,1.5); ctx.lineTo(8,3); ctx.lineTo(-12,4);
@@ -12649,6 +12658,52 @@ function mergeOnlineWinsEntries(cloudEntries, seedEntries) {
     .slice(0, 50);
 }
 
+const _leaderboardGhostCache = new Map();
+
+async function fetchLeaderboardGhost(runId) {
+  const safeId = String(runId || '');
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(safeId)) throw new Error('invalid_ghost');
+  if (_leaderboardGhostCache.has(safeId)) return _leaderboardGhostCache.get(safeId);
+  const data = await leaderboardFetchJson(`/api/ghost?runId=${encodeURIComponent(safeId)}&t=${Date.now()}`);
+  const unpacked = window.KartBlitzGhost && window.KartBlitzGhost.unpackLeaderboardGhost(data && data.ghost);
+  if (!data || !data.ok || !unpacked || Number(data.trackId) !== Number(unpacked.trackId)) throw new Error('invalid_ghost');
+  const result = { ...data, unpacked };
+  _leaderboardGhostCache.set(safeId, result);
+  return result;
+}
+
+async function raceLeaderboardGhost(runId) {
+  try {
+    const result = await fetchLeaderboardGhost(runId);
+    window._leaderboardGhostSelection = {
+      runId: String(runId), username: String(result.username || 'TOP 10'),
+      rank: Number(result.rank) || 0, trackId: Number(result.trackId),
+      lapTime: Number(result.bestLap), frames: result.unpacked.frames
+    };
+    const idx = TRACKS.findIndex(track => Number(track.id) === Number(result.trackId));
+    if (idx < 0) throw new Error('unknown_track');
+    currentMode = 'trial';
+    showSetupScreen(idx);
+  } catch (e) {
+    showLbToast(('GHOST UNAVAILABLE: ' + formatLbError(e)).toUpperCase(), true);
+  }
+}
+
+async function learnFromLeaderboardGhost(runId) {
+  try {
+    const result = await fetchLeaderboardGhost(runId);
+    if (!window.KartBlitzMLLab || typeof window.KartBlitzMLLab.importLeaderboardGhost !== 'function') throw new Error('ml_lab_unavailable');
+    await window.KartBlitzMLLab.importLeaderboardGhost(result);
+  } catch (e) {
+    showLbToast(('ML IMPORT FAILED: ' + formatLbError(e)).toUpperCase(), true);
+  }
+}
+
+function clearLeaderboardGhost() {
+  window._leaderboardGhostSelection = null;
+  if (typeof pendingTrackIdx === 'number') showSetupScreen(pendingTrackIdx);
+}
+
 async function buildLeaderboardScreen() {
   const seq = ++_lbBuildSeq;
   const modeTabs = document.getElementById('lb-mode-tabs');
@@ -12770,17 +12825,20 @@ async function buildLeaderboardScreen() {
     const trustTitle = trust === 'verified'
       ? 'Server-verified Time Trial run'
       : (trust === 'unverified' ? 'Client-reported (not server-verified)' : 'Legacy record (pre-verification)');
+    const ghostActions = !isOnlineWins && lbMode === 'trial' && i < 10 && e.hasGhost && e.verifiedRunId
+      ? `<div class="lb-ghost-actions"><button class="lb-ghost-btn" onclick="raceLeaderboardGhost('${e.verifiedRunId}')">RACE GHOST</button><button class="lb-ghost-btn ml" onclick="learnFromLeaderboardGhost('${e.verifiedRunId}')">USE FOR ML</button></div>`
+      : '';
     return `
       <div class="lb-row${i === 0 ? ' lb-top' : ''}">
         <div class="lb-rank" style="color:${rankColors[i] || 'rgba(255,255,255,.45)'}">${i + 1}</div>
         <div class="lb-name">${e.username || '—'} <span class="lb-trust" title="${trustTitle}" style="opacity:.55;font-size:10px;letter-spacing:.04em;">${isOnlineWins ? '' : trustLabel}</span></div>
         <div class="lb-time">${timeVal}</div>
-        <div class="lb-meta">${meta}</div>
+        <div class="lb-meta">${meta}${ghostActions}</div>
         <div class="lb-date">${fmtLbDate(e.createdAt)}</div>
       </div>`;
   }).join('');
 
-  html += `<div class="lb-foot">${isOnlineWins ? `Showing top ${entries.length} · cloud + seed file` : `Showing top ${entries.length} · cloud leaderboard${lbMode === 'trial' ? ' · ✓ = verified run' : ''}`}</div>`;
+  html += `<div class="lb-foot">${isOnlineWins ? `Showing top ${entries.length} · cloud + seed file` : `Showing top ${entries.length} · cloud leaderboard${lbMode === 'trial' ? ' · ✓ = verified run · top-10 ghosts are public and may be used as ML examples' : ''}`}</div>`;
   content.innerHTML = html;
 
   if(lbMode === 'trial' && typeof CG !== 'undefined' && CG.showBoard) {
@@ -14789,7 +14847,7 @@ function showSetupScreen(trackIdx) {
     ghostSection.innerHTML = `
       <div class="setup-section-label">PB GHOST</div>
       <div class="lap-row" id="pb-ghost-row"></div>
-      <div class="quali-note">Your personal-best lap replays as a ghost rival. Only a faster valid lap replaces it.</div>`;
+      <div class="quali-note" id="pb-ghost-note">Your personal-best lap replays as a ghost rival. Only a faster valid lap replaces it.</div>`;
     const grid = document.getElementById('setup-grid');
     if (grid && grid.parentNode) {
       grid.parentNode.insertBefore(ghostSection, grid.nextSibling);
@@ -14821,6 +14879,19 @@ function showSetupScreen(trackIdx) {
         };
         row.appendChild(b);
       });
+      const rival = window._leaderboardGhostSelection;
+      const rivalMatches = rival && Number(rival.trackId) === Number((TRACKS[pendingTrackIdx] || {}).id);
+      if (rivalMatches) {
+        const clear = document.createElement('button');
+        clear.className = 'lap-opt';
+        clear.textContent = 'CLEAR TOP-10 RIVAL';
+        clear.onclick = clearLeaderboardGhost;
+        row.appendChild(clear);
+      }
+      const note = document.getElementById('pb-ghost-note');
+      if (note) note.textContent = rivalMatches
+        ? `Racing #${rival.rank || '?'} ${rival.username} (${fmtTime(rival.lapTime)}). This verified public ghost replaces your PB ghost for this session.`
+        : 'Your personal-best lap replays as a ghost rival. Select a verified top-10 rival from the leaderboard to race their lap.';
     }
   }
 

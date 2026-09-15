@@ -21,6 +21,7 @@ type ScoreRow = {
   trust_level?: string | null;
   rules_version?: number | null;
   verified_run_id?: string | null;
+  has_ghost?: number | null;
 };
 
 export async function ensureLeaderboardSchema(db: D1Database): Promise<void> {
@@ -66,6 +67,17 @@ export async function ensureLeaderboardSchema(db: D1Database): Promise<void> {
       )`
     ),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_online_wins_rank ON online_wins(wins DESC)"),
+    db.prepare(
+      `CREATE TABLE IF NOT EXISTS ghost_replays (
+        run_id TEXT PRIMARY KEY,
+        track_id INTEGER NOT NULL,
+        lap_time REAL NOT NULL,
+        rules_version INTEGER NOT NULL,
+        ghost_json TEXT NOT NULL,
+        created_at REAL NOT NULL
+      )`
+    ),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_ghost_replays_track ON ghost_replays(track_id, lap_time)"),
   ]);
 }
 
@@ -364,6 +376,7 @@ export async function getLeaderboard(
         trustLevel?: string;
         rulesVersion?: number | null;
         verifiedRunId?: string | null;
+        hasGhost?: boolean;
         wins?: number;
       }>;
     }
@@ -423,7 +436,8 @@ export async function getLeaderboard(
   const rows = await db
     .prepare(
       `SELECT username_snapshot, mode, track_id, track_name, best_lap, total, winner, created_at,
-              trust_level, rules_version, verified_run_id
+              trust_level, rules_version, verified_run_id,
+              EXISTS(SELECT 1 FROM ghost_replays g WHERE g.run_id = scores.verified_run_id) AS has_ghost
        FROM scores
        WHERE mode = ? AND track_id = ?
        ORDER BY best_lap ASC
@@ -446,7 +460,58 @@ export async function getLeaderboard(
       trustLevel: r.trust_level || "legacy",
       rulesVersion: r.rules_version == null ? null : Number(r.rules_version),
       verifiedRunId: r.verified_run_id || null,
+      hasGhost: Number(r.has_ghost) === 1,
     })),
+  };
+}
+
+export async function getLeaderboardGhost(
+  db: D1Database,
+  runIdRaw: unknown
+): Promise<
+  | { ok: true; runId: string; username: string; trackId: number; bestLap: number; rank: number; ghost: Record<string, unknown> }
+  | { ok: false; error: string; status: number }
+> {
+  const runId = String(runIdRaw || "").trim();
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(runId)) {
+    return { ok: false, error: "invalid_run_id", status: 400 };
+  }
+  await ensureLeaderboardSchema(db);
+  const row = await db.prepare(
+    `SELECT s.username_snapshot, s.track_id, s.best_lap, s.trust_level, g.ghost_json
+     FROM scores s
+     JOIN ghost_replays g ON g.run_id = s.verified_run_id
+     WHERE s.mode = 'trial' AND s.verified_run_id = ?`
+  ).bind(runId).first<{
+    username_snapshot: string;
+    track_id: number;
+    best_lap: number;
+    trust_level: string;
+    ghost_json: string;
+  }>();
+  if (!row || row.trust_level !== "verified") {
+    return { ok: false, error: "ghost_not_found", status: 404 };
+  }
+  const faster = await db.prepare(
+    `SELECT COUNT(*) AS count FROM scores
+     WHERE mode = 'trial' AND track_id = ? AND best_lap < ?`
+  ).bind(Number(row.track_id), Number(row.best_lap)).first<{ count: number }>();
+  const rank = Number(faster?.count || 0) + 1;
+  if (rank > 10) return { ok: false, error: "ghost_not_top_10", status: 404 };
+  let ghost: Record<string, unknown>;
+  try {
+    ghost = JSON.parse(row.ghost_json) as Record<string, unknown>;
+  } catch {
+    return { ok: false, error: "ghost_corrupt", status: 500 };
+  }
+  return {
+    ok: true,
+    runId,
+    username: row.username_snapshot,
+    trackId: Number(row.track_id),
+    bestLap: Number(row.best_lap),
+    rank,
+    ghost,
   };
 }
 

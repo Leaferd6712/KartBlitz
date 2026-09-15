@@ -11,6 +11,7 @@
 export const PB_GHOST_SCHEMA = 1;
 export const PB_GHOST_MAX_FRAMES = 160;
 export const PB_GHOST_MIN_FRAMES = 8;
+export const LEADERBOARD_GHOST_MAX_FRAMES = 2400;
 
 /**
  * Evenly resample frames along time to at most maxFrames.
@@ -165,10 +166,43 @@ export function putPbGhost(store, packed) {
   return s;
 }
 
+/** Validate and unpack a public server-generated top-10 ghost. */
+export function unpackLeaderboardGhost(raw) {
+  if (!raw || Number(raw.v) !== 1 || !Array.isArray(raw.frames)) return null;
+  if (raw.frames.length < PB_GHOST_MIN_FRAMES || raw.frames.length > LEADERBOARD_GHOST_MAX_FRAMES) return null;
+  const trackId = Number(raw.trackId), lapTime = Number(raw.lapTime);
+  if (!Number.isInteger(trackId) || trackId < 0 || !Number.isFinite(lapTime) || lapTime <= 0 || lapTime > 600) return null;
+  let previousT = -1;
+  const frames = [];
+  const samples = [];
+  for (const packed of raw.frames) {
+    if (!Array.isArray(packed) || packed.length < 10 || packed.slice(0, 10).some(value => !Number.isFinite(Number(value)))) return null;
+    const t = Number(packed[0]) / 1000;
+    if (t < previousT || t > lapTime + 1) return null;
+    previousT = t;
+    const flags = Number(packed[5]) & 0xff;
+    frames.push({ t, x: Number(packed[1]) / 10, y: Number(packed[2]) / 10, a: Number(packed[3]) / 1000 });
+    samples.push({
+      t,
+      x: Number(packed[1]) / 10,
+      y: Number(packed[2]) / 10,
+      a: Number(packed[3]) / 1000,
+      speed: Number(packed[4]) / 10,
+      flags,
+      offTrack: !!Number(packed[6]),
+      ersCharge: Number(packed[7]) / 1000,
+      drsInZone: !!Number(packed[8]),
+      grip: Number(packed[9]) / 1000,
+    });
+  }
+  return { frames, samples, lapTime, trackId, packed: raw };
+}
+
 export default {
   PB_GHOST_SCHEMA,
   PB_GHOST_MAX_FRAMES,
   PB_GHOST_MIN_FRAMES,
+  LEADERBOARD_GHOST_MAX_FRAMES,
   resampleGhostFrames,
   packPbGhost,
   unpackPbGhost,
@@ -177,4 +211,5 @@ export default {
   normalizePbGhostStore,
   getStoredPbGhost,
   putPbGhost,
+  unpackLeaderboardGhost,
 };

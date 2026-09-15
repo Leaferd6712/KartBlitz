@@ -65,3 +65,15 @@ CREATE TABLE IF NOT EXISTS validated_runs (
 
 CREATE INDEX IF NOT EXISTS idx_runs_device_status ON validated_runs(device_token, status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_runs_idempotency ON validated_runs(idempotency_key);
+
+-- Public ghost/ML data derived only from server-verified top-10 Time Trial replays.
+CREATE TABLE IF NOT EXISTS ghost_replays (
+  run_id TEXT PRIMARY KEY,
+  track_id INTEGER NOT NULL,
+  lap_time REAL NOT NULL,
+  rules_version INTEGER NOT NULL,
+  ghost_json TEXT NOT NULL,
+  created_at REAL NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ghost_replays_track ON ghost_replays(track_id, lap_time);

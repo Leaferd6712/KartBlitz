@@ -115,7 +115,7 @@
 
         <section class="ml-panel" data-panel="build">
           <div class="ml-grid">
-            <article class="ml-card"><span class="ml-badge">DO NOW / OPTIONAL IMITATION</span><h3>Give PPO a short head start</h3><div class="ml-status"><div class="ml-stat"><span>INPUTS</span><strong>24</strong></div><div class="ml-stat"><span>OUTPUTS</span><strong>3</strong></div><div class="ml-stat"><span>IMITATION</span><strong>10%</strong></div><div class="ml-stat"><span>PPO RL</span><strong>90%</strong></div></div><p>Recording is optional. Human samples replace part of the built-in teacher’s 10% example allowance; they never reduce the 90% PPO budget.</p><div class="ml-note">Domain randomization changes top speed, acceleration, steering, braking and tyre grip during reinforcement learning. This reduces overfitting to one physics setup.</div><label class="ml-field"><span>Demonstration circuit</span><select class="ml-select" id="ml-demo-track">${getTracks().map(track => `<option value="${Number(track.id)}">${esc(track.name)}</option>`).join('')}</select><small>Choose a circuit, press Record, and complete one clean lap. Skip this if you only want the built-in teacher.</small></label><div class="ml-actions"><button class="ml-btn primary" onclick="KartBlitzMLLab.recordHumanLap()">DO NOW: RECORD A LAP</button><button class="ml-btn" onclick="KartBlitzMLLab.exportDemonstrations()">EXPORT DEMOS</button></div><div class="ml-demo-status" id="ml-demo-status">No human samples recorded in this session.</div></article>
+            <article class="ml-card"><span class="ml-badge">DO NOW / OPTIONAL IMITATION</span><h3>Give PPO a short head start</h3><div class="ml-status"><div class="ml-stat"><span>INPUTS</span><strong>24</strong></div><div class="ml-stat"><span>OUTPUTS</span><strong>3</strong></div><div class="ml-stat"><span>IMITATION</span><strong>10%</strong></div><div class="ml-stat"><span>PPO RL</span><strong>90%</strong></div></div><p>Recording is optional. Your clean laps and server-verified top-10 leaderboard ghosts replace part of the built-in teacher’s 10% example allowance; they never reduce the 90% PPO budget.</p><div class="ml-note">Choose USE FOR ML beside a verified top-10 Time Trial lap on the leaderboard. Off-track frames are excluded, and the server—not the player’s browser—must verify every imported replay.</div><label class="ml-field"><span>Demonstration circuit</span><select class="ml-select" id="ml-demo-track">${getTracks().map(track => `<option value="${Number(track.id)}">${esc(track.name)}</option>`).join('')}</select><small>Choose a circuit, press Record, and complete one clean lap. Skip this if you want leaderboard and built-in examples only.</small></label><div class="ml-actions"><button class="ml-btn primary" onclick="KartBlitzMLLab.recordHumanLap()">DO NOW: RECORD A LAP</button><button class="ml-btn" onclick="KartBlitzMLLab.exportDemonstrations()">EXPORT DEMOS</button></div><div class="ml-demo-status" id="ml-demo-status">No demonstration samples imported or recorded in this session.</div></article>
             <article class="ml-card"><span class="ml-badge player">REWARD DESIGN</span><h3>What should success mean?</h3><p>Reward is the score used during training, not the race score. Every slider changes the relative pressure on the policy.</p><div id="ml-reward-fields"></div></article>
           </div>
           <article class="ml-card ml-spaced"><span class="ml-badge player">REWARD LAB / CHANGE ONE THING</span><h3>See exactly where one frame's reward comes from</h3><p>Change the driving situation below. The coloured contributions use your reward weights above, so you can see when signals cooperate or fight each other.</p><div class="ml-reward-lab"><div class="ml-reward-scenarios"><label class="ml-param"><span>Forward movement</span><input id="ml-demo-progress" type="range" min="-1" max="3" step=".25" value="1" oninput="KartBlitzMLLab.renderRewardLab()"><small>Negative means the kart moved backwards.</small></label><label class="ml-param"><span>Speed</span><input id="ml-demo-speed" type="range" min="0" max="1" step=".05" value=".7" oninput="KartBlitzMLLab.renderRewardLab()"><small>Normalized from stopped to top speed.</small></label><label class="ml-param"><span>Track alignment</span><input id="ml-demo-alignment" type="range" min="0" max="1" step=".05" value=".9" oninput="KartBlitzMLLab.renderRewardLab()"><small>1 points along the road; 0 points sideways.</small></label><label class="ml-param"><span>Edge margin</span><input id="ml-demo-edge" type="range" min="-1" max="1" step=".05" value=".72" oninput="KartBlitzMLLab.renderRewardLab()"><small>1 is safely centred; negative is beyond an edge.</small></label><label class="ml-param"><span>Control change</span><input id="ml-demo-smooth" type="range" min="0" max="2" step=".1" value=".2" oninput="KartBlitzMLLab.renderRewardLab()"><small>Higher means a more sudden input change.</small></label><label class="ml-check"><input id="ml-demo-offtrack" type="checkbox" onchange="KartBlitzMLLab.renderRewardLab()"><span>Off track</span></label><label class="ml-check"><input id="ml-demo-stuck" type="checkbox" onchange="KartBlitzMLLab.renderRewardLab()"><span>Stuck for over 0.75 seconds</span></label><label class="ml-check"><input id="ml-demo-lap" type="checkbox" onchange="KartBlitzMLLab.renderRewardLab()"><span>Lap completed this frame</span></label></div><div><div id="ml-reward-total" class="ml-reward-total"></div><div id="ml-reward-breakdown" class="ml-reward-breakdown"></div><div class="ml-coach" id="ml-reward-coach"></div></div></div></article>
@@ -364,6 +364,9 @@
       const throttle = Number.isFinite(input && input.throttle) ? input.throttle : (input && input.up ? 1 : 0);
       const brake = Number.isFinite(input && input.brake) ? input.brake : (input && input.down ? 1 : 0);
       recording.samples.push({ observation: observation.map(value => Math.round(value * 100000) / 100000), action: [steer, throttle * 2 - 1, brake * 2 - 1].map(value => Math.round(Math.max(-1, Math.min(1, value)) * 100000) / 100000) });
+      recording.sensorState.previousSteer = steer;
+      recording.sensorState.previousThrottle = throttle;
+      recording.sensorState.previousBrake = brake;
     }
     if (recording.started && (kart.finished || race.phase === 'finished')) finishRecording(kart.finished);
   }
@@ -377,7 +380,34 @@
     const element = document.getElementById('ml-demo-status'); if (!element) return;
     if (state.recording) { element.textContent = `Recording track ${state.recording.trackId + 1}: drive one clean lap. ${state.recording.samples.length.toLocaleString()} samples captured.`; return; }
     const count = state.demonstrations.reduce((sum, demo) => sum + demo.samples.length, 0);
-    element.textContent = count ? `${state.demonstrations.length} recorded run(s), ${count.toLocaleString()} human samples. They will be included in the next job.` : 'No human samples recorded in this session.';
+    const leaderboardCount = state.demonstrations.filter(demo => demo.source === 'verified-top-10').length;
+    element.textContent = count ? `${state.demonstrations.length} demonstration run(s), ${count.toLocaleString()} samples${leaderboardCount ? `, including ${leaderboardCount} verified top-10 ghost${leaderboardCount === 1 ? '' : 's'}` : ''}. They will be included in the next job.` : 'No demonstration samples imported or recorded in this session.';
+  }
+
+  async function importLeaderboardGhost(payload) {
+    const ghostApi = window.KartBlitzGhost;
+    const unpacked = payload && (payload.unpacked || (ghostApi && ghostApi.unpackLeaderboardGhost(payload.ghost)));
+    const rank = Number(payload && payload.rank);
+    if (!unpacked || !(rank >= 1 && rank <= 10)) throw new Error('Only a current verified top-10 ghost can be imported.');
+    if (!state.tracks) await loadTracks();
+    const track = state.tracks && state.tracks.find(item => Number(item.id) === Number(unpacked.trackId));
+    if (!track) throw new Error('The ghost track is not available in ML Lab.');
+    const sourceId = String(payload.runId || `${payload.username}-${unpacked.trackId}-${unpacked.lapTime}`);
+    state.demonstrations = state.demonstrations.filter(demo => demo.sourceId !== sourceId);
+    const sensorState = {}, samples = [], maxSpeed = Math.max(1, Number(unpacked.packed.maxSpeed) || 362);
+    for (const frame of unpacked.samples) {
+      const flags = frame.flags & 0xff;
+      const steer = (flags & 4) && !(flags & 8) ? -1 : (flags & 8) && !(flags & 4) ? 1 : 0;
+      const throttle = flags & 1 ? 1 : 0, brake = flags & 2 ? 1 : 0;
+      const kart = { x: frame.x, y: frame.y, angle: frame.a, speed: frame.speed, maxSpeed, isOffTrack: frame.offTrack, ersCharge: frame.ersCharge, drsAvailable: true, drsInZone: frame.drsInZone, grip: frame.grip };
+      const observation = Runtime.observeV2(kart, track, sensorState);
+      if (!frame.offTrack) samples.push({ observation: observation.map(value => Math.round(value * 100000) / 100000), action: [steer, throttle * 2 - 1, brake * 2 - 1] });
+      sensorState.previousSteer = steer; sensorState.previousThrottle = throttle; sensorState.previousBrake = brake;
+    }
+    if (samples.length < 30) throw new Error('The verified ghost does not contain enough clean samples.');
+    state.demonstrations.push({ format: 'kartblitz-demonstration-v1', observationVersion: 2, source: 'verified-top-10', sourceId, username: String(payload.username || 'TOP 10'), rank, trackId: unpacked.trackId, lapTime: unpacked.lapTime, completedLap: true, sampleRateHz: 15, samples });
+    setEnabled(true); open(); tab('build'); updateDemoStatus();
+    const status = document.getElementById('ml-demo-status'); if (status) status.classList.add('success');
   }
 
   function download(name, payload) {
@@ -477,6 +507,6 @@
   }
 
   function boot() { installScreen(); hookSettings(); loadOurModel(); }
-  window.KartBlitzMLLab = { open, close, tab, setEnabled, settingsMarkup, connect, startTraining, applyPreset, renderDecisionLesson, chooseLesson, checkDecision, renderRewardLab, explainPhase, updateTrainingExplanation, copyCommand, exportConfig, exportDemonstrations, exportModel, downloadTrainerPack, selectModel, selectTrack, launchRace, replayTrack, recordHumanLap, captureRaceFrame, scoreDecision, calculateRewardFrame };
+  window.KartBlitzMLLab = { open, close, tab, setEnabled, settingsMarkup, connect, startTraining, applyPreset, renderDecisionLesson, chooseLesson, checkDecision, renderRewardLab, explainPhase, updateTrainingExplanation, copyCommand, exportConfig, exportDemonstrations, exportModel, downloadTrainerPack, importLeaderboardGhost, selectModel, selectTrack, launchRace, replayTrack, recordHumanLap, captureRaceFrame, scoreDecision, calculateRewardFrame };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 })();

@@ -11,6 +11,7 @@ import {
   getStoredPbGhost,
   putPbGhost,
   estimatePackedGhostBytes,
+  unpackLeaderboardGhost,
   PB_GHOST_MAX_FRAMES,
 } from '../pb-ghost.mjs';
 
@@ -22,6 +23,19 @@ function makeFrames(seconds, hz = 30) {
     frames.push({ t, x: 1000 + t * 40, y: 2000 + Math.sin(t) * 20, a: t * 0.05 });
   }
   return frames;
+}
+
+// Public leaderboard ghosts carry authoritative pose, control, and vehicle-state samples.
+{
+  const frames = [];
+  for (let i = 0; i < 12; i++) frames.push([i * 100, 10000 + i * 20, 20000, i * 5, 2500, 1 | (i > 5 ? 8 : 0), 0, 900, 1, 1000]);
+  const got = unpackLeaderboardGhost({ v: 1, trackId: 2, lapTime: 1.1, sampleRateHz: 15, maxSpeed: 362, frames });
+  assert.ok(got);
+  assert.strictEqual(got.frames.length, 12);
+  assert.strictEqual(got.samples[0].x, 1000);
+  assert.strictEqual(got.samples[7].flags & 8, 8);
+  assert.strictEqual(unpackLeaderboardGhost({ v: 1, trackId: 2, lapTime: 1.1, frames: frames.slice().reverse() }), null);
+  assert.strictEqual(unpackLeaderboardGhost({ v: 1, trackId: 2, lapTime: 1.1, frames: [[0, 1]] }), null);
 }
 
 // Resample caps size

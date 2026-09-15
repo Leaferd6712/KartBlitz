@@ -203,7 +203,7 @@ async function upsertVerifiedScore(
   bestLap: number,
   runId: string,
   rulesVersion: number
-): Promise<{ saved: boolean; bestLap: number; reason?: string }> {
+): Promise<{ saved: boolean; bestLap: number; rank?: number; reason?: string }> {
   const now = Date.now();
   const existing = await db
     .prepare(
@@ -251,7 +251,39 @@ async function upsertVerifiedScore(
       )
       .run();
   }
-  return { saved: true, bestLap };
+  const faster = await db.prepare(
+    `SELECT COUNT(*) AS count FROM scores
+     WHERE mode = 'trial' AND track_id = ? AND best_lap < ?`
+  ).bind(trackId, bestLap).first<{ count: number }>();
+  return { saved: true, bestLap, rank: Number(faster?.count || 0) + 1 };
+}
+
+async function storeTopTenGhost(
+  db: D1Database,
+  runId: string,
+  trackId: number,
+  lapTime: number,
+  rulesVersion: number,
+  ghost: Record<string, unknown>
+): Promise<void> {
+  const encoded = JSON.stringify(ghost);
+  if (encoded.length < 32 || encoded.length > 500_000) throw new Error("ghost_size_invalid");
+  await db.prepare(
+    `INSERT INTO ghost_replays (run_id, track_id, lap_time, rules_version, ghost_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(run_id) DO UPDATE SET
+       track_id = excluded.track_id, lap_time = excluded.lap_time,
+       rules_version = excluded.rules_version, ghost_json = excluded.ghost_json,
+       created_at = excluded.created_at`
+  ).bind(runId, trackId, lapTime, rulesVersion, encoded, Date.now()).run();
+  await db.prepare(
+    `DELETE FROM ghost_replays
+     WHERE track_id = ? AND run_id NOT IN (
+       SELECT verified_run_id FROM scores
+       WHERE mode = 'trial' AND track_id = ? AND trust_level = 'verified'
+       ORDER BY best_lap ASC LIMIT 10
+     )`
+  ).bind(trackId, trackId).run();
 }
 
 export async function completeTrialRun(
@@ -267,6 +299,8 @@ export async function completeTrialRun(
       lapTimes: number[];
       trustLevel: "verified";
       rulesVersion: number;
+      rank?: number;
+      ghostSaved?: boolean;
       reason?: string;
       idempotent?: boolean;
     }
@@ -358,6 +392,19 @@ export async function completeTrialRun(
     verified.rulesVersion
   );
 
+  let ghostSaved = false;
+  if (upsert.saved && Number(upsert.rank) <= 10 && verified.ghost) {
+    await storeTopTenGhost(
+      db,
+      runId,
+      Number(run.track_id),
+      verified.bestLap,
+      verified.rulesVersion,
+      verified.ghost as unknown as Record<string, unknown>
+    );
+    ghostSaved = true;
+  }
+
   await db
     .prepare(
       `UPDATE validated_runs
@@ -382,6 +429,8 @@ export async function completeTrialRun(
     lapTimes: verified.lapTimes,
     trustLevel: "verified",
     rulesVersion: verified.rulesVersion,
+    rank: upsert.rank,
+    ghostSaved,
     reason: upsert.reason,
   };
 }

@@ -118,7 +118,39 @@ export type TrialVerifyOk = {
   steps: number;
   rulesVersion: number;
   trackBakeVersion: number;
+  ghost: TrialGhostReplay | null;
 };
+
+/** Compact authoritative replay sampled at 15 Hz. Each frame is
+ * [timeMs, x*10, y*10, angle*1000, speed*10, inputFlags, offTrack, ers*1000, drsInZone, grip*1000]. */
+export type TrialGhostFrame = [number, number, number, number, number, number, number, number, number, number];
+export type TrialGhostReplay = {
+  v: 1;
+  trackId: number;
+  lapTime: number;
+  sampleRateHz: 15;
+  rulesVersion: number;
+  trackBakeVersion: number;
+  maxSpeed: number;
+  frames: TrialGhostFrame[];
+};
+
+export const TRIAL_GHOST_MAX_FRAMES = 2400;
+
+function ghostFrame(kart: ReturnType<typeof createKart>, elapsedSec: number, inputFlags: number): TrialGhostFrame {
+  return [
+    Math.max(0, Math.round(elapsedSec * 1000)),
+    Math.round(kart.x * 10),
+    Math.round(kart.y * 10),
+    Math.round(kart.angle * 1000),
+    Math.round(kart.speed * 10),
+    inputFlags & 0xff,
+    kart.isOffTrack ? 1 : 0,
+    Math.round(Math.max(0, Math.min(1, kart.ersCharge || 0)) * 1000),
+    kart.drsInZone ? 1 : 0,
+    Math.round(Math.max(0, Math.min(1.5, kart.grip || 0)) * 1000),
+  ];
+}
 
 export type TrialVerifyErr = {
   ok: false;
@@ -164,14 +196,46 @@ export function verifyTrialReplay(
 
   const floor = minPlausibleLapSec(track);
   let nowMs = 0;
+  let activeGhost: TrialGhostFrame[] = [];
+  let bestGhost: TrialGhostReplay | null = null;
+  let bestGhostLap = Infinity;
   for (let i = 0; i < packedInputs.length; i++) {
     const inp = unpackInputFlags(packedInputs[i]);
+    const lapStartBefore = kart.lapStart;
+    const lapCountBefore = kart.lapTimes.length;
     nowMs += FIXED_DT * 1000;
     stepKart(kart, inp, FIXED_DT, track, [], {
       contact: false,
       resolveCollisions: false,
       nowMs,
     });
+
+    const completedLap = kart.lapTimes.length > lapCountBefore;
+    if (completedLap) {
+      const lapTime = Number(kart.lapTimes[kart.lapTimes.length - 1]);
+      if (lapStartBefore !== null && activeGhost.length < TRIAL_GHOST_MAX_FRAMES) {
+        activeGhost.push(ghostFrame(kart, lapTime, packedInputs[i]));
+      }
+      if (Number.isFinite(lapTime) && lapTime > 0 && activeGhost.length >= 8 && lapTime < bestGhostLap) {
+        bestGhostLap = lapTime;
+        bestGhost = {
+          v: 1,
+          trackId: Number(track.id) || 0,
+          lapTime: Math.round(lapTime * 1000) / 1000,
+          sampleRateHz: 15,
+          rulesVersion: LEADERBOARD_RULES_VERSION,
+          trackBakeVersion: TRACK_BAKE_VERSION,
+          maxSpeed: Math.round((kart.baseMaxSpeed || kart.maxSpeed || 1) * 1000) / 1000,
+          frames: activeGhost.slice(),
+        };
+      }
+      activeGhost = [ghostFrame(kart, 0, packedInputs[i])];
+    } else if (kart.lapStart !== null) {
+      if (lapStartBefore === null) activeGhost = [ghostFrame(kart, 0, packedInputs[i])];
+      else if (i % 4 === 0 && activeGhost.length < TRIAL_GHOST_MAX_FRAMES) {
+        activeGhost.push(ghostFrame(kart, (nowMs - kart.lapStart) / 1000, packedInputs[i]));
+      }
+    }
   }
 
   if (!kart.lapTimes.length) {
@@ -196,5 +260,6 @@ export function verifyTrialReplay(
     steps: packedInputs.length,
     rulesVersion: LEADERBOARD_RULES_VERSION,
     trackBakeVersion: TRACK_BAKE_VERSION,
+    ghost: bestGhost,
   };
 }
