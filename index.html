@@ -16,12 +16,14 @@ import * as KartBlitzSave from './sim/player-save.mjs';
 import * as KartBlitzProgramme from './sim/upgrade-programme.mjs';
 import * as KartBlitzMastery from './sim/track-mastery.mjs';
 import * as KartBlitzGhost from './sim/pb-ghost.mjs';
+import * as KartBlitzSpeedFeel from './sim/speed-feel.mjs';
 window.KartBlitzRewards = KartBlitzRewards;
 window.KartBlitzRnD = KartBlitzRnD;
 window.KartBlitzSave = KartBlitzSave;
 window.KartBlitzProgramme = KartBlitzProgramme;
 window.KartBlitzMastery = KartBlitzMastery;
 window.KartBlitzGhost = KartBlitzGhost;
+window.KartBlitzSpeedFeel = KartBlitzSpeedFeel;
 </script>
 <script type="importmap">
 {
@@ -94,6 +96,9 @@ button.touch-btn{
   min-height:44px;
 }
 .btn-sm{min-height:40px;font-size:calc(13px * var(--ui-scale));padding:10px 22px;}
+.back-btn{
+  position:absolute;top:0;left:0;
+  width:56px;height:56px;min-width:56px;min-height:56px;
   font-size:0;padding:0;border:none;border-radius:0 0 14px 0;
   background:#2a2340;color:#fff;cursor:pointer;
   clip-path:none;z-index:25;transition:background .2s;
@@ -102,8 +107,17 @@ button.touch-btn{
 .back-btn::after{content:'◀';font-size:18px;position:static;color:#fff;line-height:1;}
 .back-btn:hover{background:#3a3060;color:#fff;}
 .section-sub{font-size:calc(14px * var(--ui-scale));opacity:.9;color:rgba(255,255,255,0.92);}
+.mode-card .m-desc{opacity:.92;color:rgba(255,255,255,0.92);}
+.mode-card .m-tag{opacity:.8;font-size:11px;color:rgba(255,255,255,0.82);}
 .track-target,.track-mastery,.online-player .op-meta,.lb-meta,.lb-date,.ctrl-mode-label,.howto-tip,.info-tip{
   opacity:.85!important;
+  color:rgba(255,255,255,0.88);
+}
+.track-name{font-size:calc(13px * var(--ui-scale));}
+.track-diff{font-size:calc(12px * var(--ui-scale));}
+.controls-ref{opacity:.55;}
+.sr-only{
+  position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
   overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3248,20 +3262,36 @@ function updateEngine(id, speed, maxSpeed, isThrottle=false, isBraking=false) {
   if (!AC || !engines[id]) return;
 
   const eng = engines[id];
-  const speedRatio = Math.max(0, Math.min(1, Math.abs(speed) / Math.max(1, maxSpeed || 1)));
-  const throttleBoost = isThrottle ? 0.22 : 0;
-  const brakeDrag = isBraking ? 0.08 : 0;
-  const rpm = Math.max(0, Math.min(1, 0.18 + speedRatio * 0.72 + throttleBoost - brakeDrag));
-
-  const targetFreq = 55 + rpm * 190;
-  const targetFilter = 300 + rpm * 1400;
-  let targetGain = 0.004 + rpm * 0.012;
-  if (isThrottle) targetGain += 0.014;
-  if (!isThrottle && Math.abs(speed) < 4) targetGain = 0.003;
+  const Feel = window.KartBlitzSpeedFeel;
+  const speedRatio = Math.max(0, Math.min(1.12, Math.abs(speed) / Math.max(1, maxSpeed || 1)));
+  let targetFreq, targetFilter, targetGain;
+  if (Feel && typeof Feel.engineVoice === 'function') {
+    const voice = Feel.engineVoice({ speedRatio, throttle: !!isThrottle, braking: !!isBraking });
+    targetFreq = voice.hz;
+    targetFilter = voice.filter;
+    targetGain = voice.gain;
+  } else {
+    const throttleBoost = isThrottle ? 0.22 : 0;
+    const brakeDrag = isBraking ? 0.08 : 0;
+    const rpm = Math.max(0, Math.min(1, 0.18 + speedRatio * 0.72 + throttleBoost - brakeDrag));
+    targetFreq = 55 + rpm * 190;
+    targetFilter = 300 + rpm * 1400;
+    targetGain = 0.004 + rpm * 0.012;
+    if (isThrottle) targetGain += 0.014;
+    if (!isThrottle && Math.abs(speed) < 4) targetGain = 0.003;
+  }
 
   eng.osc.frequency.setTargetAtTime(targetFreq, AC.currentTime, 0.05);
   eng.filt.frequency.setTargetAtTime(targetFilter, AC.currentTime, 0.06);
   eng.gain.gain.setTargetAtTime(targetGain, AC.currentTime, 0.07);
+}
+function duckAllEngines() {
+  if (!AC) return;
+  Object.keys(engines).forEach((id) => {
+    const eng = engines[id];
+    if (!eng || !eng.gain) return;
+    try { eng.gain.gain.setTargetAtTime(0.0001, AC.currentTime, 0.04); } catch (e) {}
+  });
 }
 function stopEngine(id) {
   if(engines[id] == null) return;
@@ -4516,6 +4546,38 @@ function spawnDust(x,y,a) {
   }
 }
 
+function maybeSpawnSpeedSpray(kart, dt) {
+  const Feel = window.KartBlitzSpeedFeel;
+  if (!Feel || typeof Feel.sprayIntensity !== 'function' || !kart) return;
+  if (typeof hudReducedMotion === 'function' && hudReducedMotion()) return;
+  const maxSpd = Math.max(1, kart.maxSpeed || kart.baseMaxSpeed || 1);
+  const ratio = Math.abs(kart.speed || 0) / maxSpd;
+  const inten = Feel.sprayIntensity(ratio, false);
+  if (inten <= 0.02) return;
+  kart._sfSprayT = (kart._sfSprayT || 0) - dt;
+  if (kart._sfSprayT > 0) return;
+  const q = getQualityPreset();
+  const interval = (Feel.SPEED_FEEL && Feel.SPEED_FEEL.spray && Feel.SPEED_FEEL.spray.interval) || 0.075;
+  kart._sfSprayT = interval / Math.max(0.4, q.particleSpawnMul);
+  const count = Math.max(1, Math.round(((Feel.SPEED_FEEL.spray && Feel.SPEED_FEEL.spray.count) || 2) * inten * q.particleSpawnMul));
+  const back = kart.angle + Math.PI;
+  const px0 = Math.cos(back), py0 = Math.sin(back);
+  const lx = -Math.sin(kart.angle), ly = Math.cos(kart.angle);
+  for (let i = 0; i < count; i++) {
+    const side = (Math.random() - 0.5) * 14;
+    const along = 8 + Math.random() * 10;
+    _emit(
+      kart.x + px0 * along + lx * side,
+      kart.y + py0 * along + ly * side,
+      px0 * (16 + Math.abs(kart.speed) * 0.035) * (0.6 + Math.random() * 0.5),
+      py0 * (16 + Math.abs(kart.speed) * 0.035) * (0.6 + Math.random() * 0.5),
+      `hsla(38,10%,${58 + Math.random() * 14}%,0.55)`,
+      0.18 + Math.random() * 0.16,
+      1.2 + Math.random() * 1.4
+    );
+  }
+}
+
 // ── KART CLASS ──────────────────────────────────────────
 const GAME_SPEED_MULT = 0.75; // global multiplier to reduce top speeds by 25%
 const GLOBAL_ACCEL_MULT = 0.45;
@@ -4741,6 +4803,8 @@ class Kart {
     }
     const throttleInput = Math.max(0, Math.min(1, this._throttleAssist));
     const brakeInput = Math.max(0, Math.min(1, this._brakeAssist));
+    this._sfThrottle = throttleInput > 0.12;
+    this._sfBrake = brakeInput > 0.10;
 
     // ── KART-TO-KART CONTACT PHYSICS ───────────────────
     // Simple circle-circle push: karts have a ~18-unit radius.
@@ -5068,6 +5132,9 @@ class Kart {
         spawnDust(this.x, this.y, this.angle + Math.PI);
         this.slideParticleTimer = 0.11;
       }
+    }
+    if (!this.isAI && !_drifting && !this.isOffTrack) {
+      maybeSpawnSpeedSpray(this, dt);
     }
 
     // Move
@@ -7949,7 +8016,7 @@ function drawPitIntentGuide(ctx, raceState, kart, camX, camY, viewW, viewH) {
 
 function getDebugOverlayRect(viewW, viewH) {
   const layout = getHudLayout(viewW, viewH || 720, 'ai');
-  const panelW = 246, panelH = 118;
+  const panelW = 246, panelH = 134;
   // Park above the secondary stack on the left — clear of timer + pause/exit.
   const stackTop = layout.secondaryBottom - (28 * 3 + 6 * 2 + 26);
   let y = Math.max(layout.primaryBottom + 8, stackTop - panelH - 8);
@@ -7979,7 +8046,12 @@ function drawDebugOverlay(ctx, kart, viewW, viewH) {
   hudFillText(ctx, `PARTICLES ${activeParticles}/${POOL_SIZE}`, panelX + 10, panelY + 54, { bold: true, size: 11, color: '#dbeaff' });
   hudFillText(ctx, `SLIPSTREAM ${(kart.slipstreamStrength * 100).toFixed(0)}%`, panelX + 10, panelY + 72, { bold: true, size: 11, color: '#dbeaff' });
   hudFillText(ctx, `PIT ASSIST ${kart._pitIntentActive ? 'ON' : 'OFF'}`, panelX + 10, panelY + 90, { bold: true, size: 11, color: '#dbeaff' });
-  hudFillText(ctx, 'F9 DEBUG · F8 QUALITY · ALT+V PIT', panelX + 10, panelY + 106, { bold: true, size: 10, color: HUD.muted });
+  const feel = (race && race.cameras && race.cameras[0] && race.cameras[0]._feel) || null;
+  const streakN = (window.KartBlitzSpeedFeel && feel)
+    ? window.KartBlitzSpeedFeel.countActiveStreaks(feel) : 0;
+  const zoomTxt = feel ? `ZOOM ${feel.zoom.toFixed(2)}  STREAKS ${streakN}` : 'ZOOM —';
+  hudFillText(ctx, zoomTxt, panelX + 10, panelY + 106, { bold: true, size: 11, color: '#dbeaff' });
+  hudFillText(ctx, 'F9 DEBUG · F8 QUALITY · ALT+V PIT', panelX + 10, panelY + 122, { bold: true, size: 10, color: HUD.muted });
   ctx.restore();
 }
 
@@ -7991,6 +8063,7 @@ function drawViewportRaceTimer(ctx, elapsed, viewW) {
 // ── RACE STATE ──────────────────────────────────────────
 let race = null;
 let animId = null;
+window.getActiveRace = function getActiveRace() { return race; };
 let lastTime = null;
 let _fpsFrames = 0, _fpsTimer = 0, _fpsDisplay = 0;
 let _qualityLevel = 'high';
@@ -8000,6 +8073,99 @@ const QUALITY_PRESETS = {
   low: { particleSpawnMul:0.45, trailLines:4, rainDrops:90, screenShakeMul:0.60, speedLineAlpha:0.22 },
   medium: { particleSpawnMul:0.72, trailLines:7, rainDrops:150, screenShakeMul:0.82, speedLineAlpha:0.32 },
   high: { particleSpawnMul:1.00, trailLines:10, rainDrops:220, screenShakeMul:1.00, speedLineAlpha:0.45 },
+};
+
+function ensureSpeedFeelSlot(cam) {
+  const Feel = window.KartBlitzSpeedFeel;
+  if (!cam || !Feel || typeof Feel.createSlot !== 'function') return null;
+  if (!cam._feel) cam._feel = Feel.createSlot();
+  return cam._feel;
+}
+
+function resetSpeedFeel(opts) {
+  const Feel = window.KartBlitzSpeedFeel;
+  if (!Feel || typeof Feel.resetSlot !== 'function') return;
+  const keepZoom = !!(opts && opts.keepZoom);
+  if (race && race.cameras) {
+    race.cameras.forEach((cam) => {
+      if (cam && cam._feel) Feel.resetSlot(cam._feel, { keepZoom });
+    });
+  }
+  if (race && race.karts) {
+    race.karts.forEach((k) => { if (k) k._sfSprayT = 0; });
+  }
+}
+
+function tickSpeedFeelStreaks(cam, kart, viewW, viewH) {
+  const Feel = window.KartBlitzSpeedFeel;
+  const slot = cam && cam._feel;
+  if (!Feel || !slot || !kart) return;
+  Feel.tickStreaks(slot, {
+    dt: (race && race._lastDt) || 0.016,
+    speed: kart.speed,
+    maxSpeed: kart.maxSpeed || kart.baseMaxSpeed,
+    angle: kart.angle,
+    viewW,
+    viewH,
+    reducedMotion: hudReducedMotion(),
+    trailLines: getQualityPreset().trailLines,
+    speedLineAlpha: getQualityPreset().speedLineAlpha,
+  });
+}
+
+function beginSpeedFeelWorld(ctx, cam, kart, viewW, viewH) {
+  tickSpeedFeelStreaks(cam, kart, viewW, viewH);
+  const feel = cam && cam._feel;
+  const zoom = feel && Number.isFinite(feel.zoom) ? feel.zoom : 1;
+  ctx.save();
+  if (Math.abs(zoom - 1) > 0.001) {
+    ctx.translate(viewW * 0.5, viewH * 0.5);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-viewW * 0.5, -viewH * 0.5);
+  }
+  return {
+    camX: cam.x + (feel ? feel.shakeX : 0),
+    camY: cam.y + (feel ? feel.shakeY : 0),
+    feel,
+  };
+}
+
+function endSpeedFeelWorld(ctx) {
+  ctx.restore();
+}
+
+function drawSpeedFeelStreaks(ctx, cam, viewW, viewH) {
+  const feel = cam && cam._feel;
+  if (!feel || !feel.streaks || hudReducedMotion()) return;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(214,226,255,0.9)';
+  for (let i = 0; i < feel.streaks.length; i++) {
+    const s = feel.streaks[i];
+    if (!s.active) continue;
+    const fade = s.maxLife > 0 ? s.life / s.maxLife : 0;
+    ctx.globalAlpha = Math.max(0, Math.min(0.38, s.alpha * fade));
+    ctx.lineWidth = s.w;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x + Math.cos(s.ang) * s.len, s.y + Math.sin(s.ang) * s.len);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+window.getSpeedFeelDiagnostics = function getSpeedFeelDiagnostics() {
+  const Feel = window.KartBlitzSpeedFeel;
+  const cams = (race && race.cameras) || [];
+  return {
+    reducedMotion: hudReducedMotion(),
+    shakeAllowed: screenShakeAllowed(),
+    cameras: cams.map((cam, i) => ({
+      i,
+      zoom: cam && cam._feel ? cam._feel.zoom : null,
+      feel: Feel && cam && cam._feel ? Feel.slotDiagnostics(cam._feel) : null,
+    })),
+  };
 };
 
 function saveRuntimePrefs() {
@@ -8374,7 +8540,21 @@ class Race {
       return;
     }
     const vis = (typeof kartVisPose === 'function') ? kartVisPose(k) : { x: k.x, y: k.y, angle: k.angle };
-    const lookAhead = Math.abs(k.speed) * 0.55;
+    const Feel = window.KartBlitzSpeedFeel;
+    const feelSlot = ensureSpeedFeelSlot(cam);
+    if (Feel && feelSlot && typeof Feel.tickDynamics === 'function') {
+      Feel.tickDynamics(feelSlot, {
+        dt: dt || 0.016,
+        speed: k.speed,
+        maxSpeed: k.maxSpeed || k.baseMaxSpeed,
+        throttle: !!k._sfThrottle,
+        brake: !!k._sfBrake,
+        reducedMotion: hudReducedMotion(),
+        shakeAllowed: screenShakeAllowed(),
+        shakeMul: getQualityPreset().screenShakeMul,
+      });
+    }
+    const lookAhead = Math.abs(k.speed) * 0.55 + (feelSlot ? feelSlot.lookNudge : 0);
     let tx = vis.x + Math.cos(vis.angle) * lookAhead;
     let ty = vis.y + Math.sin(vis.angle) * lookAhead;
     const cache = (typeof _trackBaseCache !== 'undefined' && _trackBaseCache && this.track && _trackBaseCache.trackId === this.track.id)
@@ -8993,6 +9173,7 @@ class Race {
     if(animId) { cancelAnimationFrame(animId); animId = null; lastTime = null; }
     stopAllEngines();
     stopAllDriftSnds();
+    resetSpeedFeel();
   showTouchOverlay(false);
   updateRaceControlsHud(false);
   canvas.style.display = 'none';
@@ -9221,6 +9402,7 @@ class Race {
   }
 
   update(dt) {
+    this._lastDt = dt;
     if(this.phase === 'qualifying') {
       // Freeze the whole session while a human is on the pit tyre screen.
       if(this._isHumanPitMenuOpen()) {
@@ -9492,12 +9674,8 @@ class Race {
       // Full screen, camera on P1
       ctx.clearRect(0,0,W,H);
       const cam = this.cameras[0];
-      const quality = getQualityPreset();
-      // Speed shake: vibrates screen at > 80% max speed
-      const _sr0 = Math.abs(karts[0].speed) / karts[0].maxSpeed;
-      const _sh0 = screenShakeAllowed() && _sr0 > 0.8 ? (_sr0 - 0.8) * 14 * quality.screenShakeMul : 0;
-      const _sx0 = (Math.random()-0.5)*_sh0, _sy0 = (Math.random()-0.5)*_sh0;
-      drawTrack(ctx, track, cam.x + _sx0, cam.y + _sy0, W, H, karts[0].checkpointsBit);
+      const world = beginSpeedFeelWorld(ctx, cam, karts[0], W, H);
+      drawTrack(ctx, track, world.camX, world.camY, W, H, karts[0].checkpointsBit);
       drawPitIntentGuide(ctx, this, karts[0], cam.x, cam.y, W, H);
       for(let _ri=0;_ri<_pPool.length;_ri++){
         const p=_pPool[_ri]; if(!p.active) continue;
@@ -9507,24 +9685,10 @@ class Race {
         ctx.arc(p.x-cam.x+W/2, p.y-cam.y+H/2, p.size*a, 0, Math.PI*2);
         ctx.fill(); ctx.globalAlpha=1;
       }
-      // Speed trail lines at high velocity
-      if(_sr0 > 0.78) {
-        ctx.save();
-        ctx.globalAlpha = (_sr0 - 0.78) * quality.speedLineAlpha;
-        ctx.strokeStyle = 'rgba(210,225,255,0.9)';
-        ctx.lineWidth = 1.5;
-        const _ang0 = karts[0].angle + Math.PI;
-        for(let _li = 0; _li < quality.trailLines; _li++) {
-          const lx = Math.random()*W, ly = Math.random()*H;
-          const ll = 20 + Math.random()*55;
-          ctx.beginPath(); ctx.moveTo(lx, ly);
-          ctx.lineTo(lx + Math.cos(_ang0)*ll, ly + Math.sin(_ang0)*ll);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
       karts.forEach(k => k.draw(ctx, cam.x, cam.y, W, H));
       drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
+      endSpeedFeelWorld(ctx);
+      drawSpeedFeelStreaks(ctx, cam, W, H);
       drawHUD(ctx, karts[0], track, 0, 0, W, H, 0, mode);
       drawMinimap(ctx, track, karts, W-140, H-140, 130);
       drawRaceDirectorPanel(ctx, this, karts[0]);
@@ -9543,12 +9707,8 @@ class Race {
         cam.y = (activeKart && isFinite(activeKart.y)) ? activeKart.y : ((this.track.startPos && this.track.startPos.y) || 0);
       }
       clampCamToTrack(cam, this.track, activeKart);
-      const quality = getQualityPreset();
-      const maxSpd = Math.max(1, (activeKart && (activeKart.maxSpeed || activeKart.baseMaxSpeed)) || 469);
-      const _sr0 = Math.min(1.5, Math.abs((activeKart && activeKart.speed) || 0) / maxSpd);
-      const _sh0 = screenShakeAllowed() && _sr0 > 0.8 ? (_sr0 - 0.8) * 14 * quality.screenShakeMul : 0;
-      const _sx0 = (Math.random()-0.5)*_sh0, _sy0 = (Math.random()-0.5)*_sh0;
-      drawTrack(ctx, track, cam.x + _sx0, cam.y + _sy0, W, H, activeKart.checkpointsBit);
+      const world = beginSpeedFeelWorld(ctx, cam, activeKart, W, H);
+      drawTrack(ctx, track, world.camX, world.camY, W, H, activeKart.checkpointsBit);
       drawPitIntentGuide(ctx, this, activeKart, cam.x, cam.y, W, H);
       if((this.phase === 'countdown' || this.phase === 'launch') && this.gridSlots) this._drawGridSlots(ctx, cam.x, cam.y, W, H);
       for(let _ri=0;_ri<_pPool.length;_ri++){
@@ -9559,21 +9719,6 @@ class Race {
         ctx.arc(p.x-cam.x+W/2, p.y-cam.y+H/2, p.size*a, 0, Math.PI*2);
         ctx.fill(); ctx.globalAlpha=1;
       }
-      if(_sr0 > 0.78) {
-        ctx.save();
-        ctx.globalAlpha = (_sr0 - 0.78) * quality.speedLineAlpha;
-        ctx.strokeStyle = 'rgba(210,225,255,0.9)';
-        ctx.lineWidth = 1.5;
-        const _ang0 = activeKart.angle + Math.PI;
-        for(let _li = 0; _li < quality.trailLines; _li++) {
-          const lx = Math.random()*W, ly = Math.random()*H;
-          const ll = 20 + Math.random()*55;
-          ctx.beginPath(); ctx.moveTo(lx, ly);
-          ctx.lineTo(lx + Math.cos(_ang0)*ll, ly + Math.sin(_ang0)*ll);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
       karts.forEach(k => {
         if(k._shootoutStowed) return;
         k.draw(ctx, cam.x, cam.y, W, H);
@@ -9581,6 +9726,8 @@ class Race {
       if(mode !== 'online' && (mode !== 'shootout' || this.shootoutStage === 'player')) {
         drawGhost(ctx, karts[0], cam.x, cam.y, W, H);
       }
+      endSpeedFeelWorld(ctx);
+      drawSpeedFeelStreaks(ctx, cam, W, H);
       drawHUD(ctx, activeKart, track, 0, 0, W, H, 0, 'ai');
       if(mode !== 'shootout') drawPositionTracker(ctx, karts, W, H);
       drawMinimap(ctx, track, karts.filter(k => !k._shootoutStowed), W-140, H-140, 130);
@@ -9603,7 +9750,6 @@ class Race {
     } else {
       // Split screen — left/right (keyboard) or top/bottom face-to-face (touch)
       const faceToFace = touchMode;
-      const quality = getQualityPreset();
       const viewW = faceToFace ? W : W / 2;
       const viewH = faceToFace ? H / 2 : H;
 
@@ -9622,11 +9768,8 @@ class Race {
         }
 
         const cam = this.cameras[i];
-        // Speed shake for versus
-        const _srV = Math.abs(kart.speed) / kart.maxSpeed;
-        const _shV = screenShakeAllowed() && _srV > 0.8 ? (_srV - 0.8) * 12 * quality.screenShakeMul : 0;
-        const _sxV = (Math.random()-0.5)*_shV, _syV = (Math.random()-0.5)*_shV;
-        drawTrack(ctx, track, cam.x + _sxV, cam.y + _syV, viewW, viewH, kart.checkpointsBit);
+        const world = beginSpeedFeelWorld(ctx, cam, kart, viewW, viewH);
+        drawTrack(ctx, track, world.camX, world.camY, viewW, viewH, kart.checkpointsBit);
         drawPitIntentGuide(ctx, this, kart, cam.x, cam.y, viewW, viewH);
         if((this.phase === 'countdown' || this.phase === 'launch') && this.gridSlots) this._drawGridSlots(ctx, cam.x, cam.y, viewW, viewH);
 
@@ -9639,25 +9782,11 @@ class Race {
           ctx.arc(p.x-cam.x+viewW/2, p.y-cam.y+viewH/2, p.size*a, 0, Math.PI*2);
           ctx.fill(); ctx.globalAlpha=1;
         }
-        // Speed trail lines (versus)
-        if(_srV > 0.78) {
-          ctx.save();
-          ctx.globalAlpha = (_srV - 0.78) * Math.max(0.18, quality.speedLineAlpha - 0.05);
-          ctx.strokeStyle = 'rgba(210,225,255,0.9)';
-          ctx.lineWidth = 1.5;
-          const _angV = kart.angle + Math.PI;
-          for(let _li = 0; _li < Math.max(3, quality.trailLines - 2); _li++) {
-            const lx = Math.random()*viewW, ly = Math.random()*viewH;
-            const ll = 16 + Math.random()*45;
-            ctx.beginPath(); ctx.moveTo(lx, ly);
-            ctx.lineTo(lx + Math.cos(_angV)*ll, ly + Math.sin(_angV)*ll);
-            ctx.stroke();
-          }
-          ctx.restore();
-        }
 
         // Draw both karts from this camera
         karts.forEach(k => k.draw(ctx, cam.x, cam.y, viewW, viewH));
+        endSpeedFeelWorld(ctx);
+        drawSpeedFeelStreaks(ctx, cam, viewW, viewH);
 
         drawHUD(ctx, kart, track, 0, 0, viewW, viewH, i, mode);
         drawDebugOverlay(ctx, kart, viewW, viewH);
@@ -9930,6 +10059,7 @@ class Race {
     stopOnlineBgSim();
     stopAllEngines();
     stopAllDriftSnds();
+    resetSpeedFeel();
     showTouchOverlay(false);
     updateRaceControlsHud(false);
     CG.gameplayStop(); // notify CrazyGames platform: gameplay ended
@@ -10190,7 +10320,11 @@ class Race {
 
     // Show mid-roll ad then reveal the results screen
     CG.requestMidroll(() => {
-      document.getElementById('screen-results').classList.remove('hidden');
+      const el = document.getElementById('screen-results');
+      if (!el) return;
+      el.classList.remove('hidden');
+      el.setAttribute('aria-hidden', 'false');
+      try { el.inert = false; } catch (e) {}
     });
   }
 }
@@ -10279,6 +10413,8 @@ function pauseGame() {
   if (!pausable.includes(race.phase)) return;
   isPaused = true;
   if (animId) { cancelAnimationFrame(animId); animId = null; }
+  duckAllEngines();
+  resetSpeedFeel({ keepZoom: true });
   setAdMuted(true);
   const po = document.getElementById('pause-overlay');
   if (po) po.style.display = 'flex';
@@ -10327,6 +10463,7 @@ function teardownRaceUI() {
   stopOnlineBgSim();
   stopAllEngines();
   stopAllDriftSnds();
+  resetSpeedFeel();
   setAdMuted(false);
   const po = document.getElementById('pause-overlay');
   if (po) po.style.display = 'none';
@@ -11350,6 +11487,7 @@ function selectTrackStart(idx) {
     showTouchOverlay(true);
     updateRaceControlsHud(true);
     _pPool.forEach(p => { p.active = false; }); // reset particle pool
+    resetSpeedFeel();
     if(currentMode === 'trial') {
       beginTrialRunSession(t.id, t.name).catch(() => {});
     } else {
