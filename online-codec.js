@@ -5,7 +5,7 @@
   'use strict';
 
   var NET_MAGIC = 0x4b42;
-  var NET_VERSION = 4;
+  var NET_VERSION = 5;
   var MSG_INPUT = 1;
   var MSG_STATE = 2;
   var PHASE_TO_ID = { countdown: 0, launch: 1, racing: 2, finished: 3 };
@@ -21,6 +21,12 @@
   }
   function clampByte(n) {
     return Math.max(0, Math.min(255, n | 0));
+  }
+  function quantPenaltyTimer(t) {
+    return clampByte(Math.round(Math.max(0, Number(t) || 0) * 85));
+  }
+  function dequantPenaltyTimer(u) {
+    return (u & 0xff) / 85;
   }
   function quantAngle(a) {
     var x = a % (Math.PI * 2);
@@ -84,7 +90,7 @@
     var karts = state.karts || [];
     var n = Math.min(6, karts.length);
     var full = !prev || !!state.full || (state.tick & 15) === 0;
-    var buf = new ArrayBuffer(24 + 6 + 12 + n * 56 + 8);
+    var buf = new ArrayBuffer(24 + 6 + 12 + n * 60 + 8);
     var v = new DataView(buf);
     var o = 0;
     v.setUint16(o, NET_MAGIC, true); o += 2;
@@ -109,7 +115,7 @@
     for (i = 0; i < n; i++) {
       var k = karts[i];
       var pk = prev && prev.karts && prev.karts[i];
-      var mask = 0x07;
+      var mask = 0x0f;
       if (!full && pk) {
         mask = 0x01;
         if (
@@ -125,6 +131,17 @@
           Math.abs((k.maxSpeed || 0) - (pk.maxSpeed || 0)) > 1
         ) mask |= 0x02;
         if (!!k.finished !== !!pk.finished || k.finishTime !== pk.finishTime || k.finishOrder !== pk.finishOrder) mask |= 0x04;
+        var penNow = quantPenaltyTimer(k._penaltyTimer);
+        var penPrev = quantPenaltyTimer(pk._penaltyTimer);
+        if (
+          !!k._isCompletelyOff !== !!pk._isCompletelyOff ||
+          !!k.isOffTrack !== !!pk.isOffTrack ||
+          penNow !== penPrev ||
+          !!k._isCompletelyOff ||
+          penNow > 0 ||
+          !!pk._isCompletelyOff ||
+          penPrev > 0
+        ) mask |= 0x08;
       }
       v.setUint8(o++, mask);
       var flags = 0;
@@ -134,6 +151,8 @@
       if (k.finished) flags |= 8;
       if (k.inPit) flags |= 16;
       if (k.disconnected) flags |= 32;
+      if (k._isCompletelyOff) flags |= 64;
+      if (k.isOffTrack) flags |= 128;
       v.setUint8(o++, flags);
       v.setInt32(o, Math.round(k.x * 100), true); o += 4;
       v.setInt32(o, Math.round(k.y * 100), true); o += 4;
@@ -155,6 +174,9 @@
       if (mask & 0x04) {
         v.setFloat32(o, k.finishTime == null ? -1 : k.finishTime, true); o += 4;
         v.setUint8(o++, k.finishOrder == null ? 0 : Math.min(255, k.finishOrder | 0));
+      }
+      if (mask & 0x08) {
+        v.setUint8(o++, quantPenaltyTimer(k._penaltyTimer));
       }
     }
     return buf.slice(0, o);
@@ -200,6 +222,7 @@
       var bestLap = pk ? pk.bestLap : null;
       var finishTime = pk ? pk.finishTime : null;
       var finishOrder = pk ? pk.finishOrder : null;
+      var penaltyTimer = pk && typeof pk._penaltyTimer === 'number' ? pk._penaltyTimer : 0;
       if (mask & 0x02) {
         lap = v.getUint8(o++);
         tyreId = tyreFromId(v.getUint8(o++));
@@ -219,6 +242,9 @@
         var fo = v.getUint8(o++);
         finishOrder = fo > 0 ? fo : null;
       }
+      if (mask & 0x08) {
+        if (o < v.byteLength) penaltyTimer = dequantPenaltyTimer(v.getUint8(o++));
+      }
       karts.push({
         id: i, x: x, y: y, angle: angle, speed: speed, lap: lap,
         finished: !!(flags & 8), finishTime: finishTime, finishOrder: finishOrder, tyreId: tyreId, tyreWear: tyreWear,
@@ -226,7 +252,9 @@
         ersCharge: ersCharge, ersActive: !!(flags & 1), drsActive: !!(flags & 2),
         drsAvailable: !!(flags & 4), pitPhase: null, inPit: !!(flags & 16),
         checkpointsBit: checkpointsBit, _nearestSplineIdx: nearest, bestLap: bestLap,
-        maxSpeed: maxSpeed, disconnected: !!(flags & 32)
+        maxSpeed: maxSpeed, disconnected: !!(flags & 32),
+        _isCompletelyOff: !!(flags & 64), isOffTrack: !!(flags & 128),
+        _penaltyTimer: penaltyTimer
       });
     }
     return {
@@ -257,6 +285,8 @@
     decodeInput: decodeInput,
     encodeState: encodeState,
     decodeState: decodeState,
-    peekMsgType: peekMsgType
+    peekMsgType: peekMsgType,
+    quantPenaltyTimer: quantPenaltyTimer,
+    dequantPenaltyTimer: dequantPenaltyTimer
   };
 })(typeof window !== 'undefined' ? window : globalThis);

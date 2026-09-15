@@ -21,6 +21,7 @@ const order = [
   "kart.ts",
   "raceOnline.ts",
   "tracks.ts",
+  "trial-run.ts",
   "browser-entry.ts",
 ];
 
@@ -113,7 +114,13 @@ ${body}
     OnlineRaceSim: OnlineRaceSim,
     loadTrackBake: loadTrackBake,
     listTrackIds: listTrackIds,
-    SimKart: SimKart
+    SimKart: SimKart,
+    LEADERBOARD_RULES_VERSION: typeof LEADERBOARD_RULES_VERSION !== "undefined" ? LEADERBOARD_RULES_VERSION : 1,
+    packInputFlags: packInputFlags,
+    unpackInputFlags: unpackInputFlags,
+    encodeTrialInputs: encodeTrialInputs,
+    verifyTrialReplay: verifyTrialReplay,
+    minPlausibleLapSec: minPlausibleLapSec
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 `;

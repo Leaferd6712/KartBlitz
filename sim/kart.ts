@@ -566,6 +566,9 @@ export function applyNetPose(kart: SimKart, snap: {
   drsActive?: boolean; drsAvailable?: boolean;
   checkpointsBit?: number; _nearestSplineIdx?: number;
   bestLap?: number | null; maxSpeed?: number; disconnected?: boolean;
+  isOffTrack?: boolean;
+  _isCompletelyOff?: boolean;
+  _penaltyTimer?: number;
 }) {
   kart.x = snap.x;
   kart.y = snap.y;
@@ -586,4 +589,10 @@ export function applyNetPose(kart: SimKart, snap: {
   if (snap.bestLap != null) kart.bestLap = snap.bestLap;
   if (typeof snap.maxSpeed === "number" && snap.maxSpeed > 1) kart.maxSpeed = snap.maxSpeed;
   kart._onlineDisconnected = !!snap.disconnected;
+  // Authoritative track-limit HUD / recon seed (client must not invent these).
+  if (snap.isOffTrack != null) kart.isOffTrack = !!snap.isOffTrack;
+  if (snap._isCompletelyOff != null) kart._isCompletelyOff = !!snap._isCompletelyOff;
+  if (typeof snap._penaltyTimer === "number" && isFinite(snap._penaltyTimer)) {
+    kart._penaltyTimer = Math.max(0, snap._penaltyTimer);
+  }
 }

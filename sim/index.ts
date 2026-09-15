@@ -16,6 +16,18 @@ export {
   ONLINE_PROTOCOL,
   TRACK_BAKE_VERSION,
 } from "./constants";
+export {
+  LEADERBOARD_RULES_VERSION,
+  TRIAL_RUN_MAX_STEPS,
+  TRIAL_RUN_TTL_MS,
+  packInputFlags,
+  unpackInputFlags,
+  encodeTrialInputs,
+  decodeTrialInputsBase64,
+  verifyTrialReplay,
+  minPlausibleLapSec,
+  trialRunSpec,
+} from "./trial-run";
 export { defaultUpgrades, sanitizeUpgrades, resolveOnlineUpgrades, competitiveStandardUpgrades, TRUST_CLIENT_PROGRESSION_UPGRADES, type UpgradeStats } from "./upgrades";
 export { loadTrackBake, listTrackIds } from "./tracks";
 export { resolveKartCollisions } from "./collision";

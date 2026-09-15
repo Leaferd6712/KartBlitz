@@ -18,6 +18,9 @@ type ScoreRow = {
   total: number | null;
   winner: string | null;
   created_at: number;
+  trust_level?: string | null;
+  rules_version?: number | null;
+  verified_run_id?: string | null;
 };
 
 export async function ensureLeaderboardSchema(db: D1Database): Promise<void> {
@@ -42,7 +45,10 @@ export async function ensureLeaderboardSchema(db: D1Database): Promise<void> {
         total REAL,
         winner TEXT,
         created_at REAL NOT NULL,
-        updated_at REAL NOT NULL
+        updated_at REAL NOT NULL,
+        trust_level TEXT NOT NULL DEFAULT 'legacy',
+        rules_version INTEGER,
+        verified_run_id TEXT
       )`
     ),
     db.prepare(
@@ -168,13 +174,19 @@ export async function submitScore(
   db: D1Database,
   body: Record<string, unknown>
 ): Promise<
-  | { ok: true; saved: boolean; username: string; bestLap: number; reason?: string }
+  | { ok: true; saved: boolean; username: string; bestLap: number; reason?: string; trustLevel?: string }
   | { ok: false; error: string; status: number }
 > {
   const deviceToken = validateDeviceToken(body.deviceToken);
   if (!deviceToken) return { ok: false, error: "invalid_device_token", status: 400 };
   const mode = normalizeMode(body.mode);
   if (!mode) return { ok: false, error: "invalid_mode", status: 400 };
+
+  // Time Trial competitive boards require a server-minted validated run.
+  // Client-reported bestLap alone is no longer accepted for mode=trial.
+  if (mode === "trial") {
+    return { ok: false, error: "run_required", status: 403 };
+  }
 
   const device = await getDeviceByToken(db, deviceToken);
   if (!device) return { ok: false, error: "unregistered_device", status: 401 };
@@ -193,8 +205,19 @@ export async function submitScore(
   const total = Number.isFinite(totalNum) && totalNum! > 0 ? totalNum : null;
   const winner = body.winner == null ? null : String(body.winner).slice(0, 12);
   const now = Date.now();
+  const trustLevel = mode === "versus" ? "unverified" : "unverified";
 
   await ensureLeaderboardSchema(db);
+  try {
+    await db.prepare("ALTER TABLE scores ADD COLUMN trust_level TEXT NOT NULL DEFAULT 'legacy'").run();
+  } catch { /* exists */ }
+  try {
+    await db.prepare("ALTER TABLE scores ADD COLUMN rules_version INTEGER").run();
+  } catch { /* exists */ }
+  try {
+    await db.prepare("ALTER TABLE scores ADD COLUMN verified_run_id TEXT").run();
+  } catch { /* exists */ }
+
   const existing = await db
     .prepare(
       `SELECT id, best_lap
@@ -210,29 +233,51 @@ export async function submitScore(
     .run();
 
   if (existing && Number(existing.best_lap) <= bestLap) {
-    return { ok: true, saved: false, username: device.username, bestLap: Number(existing.best_lap), reason: "not_better" };
+    return {
+      ok: true,
+      saved: false,
+      username: device.username,
+      bestLap: Number(existing.best_lap),
+      reason: "not_better",
+      trustLevel,
+    };
   }
 
   if (existing) {
     await db
       .prepare(
         `UPDATE scores
-         SET username_snapshot = ?, track_name = ?, best_lap = ?, total = ?, winner = ?, updated_at = ?
+         SET username_snapshot = ?, track_name = ?, best_lap = ?, total = ?, winner = ?, updated_at = ?,
+             trust_level = ?, rules_version = NULL, verified_run_id = NULL
          WHERE id = ?`
       )
-      .bind(device.username, trackName, bestLap, total, winner, now, existing.id)
+      .bind(device.username, trackName, bestLap, total, winner, now, trustLevel, existing.id)
       .run();
   } else {
     await db
       .prepare(
-        `INSERT INTO scores (device_token, username_snapshot, mode, track_id, track_name, best_lap, total, winner, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO scores (
+           device_token, username_snapshot, mode, track_id, track_name, best_lap, total, winner,
+           created_at, updated_at, trust_level, rules_version, verified_run_id
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`
       )
-      .bind(deviceToken, device.username, mode, Math.floor(trackId), trackName, bestLap, total, winner, now, now)
+      .bind(
+        deviceToken,
+        device.username,
+        mode,
+        Math.floor(trackId),
+        trackName,
+        bestLap,
+        total,
+        winner,
+        now,
+        now,
+        trustLevel
+      )
       .run();
   }
 
-  return { ok: true, saved: true, username: device.username, bestLap };
+  return { ok: true, saved: true, username: device.username, bestLap, trustLevel };
 }
 
 export async function recordOnlineWin(db: D1Database, deviceTokenRaw: unknown): Promise<{
@@ -316,6 +361,9 @@ export async function getLeaderboard(
         total: number | null;
         winner: string | null;
         createdAt: number;
+        trustLevel?: string;
+        rulesVersion?: number | null;
+        verifiedRunId?: string | null;
         wins?: number;
       }>;
     }
@@ -338,6 +386,7 @@ export async function getLeaderboard(
         total: null,
         winner: null,
         createdAt: r.createdAt,
+        trustLevel: "unverified",
         wins: r.wins,
       })) as unknown as Array<{
         username: string;
@@ -349,6 +398,7 @@ export async function getLeaderboard(
         winner: string | null;
         createdAt: number;
         wins: number;
+        trustLevel: string;
       }>,
     };
   }
@@ -359,9 +409,21 @@ export async function getLeaderboard(
   }
 
   await ensureLeaderboardSchema(db);
+  for (const sql of [
+    "ALTER TABLE scores ADD COLUMN trust_level TEXT NOT NULL DEFAULT 'legacy'",
+    "ALTER TABLE scores ADD COLUMN rules_version INTEGER",
+    "ALTER TABLE scores ADD COLUMN verified_run_id TEXT",
+  ]) {
+    try {
+      await db.prepare(sql).run();
+    } catch {
+      /* exists */
+    }
+  }
   const rows = await db
     .prepare(
-      `SELECT username_snapshot, mode, track_id, track_name, best_lap, total, winner, created_at
+      `SELECT username_snapshot, mode, track_id, track_name, best_lap, total, winner, created_at,
+              trust_level, rules_version, verified_run_id
        FROM scores
        WHERE mode = ? AND track_id = ?
        ORDER BY best_lap ASC
@@ -381,6 +443,9 @@ export async function getLeaderboard(
       total: r.total == null ? null : Number(r.total),
       winner: r.winner || null,
       createdAt: Number(r.created_at) || 0,
+      trustLevel: r.trust_level || "legacy",
+      rulesVersion: r.rules_version == null ? null : Number(r.rules_version),
+      verifiedRunId: r.verified_run_id || null,
     })),
   };
 }

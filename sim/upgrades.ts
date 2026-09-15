@@ -11,12 +11,12 @@ export type UpgradeStats = {
   turnMult: number;
   brakeMult: number;
   tractBonus: number;
-  /** Multiplier on incremental tyre wear (R&D durability). 1 = stock. */
+  /** Multiplier on incremental tyre wear (upgrade programme durability). 1 = stock. */
   tyreWearMult: number;
 };
 
 /**
- * Temporary: competitive online ignores client-claimed garage/R&D ownership.
+ * Temporary: competitive online ignores client-claimed garage programme ownership.
  * Flip to true once the server can verify progression / ownership.
  */
 export const TRUST_CLIENT_PROGRESSION_UPGRADES = false;

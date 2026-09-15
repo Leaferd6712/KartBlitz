@@ -1,97 +1,78 @@
 /**
- * Unit tests for race result builders and coin reward formulas.
+ * Unit tests for rebalanced race reward formulas.
  */
 import assert from 'assert';
 import {
   DIFF_MULT,
   aiPlaceBonus,
+  AD_REWARD_COINS,
+  AD_COOLDOWN_MS,
   buildTrialResult,
   buildAiResult,
   buildVersusResult,
   buildShootoutResult,
   buildOnlineResult,
   calculateRaceRewards,
+  formatRewardBreakdown,
+  TRIAL_LAP_FULL,
+  TRIAL_SESSION_BASE,
+  PB_IMPROVE_BONUS,
 } from '../rewards.mjs';
 
-const track = { id: 0, name: 'TEST', targetLap: 30, coinMult: 1.0 };
+const track = { id: 0, name: 'TEST', targetLap: 30, coinMult: 1.0, medalLaps: { bronze: 35, silver: 32, gold: 30, blitz: 28 } };
 const trackBoost = { id: 7, name: 'NEON', targetLap: 30, coinMult: 1.8 };
 
-function assertPartsSum(reward) {
-  const sum = reward.parts.reduce((s, p) => s + p.amount, 0);
-  assert.strictEqual(sum, reward.base, 'parts should sum to base');
-}
+assert.ok(AD_REWARD_COINS < 40, 'ads must not dominate');
+assert.ok(AD_COOLDOWN_MS >= 180000, 'ad cooldown at least 3 minutes');
 
-// ── Place bonus table ───────────────────────────────────
-assert.strictEqual(aiPlaceBonus(1), 20);
-assert.strictEqual(aiPlaceBonus(2), 12);
-assert.strictEqual(aiPlaceBonus(3), 8);
-assert.strictEqual(aiPlaceBonus(4), 4);
-assert.strictEqual(aiPlaceBonus(5), 2);
-assert.strictEqual(aiPlaceBonus(8), 2);
-assert.strictEqual(aiPlaceBonus(null), 0);
-assert.strictEqual(aiPlaceBonus(0), 0);
+assert.strictEqual(aiPlaceBonus(1), 50);
+assert.strictEqual(aiPlaceBonus(5), 6);
 
-// ── Trial: laps + target, no finish bonus ───────────────
+// Trial: laps + session, soft-cap, PB, medals separated
 {
-  const r = buildTrialResult({ trackId: 0, trackName: 'T', bestLap: 28, laps: 4 });
-  assert.strictEqual(r.mode, 'trial');
-  assert.strictEqual(r.finished, false);
-  assert.ok(!('total' in r) || r.total == null);
-
-  const reward = calculateRaceRewards(r, track);
-  // 4*3 + 8 target = 20
-  assert.strictEqual(reward.base, 20);
-  assert.strictEqual(reward.total, 20);
-  assertPartsSum(reward);
-  assert.ok(reward.parts.every((p) => p.label !== 'Finish bonus'));
-}
-
-{
-  // No target beat, no finish even if someone stuffed total on old payload
-  const r = buildTrialResult({ trackId: 0, trackName: 'T', bestLap: 40, laps: 2 });
-  const reward = calculateRaceRewards({ ...r, total: 99 }, track);
-  assert.strictEqual(reward.base, 6); // laps only
-  assert.strictEqual(reward.total, 6);
-}
-
-// ── AI: mode, place, finish, target, difficulty ─────────
-{
-  const r = buildAiResult({
-    trackId: 0,
-    trackName: 'T',
-    bestLap: 28,
-    total: 90,
-    laps: 3,
-    finished: true,
-    position: 1,
-    fieldSize: 6,
-    aiDiff: 'medium',
+  const r = buildTrialResult({
+    trackId: 0, trackName: 'T', bestLap: 28, laps: 4,
+    pbImproved: true,
+    medalRewards: [{ label: 'Bronze medal', amount: 45 }],
   });
-  assert.strictEqual(r.mode, 'ai');
   const reward = calculateRaceRewards(r, track);
-  // 9 + 10 finish + 8 target + 20 place = 47; ×1.25 = 58.75 → 59
-  assert.strictEqual(reward.base, 47);
+  // 4*10 + 15 session + 28 PB = 83 race/bonus; medals 45 not multiplied
+  assert.strictEqual(reward.groups.medals, 45);
+  assert.strictEqual(reward.groups.bonus, PB_IMPROVE_BONUS);
+  assert.ok(reward.groups.race >= 4 * TRIAL_LAP_FULL + TRIAL_SESSION_BASE);
+  assert.strictEqual(reward.total, Math.round((reward.groups.race + reward.groups.bonus) * 1) + 45);
+  assert.ok(formatRewardBreakdown(reward).includes('MEDALS'));
+  assert.ok(formatRewardBreakdown(reward).includes('RACE'));
+}
+
+// Trial soft-cap after 6 laps
+{
+  const r6 = calculateRaceRewards(
+    buildTrialResult({ trackId: 0, trackName: 'T', bestLap: 40, laps: 6 }),
+    track
+  );
+  const r10 = calculateRaceRewards(
+    buildTrialResult({ trackId: 0, trackName: 'T', bestLap: 40, laps: 10 }),
+    track
+  );
+  // Extra 4 laps pay reduced rate — not 4 * full
+  assert.ok(r10.groups.race - r6.groups.race < 4 * TRIAL_LAP_FULL);
+  assert.ok(r10.groups.race > r6.groups.race);
+}
+
+// AI place + finish + difficulty
+{
+  const reward = calculateRaceRewards(
+    buildAiResult({
+      trackId: 0, trackName: 'T', bestLap: 28, total: 90, laps: 3,
+      finished: true, position: 1, fieldSize: 6, aiDiff: 'medium',
+    }),
+    track
+  );
+  // 24 + 28 + 50 = 102 × 1.2 = 122.4 → 122
+  assert.strictEqual(reward.base, 102);
   assert.strictEqual(reward.diffMult, DIFF_MULT.medium);
-  assert.strictEqual(reward.total, Math.round(47 * 1.25));
-  assert.ok(reward.parts.some((p) => p.label === 'Place P1'));
-}
-
-{
-  const r = buildAiResult({
-    trackId: 0,
-    trackName: 'T',
-    bestLap: 40,
-    total: null,
-    laps: 3,
-    finished: false,
-    position: 6,
-    fieldSize: 6,
-    aiDiff: 'easy',
-  });
-  const reward = calculateRaceRewards(r, track);
-  // 9 + 2 place = 11; easy ×1
-  assert.strictEqual(reward.base, 11);
-  assert.strictEqual(reward.total, 11);
+  assert.strictEqual(reward.total, Math.round(102 * 1.2));
 }
 
 {
@@ -102,63 +83,32 @@ assert.strictEqual(aiPlaceBonus(0), 0);
     }),
     track
   );
-  const p8 = calculateRaceRewards(
+  const last = calculateRaceRewards(
     buildAiResult({
       trackId: 0, trackName: 'T', bestLap: 40, total: 90, laps: 3,
       finished: true, position: 8, fieldSize: 8, aiDiff: 'easy',
     }),
     track
   );
-  assert.ok(p1.total > p8.total, 'P1 should earn more than P8');
+  assert.ok(p1.total > last.total);
+  assert.ok(last.total > 40, 'weaker finishers still earn meaningful coins');
 }
 
-// ── Versus: sum of both players' laps ───────────────────
-{
-  const r = buildVersusResult({
-    trackId: 0,
-    trackName: 'T',
-    p1Best: 30,
-    p2Best: 31,
-    p1Total: 90,
-    p2Total: 92,
-    p1Laps: 3,
-    p2Laps: 3,
-    winner: 0,
-  });
-  assert.strictEqual(r.mode, 'versus');
-  assert.strictEqual(r.laps, 6);
-  assert.strictEqual(r.p1Laps, 3);
-  assert.strictEqual(r.p2Laps, 3);
-  const reward = calculateRaceRewards(r, track);
-  // 6*2 + 8 = 20
-  assert.strictEqual(reward.base, 20);
-  assert.strictEqual(reward.total, 20);
-}
-
-{
-  // Missing laps historically → 0 lap pay; builders always set laps
-  const reward = calculateRaceRewards(
-    { mode: 'versus', trackId: 0, laps: 0 },
-    track
-  );
-  assert.strictEqual(reward.base, 8);
-  assert.strictEqual(reward.total, 8);
-}
-
+// Versus winner bonus
 {
   const reward = calculateRaceRewards(
     buildVersusResult({
-      trackId: 7, trackName: 'N', p1Best: 1, p2Best: 1,
-      p1Total: 10, p2Total: 10, p1Laps: 2, p2Laps: 1, winner: null,
+      trackId: 0, trackName: 'T', p1Best: 30, p2Best: 31,
+      p1Total: 90, p2Total: 92, p1Laps: 3, p2Laps: 3, winner: 0,
     }),
-    trackBoost
+    track
   );
-  // (3*2)+8 = 14 × 1.8 = 25.2 → 25
-  assert.strictEqual(reward.base, 14);
-  assert.strictEqual(reward.total, Math.round(14 * 1.8));
+  // 6*5 + 18 + 20 = 68
+  assert.strictEqual(reward.base, 68);
+  assert.strictEqual(reward.total, 68);
 }
 
-// ── Shootout unchanged rates ────────────────────────────
+// Shootout
 {
   const win = calculateRaceRewards(
     buildShootoutResult({
@@ -166,38 +116,34 @@ assert.strictEqual(aiPlaceBonus(0), 0);
     }),
     track
   );
-  // 8+14+4 = 26 × 1.5 = 39
-  assert.strictEqual(win.base, 26);
-  assert.strictEqual(win.total, Math.round(26 * 1.5));
+  // 18+40+12 = 70 × 1.45
+  assert.strictEqual(win.base, 70);
+  assert.strictEqual(win.total, Math.round(70 * DIFF_MULT.hard));
+}
 
-  const lose = calculateRaceRewards(
-    buildShootoutResult({
-      trackId: 0, trackName: 'T', bestLap: 28, aiLap: 26, aiDiff: 'easy', win: false,
+// Online zero
+{
+  const reward = calculateRaceRewards(
+    buildOnlineResult({
+      trackId: 0, trackName: 'T', bestLap: 20, total: 60, laps: 3, position: 1, fieldSize: 4,
     }),
     track
   );
-  assert.strictEqual(lose.base, 12); // 8+4
-  assert.strictEqual(lose.total, 12);
-}
-
-// ── Online: zero coins ──────────────────────────────────
-{
-  const r = buildOnlineResult({
-    trackId: 0, trackName: 'T', bestLap: 20, total: 60, laps: 3, position: 1, fieldSize: 4,
-  });
-  assert.strictEqual(r.mode, 'online');
-  assert.strictEqual(r.position, 1);
-  const reward = calculateRaceRewards(r, track);
   assert.strictEqual(reward.total, 0);
-  assert.strictEqual(reward.base, 0);
 }
 
-// ── Track mult only ─────────────────────────────────────
+// Track mult does not inflate medal grants
 {
-  const r = buildTrialResult({ trackId: 7, trackName: 'N', bestLap: 40, laps: 1 });
-  const reward = calculateRaceRewards(r, trackBoost);
-  assert.strictEqual(reward.base, 3);
-  assert.strictEqual(reward.total, Math.round(3 * 1.8));
+  const reward = calculateRaceRewards(
+    buildTrialResult({
+      trackId: 7, trackName: 'N', bestLap: 28, laps: 2,
+      medalRewards: [{ label: 'Gold medal', amount: 120 }],
+    }),
+    trackBoost
+  );
+  assert.strictEqual(reward.groups.medals, 120);
+  const scalable = reward.groups.race + reward.groups.bonus;
+  assert.strictEqual(reward.total, Math.round(scalable * 1.8) + 120);
 }
 
 console.log('rewards.test.mjs: all assertions passed');

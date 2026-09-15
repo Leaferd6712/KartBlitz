@@ -61,6 +61,12 @@ export type NetKart = {
   bestLap: number | null;
   maxSpeed: number;
   disconnected: boolean;
+  /** Soft off-asphalt (status badge). */
+  isOffTrack?: boolean;
+  /** Strict track-limit flag (countdown HUD). */
+  _isCompletelyOff?: boolean;
+  /** Seconds spent completely off; reset fires at 3.0 on server. */
+  _penaltyTimer?: number;
 };
 
 export type NetState = {
@@ -90,6 +96,15 @@ function tyreFromId(id: number): string {
 
 function clampByte(n: number): number {
   return Math.max(0, Math.min(255, n | 0));
+}
+
+/** Quantize penalty timer (~0.012s steps, covers 0–3s). */
+export function quantPenaltyTimer(t: number | undefined): number {
+  return clampByte(Math.round(Math.max(0, Number(t) || 0) * 85));
+}
+
+export function dequantPenaltyTimer(u: number): number {
+  return (u & 0xff) / 85;
 }
 
 function quantAngle(a: number): number {
@@ -160,8 +175,8 @@ export function encodeState(state: NetState, prev: NetState | null = null): Arra
   const karts = state.karts || [];
   const n = Math.min(6, karts.length);
   const full = !prev || !!state.full || (state.tick & 15) === 0;
-  // header + launchRPM + lastProcessed + per kart
-  const buf = new ArrayBuffer(24 + 6 + 12 + n * 56 + 8);
+  // header + launchRPM + lastProcessed + per kart (pose + cold + finish + penalty byte)
+  const buf = new ArrayBuffer(24 + 6 + 12 + n * 60 + 8);
   const v = new DataView(buf);
   let o = 0;
   v.setUint16(o, NET_MAGIC, true);
@@ -196,7 +211,7 @@ export function encodeState(state: NetState, prev: NetState | null = null): Arra
     const k = karts[i];
     const pk = prev && prev.karts && prev.karts[i];
     let mask = 0xff; // hot always
-    // bit0 pose, bit1 gameplay cold, bit2 finish, bit3 tyre, bit4 flags-extra
+    // bit0 pose, bit1 gameplay cold, bit2 finish, bit3 penalty HUD
     if (!full && pk) {
       mask = 0x01; // pose
       if (
@@ -214,8 +229,21 @@ export function encodeState(state: NetState, prev: NetState | null = null): Arra
         mask |= 0x02;
       }
       if (!!k.finished !== !!pk.finished || k.finishTime !== pk.finishTime || k.finishOrder !== pk.finishOrder) mask |= 0x04;
+      const penNow = quantPenaltyTimer(k._penaltyTimer);
+      const penPrev = quantPenaltyTimer(pk._penaltyTimer);
+      if (
+        !!k._isCompletelyOff !== !!pk._isCompletelyOff ||
+        !!k.isOffTrack !== !!pk.isOffTrack ||
+        penNow !== penPrev ||
+        !!k._isCompletelyOff ||
+        penNow > 0 ||
+        !!pk._isCompletelyOff ||
+        penPrev > 0
+      ) {
+        mask |= 0x08;
+      }
     } else {
-      mask = 0x07;
+      mask = 0x0f;
     }
     v.setUint8(o++, mask);
     let flags = 0;
@@ -225,6 +253,8 @@ export function encodeState(state: NetState, prev: NetState | null = null): Arra
     if (k.finished) flags |= 8;
     if (k.inPit) flags |= 16;
     if (k.disconnected) flags |= 32;
+    if (k._isCompletelyOff) flags |= 64;
+    if (k.isOffTrack) flags |= 128;
     v.setUint8(o++, flags);
     v.setInt32(o, Math.round(k.x * 100), true);
     o += 4;
@@ -257,6 +287,9 @@ export function encodeState(state: NetState, prev: NetState | null = null): Arra
       v.setFloat32(o, k.finishTime == null ? -1 : k.finishTime, true);
       o += 4;
       v.setUint8(o++, k.finishOrder == null ? 0 : Math.min(255, k.finishOrder | 0));
+    }
+    if (mask & 0x08) {
+      v.setUint8(o++, quantPenaltyTimer(k._penaltyTimer));
     }
   }
 
@@ -313,6 +346,7 @@ export function decodeState(buf: ArrayBuffer | ArrayBufferView, prev: NetState |
     let bestLap: number | null = pk ? pk.bestLap : null;
     let finishTime: number | null = pk ? pk.finishTime : null;
     let finishOrder: number | null = pk ? pk.finishOrder : null;
+    let penaltyTimer = pk && typeof pk._penaltyTimer === "number" ? pk._penaltyTimer : 0;
 
     if (mask & 0x02) {
       lap = v.getUint8(o++);
@@ -337,6 +371,12 @@ export function decodeState(buf: ArrayBuffer | ArrayBufferView, prev: NetState |
       finishTime = ft < 0 ? null : ft;
       const fo = v.getUint8(o++);
       finishOrder = fo > 0 ? fo : null;
+    }
+    if (mask & 0x08) {
+      // Protocol ≥5: penalty timer byte. Older peers never set bit3.
+      if (o < v.byteLength) {
+        penaltyTimer = dequantPenaltyTimer(v.getUint8(o++));
+      }
     }
 
     karts.push({
@@ -363,6 +403,9 @@ export function decodeState(buf: ArrayBuffer | ArrayBufferView, prev: NetState |
       bestLap,
       maxSpeed,
       disconnected: !!(flags & 32),
+      _isCompletelyOff: !!(flags & 64),
+      isOffTrack: !!(flags & 128),
+      _penaltyTimer: penaltyTimer,
     });
   }
 

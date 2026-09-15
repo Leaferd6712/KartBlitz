@@ -16,7 +16,11 @@ CREATE TABLE IF NOT EXISTS scores (
   total REAL,
   winner TEXT,
   created_at REAL NOT NULL,
-  updated_at REAL NOT NULL
+  updated_at REAL NOT NULL,
+  -- legacy = pre-validation era; verified = server-replayed trial run; unverified = client-reported (versus)
+  trust_level TEXT NOT NULL DEFAULT 'legacy',
+  rules_version INTEGER,
+  verified_run_id TEXT
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_scores_device_board
@@ -35,3 +39,29 @@ CREATE TABLE IF NOT EXISTS online_wins (
 );
 
 CREATE INDEX IF NOT EXISTS idx_online_wins_rank ON online_wins(wins DESC);
+
+-- Server-minted Time Trial runs. Completion requires shared-sim input replay.
+CREATE TABLE IF NOT EXISTS validated_runs (
+  run_id TEXT PRIMARY KEY,
+  device_token TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  track_id INTEGER NOT NULL,
+  track_name TEXT,
+  rules_version INTEGER NOT NULL,
+  track_bake_version INTEGER NOT NULL,
+  weather TEXT NOT NULL,
+  tyres TEXT NOT NULL,
+  car_config TEXT NOT NULL,
+  status TEXT NOT NULL,
+  started_at REAL NOT NULL,
+  expires_at REAL NOT NULL,
+  completed_at REAL,
+  verified_best_lap REAL,
+  lap_count INTEGER NOT NULL DEFAULT 0,
+  consume_count INTEGER NOT NULL DEFAULT 0,
+  max_consumes INTEGER NOT NULL DEFAULT 1,
+  idempotency_key TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_runs_device_status ON validated_runs(device_token, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_runs_idempotency ON validated_runs(idempotency_key);

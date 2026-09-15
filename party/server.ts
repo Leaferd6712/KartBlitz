@@ -3,6 +3,19 @@ import type { Env } from "./env";
 import { getDeviceByToken, recordOnlineWin } from "./leaderboard";
 import { decodeInput, MSG_INPUT, NET_MAGIC, NET_VERSION } from "./netcodec";
 import {
+  createSeat,
+  forfeitSeat,
+  graceRemainingMs,
+  isGraceExpired,
+  markSeatDisconnected,
+  pickHostSeatId,
+  RECONNECT_GRACE_MS,
+  RESUME_HELLO_TIMEOUT_MS,
+  rosterPublic,
+  validateResume,
+  type SeatRecord,
+} from "./reconnect";
+import {
   FIXED_DT,
   loadTrackBake,
   ONLINE_PROTOCOL,
@@ -22,16 +35,6 @@ const MAX_PLAYERS = 6;
 const SIM_STEP_MS = Math.round(FIXED_DT * 1000);
 const MAX_CATCHUP_STEPS = 12;
 
-type Player = {
-  id: string;
-  name: string;
-  ready: boolean;
-  color: string;
-  upgrades: UpgradeStats;
-  /** Optional: set from client hello; used to write online-win increments. */
-  deviceToken?: string;
-};
-
 type LobbySettings = {
   trackId: number;
   laps: number;
@@ -41,6 +44,10 @@ type LobbySettings = {
 };
 
 type RoomPhase = "lobby" | "racing";
+
+type PendingResume = {
+  at: number;
+};
 
 function json(data: unknown) {
   return JSON.stringify(data);
@@ -68,8 +75,14 @@ function peekBinaryType(buf: ArrayBuffer): number {
 
 /** One Durable Object room per lobby. Binding name Main → /parties/main/<room>. */
 export class KartBlitzRoom extends Server<Env> {
-  players = new Map<string, Player>();
-  /** Lobby admin (settings / start / return) — not the physics host. */
+  /** Stable seats keyed by seatId (not WebSocket id). */
+  seats = new Map<string, SeatRecord>();
+  /** Live connection → seatId. */
+  connSeats = new Map<string, string>();
+  /** Racing sockets waiting for hello+token. */
+  pendingResume = new Map<string, PendingResume>();
+
+  /** Lobby admin seatId (settings / start / return) — not the physics host. */
   hostId: string | null = null;
   phase: RoomPhase = "lobby";
   settings: LobbySettings = {
@@ -81,58 +94,114 @@ export class KartBlitzRoom extends Server<Env> {
   };
 
   raceSim: OnlineRaceSim | null = null;
+  /** Grid order of seatIds at race start. */
+  raceOrder: string[] = [];
   private _alarmScheduled = false;
   private _lastSimWall = 0;
   private _simAccMs = 0;
   private _raceEndTimer = 0;
+  /** Prevent duplicate online-win DB writes for one race. */
+  private _winRecorded = false;
 
   onConnect(conn: Connection, _ctx: ConnectionContext) {
-    if (this.players.size >= MAX_PLAYERS) {
+    if (this.phase === "racing") {
+      // Do not create a new seat — wait for resume hello with reconnect token.
+      const connectedCount = this.connectedSeatCount();
+      if (connectedCount >= MAX_PLAYERS) {
+        conn.send(json({ type: "error", code: "full", message: "Lobby is full (max 6)." }));
+        conn.close(4000, "full");
+        return;
+      }
+      this.pendingResume.set(conn.id, { at: Date.now() });
+      conn.send(
+        json({
+          type: "resumeRequired",
+          roomId: this.name,
+          phase: "racing",
+          graceMs: RECONNECT_GRACE_MS,
+          protocol: ONLINE_PROTOCOL,
+          trackBakeVersion: TRACK_BAKE_VERSION,
+        })
+      );
+      return;
+    }
+
+    if (this.seats.size >= MAX_PLAYERS) {
       conn.send(json({ type: "error", code: "full", message: "Lobby is full (max 6)." }));
       conn.close(4000, "full");
       return;
     }
-    if (this.phase === "racing") {
-      conn.send(json({ type: "error", code: "racing", message: "Race already in progress." }));
-      conn.close(4001, "racing");
-      return;
-    }
 
-    const player: Player = {
-      id: conn.id,
-      name: "RACER",
-      ready: false,
-      color: "#00f5ff",
+    const seat = createSeat({
+      connId: conn.id,
       upgrades: defaultUpgrades(),
-    };
-    this.players.set(conn.id, player);
-    if (!this.hostId) this.hostId = conn.id;
+    });
+    this.seats.set(seat.seatId, seat);
+    this.connSeats.set(conn.id, seat.seatId);
+    if (!this.hostId) this.hostId = seat.seatId;
 
-    conn.send(
-      json({
-        type: "welcome",
-        you: conn.id,
-        hostId: this.hostId,
-        roomId: this.name,
-        settings: this.settings,
-        phase: this.phase,
-        players: this.roster(),
-        authority: "server",
-        protocol: ONLINE_PROTOCOL,
-        trackBakeVersion: TRACK_BAKE_VERSION,
-      })
-    );
-    this.broadcastRoster(conn.id);
+    this.sendWelcome(conn, seat, { resumed: false });
+    this.broadcastRoster(seat.seatId);
     void this.syncDirectory();
   }
 
   onClose(conn: Connection) {
-    if (!this.players.has(conn.id)) return;
+    const pending = this.pendingResume.get(conn.id);
+    if (pending) {
+      this.pendingResume.delete(conn.id);
+      return;
+    }
 
-    const wasHost = this.hostId === conn.id;
-    this.players.delete(conn.id);
+    const seatId = this.connSeats.get(conn.id);
+    if (!seatId) return;
+    const seat = this.seats.get(seatId);
+    if (!seat || seat.connId !== conn.id) {
+      this.connSeats.delete(conn.id);
+      return;
+    }
 
-    if (this.players.size === 0) {
+    this.connSeats.delete(conn.id);
+    const wasHost = this.hostId === seatId;
+    const now = Date.now();
+
+    if (this.phase === "racing") {
+      const next = markSeatDisconnected(seat, now);
+      this.seats.set(seatId, next);
+      if (this.raceSim) this.raceSim.markDisconnected(seatId);
+
+      if (wasHost) {
+        this.hostId = pickHostSeatId([...this.seats.values()], this.raceOrder);
+      }
+
+      this.broadcast(
+        json({
+          type: "playerDisconnected",
+          id: seatId,
+          hostId: this.hostId,
+          players: this.roster(),
+          phase: this.phase,
+          graceMs: RECONNECT_GRACE_MS,
+          graceRemainingMs: graceRemainingMs(next, now),
+        })
+      );
+      if (wasHost) {
+        this.broadcast(
+          json({
+            type: "hostMigrated",
+            hostId: this.hostId,
+            disconnectedId: seatId,
+            players: this.roster(),
+            phase: this.phase,
+          })
+        );
+      }
+      void this.syncDirectory();
+      return;
+    }
+
+    // Lobby: permanent leave
+    this.seats.delete(seatId);
+    if (this.seats.size === 0) {
       this.hostId = null;
       this.phase = "lobby";
       this.stopSim();
@@ -140,33 +209,13 @@ export class KartBlitzRoom extends Server<Env> {
       void this.syncDirectory(true);
       return;
     }
-
-    if (this.phase === "racing") {
-      if (this.raceSim) this.raceSim.markDisconnected(conn.id);
-      if (wasHost) {
-        this.hostId = this.roster()[0]?.id ?? null;
-      }
-      this.broadcast(
-        json({
-          type: "playerLeft",
-          id: conn.id,
-          hostId: this.hostId,
-          players: this.roster(),
-          phase: this.phase,
-        })
-      );
-      void this.syncDirectory();
-      return;
-    }
-
     if (wasHost) {
-      this.hostId = this.roster()[0]?.id ?? null;
+      this.hostId = pickHostSeatId([...this.seats.values()]);
     }
-
     this.broadcast(
       json({
         type: "playerLeft",
-        id: conn.id,
+        id: seatId,
         hostId: this.hostId,
         players: this.roster(),
         phase: this.phase,
@@ -189,12 +238,21 @@ export class KartBlitzRoom extends Server<Env> {
     }
 
     const type = String(msg.type || "");
-    const player = this.players.get(sender.id);
-    if (!player && type !== "hello") return;
+
+    // Pending resume sockets may only send hello / resume
+    if (this.pendingResume.has(sender.id)) {
+      if (type === "hello" || type === "resume") {
+        void this.handleResumeHello(sender, msg);
+      }
+      return;
+    }
+
+    const seat = this.seatForConn(sender.id);
+    if (!seat && type !== "hello") return;
 
     switch (type) {
       case "hello": {
-        if (!player) return;
+        if (!seat) return;
         if (msg.protocol != null && Number(msg.protocol) !== ONLINE_PROTOCOL) {
           sender.send(
             json({
@@ -211,19 +269,20 @@ export class KartBlitzRoom extends Server<Env> {
           }
           return;
         }
-        void this.applyHelloProfile(sender, player, msg);
+        // Mid-race hello on an already-bound seat is a profile refresh only
+        void this.applyHelloProfile(sender, seat, msg);
         break;
       }
       case "ready": {
-        if (!player || this.phase !== "lobby") return;
-        player.ready = !!msg.ready;
-        // Competitive: ignore client-claimed progression until ownership is verified server-side.
-        player.upgrades = resolveOnlineUpgrades(msg.upgrades);
+        if (!seat || this.phase !== "lobby") return;
+        seat.ready = !!msg.ready;
+        seat.upgrades = resolveOnlineUpgrades(msg.upgrades);
+        this.seats.set(seat.seatId, seat);
         this.broadcastRoster();
         break;
       }
       case "lobbySettings": {
-        if (sender.id !== this.hostId || this.phase !== "lobby") return;
+        if (!seat || seat.seatId !== this.hostId || this.phase !== "lobby") return;
         this.settings = {
           trackId: clampInt(msg.trackId, 0, 64, this.settings.trackId),
           laps: clampInt(msg.laps, 1, 20, this.settings.laps),
@@ -236,7 +295,7 @@ export class KartBlitzRoom extends Server<Env> {
         break;
       }
       case "startRace": {
-        if (sender.id !== this.hostId || this.phase !== "lobby") return;
+        if (!seat || seat.seatId !== this.hostId || this.phase !== "lobby") return;
         if (msg.protocol != null && Number(msg.protocol) !== ONLINE_PROTOCOL) {
           sender.send(
             json({
@@ -248,8 +307,9 @@ export class KartBlitzRoom extends Server<Env> {
           );
           return;
         }
-        const readyCount = [...this.players.values()].filter((p) => p.ready).length;
-        if (this.players.size < 2 || readyCount < 2) {
+        const live = [...this.seats.values()].filter((s) => s.status === "connected");
+        const readyCount = live.filter((p) => p.ready).length;
+        if (live.length < 2 || readyCount < 2) {
           sender.send(
             json({
               type: "error",
@@ -285,15 +345,16 @@ export class KartBlitzRoom extends Server<Env> {
           return;
         }
 
-        const order = this.roster().map((p) => p.id);
+        const order = live.map((p) => p.seatId);
+        this.raceOrder = order.slice();
         this.phase = "racing";
         this._raceEndTimer = 0;
-        // Force standardized performance for every starter (do not trust lobby-stored claims).
-        const equalCars = this.roster().map((p) => ({
-          id: p.id,
+        this._winRecorded = false;
+        const equalCars = live.map((p) => ({
+          id: p.seatId,
           name: p.name,
           color: p.color,
-          upgrades: resolveOnlineUpgrades(p.upgrades),
+          upgrades: resolveOnlineUpgrades(p.upgrades as UpgradeStats),
         }));
         this.raceSim = new OnlineRaceSim({
           track,
@@ -318,6 +379,7 @@ export class KartBlitzRoom extends Server<Env> {
             protocol: ONLINE_PROTOCOL,
             trackBakeVersion: TRACK_BAKE_VERSION,
             equalPerformance: !TRUST_CLIENT_PROGRESSION_UPGRADES,
+            reconnectGraceMs: RECONNECT_GRACE_MS,
           })
         );
         const boot = this.raceSim.buildStatePacket(true);
@@ -327,18 +389,17 @@ export class KartBlitzRoom extends Server<Env> {
         break;
       }
       case "input": {
-        // JSON fallback input
-        if (this.phase !== "racing" || !this.raceSim) return;
-        this.raceSim.setInput(sender.id, normalizeInput(msg.input), typeof msg.seq === "number" ? msg.seq : undefined);
+        if (this.phase !== "racing" || !this.raceSim || !seat) return;
+        this.raceSim.setInput(seat.seatId, normalizeInput(msg.input), typeof msg.seq === "number" ? msg.seq : undefined);
         break;
       }
       case "raceEnded": {
-        if (sender.id !== this.hostId) return;
+        if (!seat || seat.seatId !== this.hostId) return;
         this.endRaceToLobby();
         break;
       }
       case "returnLobby": {
-        if (sender.id !== this.hostId) return;
+        if (!seat || seat.seatId !== this.hostId) return;
         this.endRaceToLobby();
         break;
       }
@@ -351,9 +412,11 @@ export class KartBlitzRoom extends Server<Env> {
     const kind = peekBinaryType(buf);
     if (kind === MSG_INPUT) {
       if (this.phase !== "racing" || !this.raceSim) return;
+      const seat = this.seatForConn(sender.id);
+      if (!seat || seat.status !== "connected") return;
       const decoded = decodeInput(buf);
       if (!decoded) return;
-      this.raceSim.setInput(sender.id, decoded.input as SimInput, decoded.seq);
+      this.raceSim.setInput(seat.seatId, decoded.input as SimInput, decoded.seq);
     }
   }
 
@@ -362,6 +425,9 @@ export class KartBlitzRoom extends Server<Env> {
     if (this.phase !== "racing" || !this.raceSim) return;
 
     const now = Date.now();
+    this.sweepPendingResume(now);
+    this.expireGraceSeats(now);
+
     let elapsed = now - (this._lastSimWall || now);
     this._lastSimWall = now;
     elapsed = Math.min(250, Math.max(0, elapsed));
@@ -374,7 +440,6 @@ export class KartBlitzRoom extends Server<Env> {
       const packet = this.raceSim.step(FIXED_DT);
       if (packet) this.broadcast(packet);
     }
-    // Cap backlog so a long stall does not spiral, but do not discard mid-step remainder
     if (this._simAccMs > SIM_STEP_MS * MAX_CATCHUP_STEPS) {
       this._simAccMs = SIM_STEP_MS * MAX_CATCHUP_STEPS;
     }
@@ -382,35 +447,7 @@ export class KartBlitzRoom extends Server<Env> {
     if (this.raceSim.isFinished()) {
       this._raceEndTimer += elapsed;
       if (this._raceEndTimer > 2800) {
-        // Server-authoritative win recording for online races.
-        // This runs before we broadcast `raceEnded`, so UI can show updated results promptly.
-        const env = doEnv(this);
-        if (env.LEADERBOARD_DB) {
-          try {
-            const winnerKart = this.raceSim.karts
-              .filter((k) => k.finished && k.finishTime != null)
-              .slice()
-              .sort((a, b) => {
-                const ao = a.finishOrder ?? Number.POSITIVE_INFINITY;
-                const bo = b.finishOrder ?? Number.POSITIVE_INFINITY;
-                if (ao !== bo) return ao - bo;
-                const at = a.finishTime ?? Number.POSITIVE_INFINITY;
-                const bt = b.finishTime ?? Number.POSITIVE_INFINITY;
-                if (at !== bt) return at - bt;
-                return (a.id ?? 0) - (b.id ?? 0);
-              })[0];
-
-            const winnerPlayer = winnerKart ? this.players.get(winnerKart.onlineConnId) : undefined;
-            const deviceToken = winnerPlayer?.deviceToken;
-            if (deviceToken) {
-              void recordOnlineWin(env.LEADERBOARD_DB, deviceToken);
-              // Note: do not await. Keep race-end UX responsive; leaderboard updates on refresh.
-            }
-          } catch (e) {
-            console.error("recordOnlineWin failed", e);
-          }
-        }
-
+        await this.recordWinnerOnce();
         this.broadcast(
           json({
             type: "raceEnded",
@@ -420,13 +457,254 @@ export class KartBlitzRoom extends Server<Env> {
         );
         this.stopSim();
         this.phase = "lobby";
-        for (const p of this.players.values()) p.ready = false;
+        this.purgeForfeitedAndDisconnected();
+        for (const p of this.seats.values()) p.ready = false;
         void this.syncDirectory();
         return;
       }
     }
 
     await this.scheduleAlarm(Date.now() + SIM_STEP_MS);
+  }
+
+  private async recordWinnerOnce() {
+    if (this._winRecorded || !this.raceSim) return;
+    this._winRecorded = true;
+    const env = doEnv(this);
+    if (!env.LEADERBOARD_DB) return;
+    try {
+      const winnerKart = this.raceSim.karts
+        .filter((k) => k.finished && k.finishTime != null)
+        .slice()
+        .sort((a, b) => {
+          const ao = a.finishOrder ?? Number.POSITIVE_INFINITY;
+          const bo = b.finishOrder ?? Number.POSITIVE_INFINITY;
+          if (ao !== bo) return ao - bo;
+          const at = a.finishTime ?? Number.POSITIVE_INFINITY;
+          const bt = b.finishTime ?? Number.POSITIVE_INFINITY;
+          if (at !== bt) return at - bt;
+          return (a.id ?? 0) - (b.id ?? 0);
+        })[0];
+
+      const winnerSeat = winnerKart ? this.seats.get(winnerKart.onlineConnId) : undefined;
+      const deviceToken = winnerSeat?.deviceToken;
+      if (deviceToken) {
+        void recordOnlineWin(env.LEADERBOARD_DB, deviceToken);
+      }
+    } catch (e) {
+      console.error("recordOnlineWin failed", e);
+    }
+  }
+
+  private expireGraceSeats(now: number) {
+    let changed = false;
+    for (const [seatId, seat] of this.seats) {
+      if (seat.status !== "disconnected") continue;
+      if (!isGraceExpired(seat, now)) continue;
+      const forfeited = forfeitSeat(seat);
+      this.seats.set(seatId, forfeited);
+      if (this.raceSim) this.raceSim.forfeitDisconnected(seatId);
+      changed = true;
+      this.broadcast(
+        json({
+          type: "playerLeft",
+          id: seatId,
+          hostId: this.hostId,
+          players: this.roster(),
+          phase: this.phase,
+          reason: "grace_expired",
+        })
+      );
+    }
+    if (changed) void this.syncDirectory();
+  }
+
+  private purgeForfeitedAndDisconnected() {
+    for (const [seatId, seat] of [...this.seats.entries()]) {
+      if (seat.status === "forfeited" || seat.status === "disconnected") {
+        this.seats.delete(seatId);
+        if (seat.connId) this.connSeats.delete(seat.connId);
+      }
+    }
+    if (this.hostId && !this.seats.has(this.hostId)) {
+      this.hostId = pickHostSeatId([...this.seats.values()], this.raceOrder);
+    }
+    this.raceOrder = [];
+  }
+
+  private async handleResumeHello(sender: Connection, msg: Record<string, unknown>) {
+    if (msg.protocol != null && Number(msg.protocol) !== ONLINE_PROTOCOL) {
+      this.failPendingResume(sender, "version_mismatch", "Client/server protocol mismatch.");
+      return;
+    }
+
+    const token = String(msg.reconnectToken || msg.token || "");
+    const seatIdHint = msg.seatId != null ? String(msg.seatId) : undefined;
+    const result = validateResume(this.seats.values(), {
+      token,
+      seatId: seatIdHint,
+      now: Date.now(),
+      phase: this.phase,
+    });
+
+    if (!result.ok) {
+      // Unrelated joiner during race — same UX as before
+      const code = result.code === "expired" || result.code === "forfeited" ? result.code : "racing";
+      this.failPendingResume(
+        sender,
+        code === "racing" ? "racing" : code,
+        result.code === "invalid_token"
+          ? "Race already in progress."
+          : result.message
+      );
+      return;
+    }
+
+    this.pendingResume.delete(sender.id);
+
+    const seat = result.seat;
+    // Displace any stale connection still bound to this seat
+    if (seat.connId && seat.connId !== sender.id) {
+      this.connSeats.delete(seat.connId);
+      try {
+        for (const c of this.getConnections()) {
+          if (c.id === seat.connId) {
+            c.send(json({ type: "error", code: "displaced", message: "Reconnected from another client." }));
+            c.close(4002, "displaced");
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    seat.connId = sender.id;
+    seat.status = "connected";
+    seat.disconnectedAt = null;
+    this.seats.set(seat.seatId, seat);
+    this.connSeats.set(sender.id, seat.seatId);
+
+    if (this.raceSim) this.raceSim.clearDisconnected(seat.seatId);
+
+    // Profile refresh (name/color/token) without changing seatId
+    await this.applyHelloProfile(sender, seat, msg, { skipRoster: true });
+
+    this.sendWelcome(sender, seat, {
+      resumed: true,
+      order: this.raceOrder.slice(),
+      players: this.racePlayersPayload(),
+    });
+
+    this.broadcast(
+      json({
+        type: "playerResumed",
+        id: seat.seatId,
+        hostId: this.hostId,
+        players: this.roster(),
+        phase: this.phase,
+      })
+    );
+
+    if (this.raceSim) {
+      sender.send(
+        json({
+          type: "resumeRace",
+          settings: this.settings,
+          order: this.raceOrder.slice(),
+          players: this.racePlayersPayload(),
+          hostId: this.hostId,
+          authority: "server",
+          protocol: ONLINE_PROTOCOL,
+          trackBakeVersion: TRACK_BAKE_VERSION,
+          equalPerformance: !TRUST_CLIENT_PROGRESSION_UPGRADES,
+          reconnectGraceMs: RECONNECT_GRACE_MS,
+          you: seat.seatId,
+        })
+      );
+      sender.send(this.raceSim.buildStatePacket(true));
+    }
+    void this.syncDirectory();
+  }
+
+  private failPendingResume(conn: Connection, code: string, message: string) {
+    this.pendingResume.delete(conn.id);
+    try {
+      conn.send(json({ type: "error", code, message }));
+      conn.close(code === "racing" ? 4001 : 4003, code);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private sweepPendingResume(now: number) {
+    for (const [connId, pending] of [...this.pendingResume.entries()]) {
+      if (now - pending.at < RESUME_HELLO_TIMEOUT_MS) continue;
+      this.pendingResume.delete(connId);
+      try {
+        for (const c of this.getConnections()) {
+          if (c.id === connId) {
+            c.send(json({ type: "error", code: "resume_timeout", message: "Reconnect hello timed out." }));
+            c.close(4003, "resume_timeout");
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  private sendWelcome(
+    conn: Connection,
+    seat: SeatRecord,
+    extra: { resumed: boolean; order?: string[]; players?: unknown }
+  ) {
+    conn.send(
+      json({
+        type: "welcome",
+        you: seat.seatId,
+        seatId: seat.seatId,
+        reconnectToken: seat.reconnectToken,
+        hostId: this.hostId,
+        roomId: this.name,
+        settings: this.settings,
+        phase: this.phase,
+        players: this.roster(),
+        authority: "server",
+        protocol: ONLINE_PROTOCOL,
+        trackBakeVersion: TRACK_BAKE_VERSION,
+        reconnectGraceMs: RECONNECT_GRACE_MS,
+        resumed: !!extra.resumed,
+        order: extra.order,
+        racePlayers: extra.players,
+      })
+    );
+  }
+
+  private racePlayersPayload() {
+    return this.raceOrder.map((id) => {
+      const s = this.seats.get(id);
+      return {
+        id,
+        name: s?.name || "RACER",
+        color: s?.color || "#00f5ff",
+        upgrades: resolveOnlineUpgrades(s?.upgrades as UpgradeStats),
+        disconnected: s?.status === "disconnected" || s?.status === "forfeited",
+      };
+    });
+  }
+
+  private connectedSeatCount() {
+    let n = 0;
+    for (const s of this.seats.values()) {
+      if (s.status === "connected" && s.connId) n++;
+    }
+    return n;
+  }
+
+  private seatForConn(connId: string): SeatRecord | null {
+    const seatId = this.connSeats.get(connId);
+    if (!seatId) return null;
+    return this.seats.get(seatId) || null;
   }
 
   async scheduleAlarm(when: number) {
@@ -443,6 +721,7 @@ export class KartBlitzRoom extends Server<Env> {
     this._simAccMs = 0;
     this._raceEndTimer = 0;
     this._alarmScheduled = false;
+    this._winRecorded = false;
     try {
       void doCtx(this).storage.deleteAlarm();
     } catch {
@@ -453,7 +732,8 @@ export class KartBlitzRoom extends Server<Env> {
   endRaceToLobby() {
     this.stopSim();
     this.phase = "lobby";
-    for (const p of this.players.values()) p.ready = false;
+    this.purgeForfeitedAndDisconnected();
+    for (const p of this.seats.values()) p.ready = false;
     this.broadcast(
       json({
         type: "raceEnded",
@@ -473,11 +753,11 @@ export class KartBlitzRoom extends Server<Env> {
     void this.syncDirectory();
   }
 
-  roster(): Player[] {
-    return [...this.players.values()];
+  roster() {
+    return rosterPublic([...this.seats.values()]);
   }
 
-  broadcastRoster(exceptId?: string) {
+  broadcastRoster(exceptSeatId?: string) {
     const payload = json({
       type: "roster",
       hostId: this.hostId,
@@ -486,8 +766,13 @@ export class KartBlitzRoom extends Server<Env> {
       phase: this.phase,
       authority: "server",
     });
-    if (exceptId) this.broadcast(payload, [exceptId]);
-    else this.broadcast(payload);
+    if (exceptSeatId) {
+      const exceptConn = this.seats.get(exceptSeatId)?.connId;
+      if (exceptConn) this.broadcast(payload, [exceptConn]);
+      else this.broadcast(payload);
+    } else {
+      this.broadcast(payload);
+    }
   }
 
   resetSettings() {
@@ -505,12 +790,15 @@ export class KartBlitzRoom extends Server<Env> {
       const env = doEnv(this);
       const dirId = env.LobbyDirectory.idFromName("global");
       const stub = env.LobbyDirectory.get(dirId);
-      const hostPlayer = this.hostId ? this.players.get(this.hostId) : null;
+      const hostPlayer = this.hostId ? this.seats.get(this.hostId) : null;
+      const liveCount = [...this.seats.values()].filter(
+        (s) => s.status === "connected" || s.status === "disconnected"
+      ).length;
       const remove =
         forceRemove ||
-        this.players.size === 0 ||
+        liveCount === 0 ||
         this.phase === "racing" ||
-        this.players.size >= MAX_PLAYERS;
+        this.connectedSeatCount() >= MAX_PLAYERS;
 
       if (remove) {
         await stub.fetch("https://directory/remove", {
@@ -527,7 +815,7 @@ export class KartBlitzRoom extends Server<Env> {
         body: JSON.stringify({
           id: this.name,
           hostName: hostPlayer?.name || "HOST",
-          players: this.players.size,
+          players: this.connectedSeatCount(),
           max: MAX_PLAYERS,
           trackId: this.settings.trackId,
           laps: this.settings.laps,
@@ -539,10 +827,15 @@ export class KartBlitzRoom extends Server<Env> {
     }
   }
 
-  private async applyHelloProfile(sender: Connection, player: Player, msg: Record<string, unknown>) {
+  private async applyHelloProfile(
+    sender: Connection,
+    seat: SeatRecord,
+    msg: Record<string, unknown>,
+    opts: { skipRoster?: boolean } = {}
+  ) {
     const color = String(msg.color || "#00f5ff").slice(0, 16);
     const deviceToken = String(msg.deviceToken || "");
-    if (deviceToken) player.deviceToken = deviceToken;
+    if (deviceToken) seat.deviceToken = deviceToken;
     let name =
       String(msg.name || "RACER")
         .toUpperCase()
@@ -565,18 +858,22 @@ export class KartBlitzRoom extends Server<Env> {
       console.error("applyHelloProfile device lookup failed", e);
     }
 
-    player.name = name;
-    player.color = color;
-    player.upgrades = resolveOnlineUpgrades(msg.upgrades);
+    seat.name = name;
+    seat.color = color;
+    seat.upgrades = resolveOnlineUpgrades(msg.upgrades);
+    this.seats.set(seat.seatId, seat);
     sender.send(
       json({
         type: "identity",
-        name: player.name,
+        name: seat.name,
+        seatId: seat.seatId,
         equalPerformance: !TRUST_CLIENT_PROGRESSION_UPGRADES,
       })
     );
-    this.broadcastRoster();
-    void this.syncDirectory();
+    if (!opts.skipRoster) {
+      this.broadcastRoster();
+      void this.syncDirectory();
+    }
   }
 }
 

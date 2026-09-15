@@ -170,6 +170,36 @@ export class OnlineRaceSim {
     }
   }
 
+  /** Resume after reconnect — clear freeze so inputs apply again. */
+  clearDisconnected(connId: string) {
+    const k = this.karts.find((x) => x.onlineConnId === connId);
+    if (k) {
+      k._onlineDisconnected = false;
+    }
+  }
+
+  /**
+   * Grace expired: DNF the seat so the race can finish without them.
+   * Idempotent if already finished.
+   */
+  forfeitDisconnected(connId: string) {
+    const k = this.karts.find((x) => x.onlineConnId === connId);
+    if (!k) return;
+    k._onlineDisconnected = true;
+    this.inputs.set(connId, emptyInput());
+    this.inputQueues.set(connId, []);
+    if (!k.finished) {
+      k.finished = true;
+      k.finishTime = this.raceTimer > 0 ? this.raceTimer : this.simTimeMs / 1000;
+      if (k.finishOrder == null) k.finishOrder = this._nextFinishOrder++;
+    }
+  }
+
+  /** True when no connected drivers are still racing (disconnected count as not racing). */
+  noActiveRacers(): boolean {
+    return !this.karts.some((k) => !k.finished && !k._onlineDisconnected);
+  }
+
   step(dt = FIXED_DT): ArrayBuffer | null {
     this.drainInputQueues();
     this.simTimeMs += dt * 1000;
@@ -206,7 +236,14 @@ export class OnlineRaceSim {
         }
       }
       resolveKartCollisions(this.karts, this.collisionEnabled);
-      if (this.karts.every((k) => k.finished)) {
+      // Finish when every kart is done, or only disconnected seats remain unfinished.
+      if (this.karts.every((k) => k.finished) || this.noActiveRacers()) {
+        // DNF any still-open disconnected seats so standings are complete.
+        for (const k of this.karts) {
+          if (!k.finished && k._onlineDisconnected) {
+            this.forfeitDisconnected(k.onlineConnId);
+          }
+        }
         this.phase = "finished";
       }
     } else if (this.phase === "finished") {
@@ -276,6 +313,9 @@ export class OnlineRaceSim {
       bestLap: k.bestLap < Infinity ? k.bestLap : null,
       maxSpeed: k.maxSpeed || 0,
       disconnected: !!k._onlineDisconnected,
+      isOffTrack: !!k.isOffTrack,
+      _isCompletelyOff: !!k._isCompletelyOff,
+      _penaltyTimer: Math.max(0, Number(k._penaltyTimer) || 0),
     };
   }
 

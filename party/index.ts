@@ -10,7 +10,9 @@ import {
   upsertAdminEntry,
 } from "./leaderboard-admin";
 import { exportLeaderboardBackup, getDeviceStatus, getLeaderboard, registerDevice, submitScore } from "./leaderboard";
+import { completeTrialRun, startTrialRun } from "./trial-runs";
 import { ONLINE_PROTOCOL, TRACK_BAKE_VERSION } from "../sim/constants";
+import { LEADERBOARD_RULES_VERSION } from "../sim/trial-run";
 import { listTrackIds } from "../sim/tracks";
 
 export { KartBlitzRoom, LobbyDirectory };
@@ -156,6 +158,40 @@ export default {
       if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
       return withCors(Response.json(res));
     }
+    if (url.pathname === "/api/runs/start") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(Response.json({ error: "leaderboard_unconfigured" }, { status: 503 }));
+      }
+      if (request.method !== "POST") {
+        return withCors(Response.json({ error: "method_not_allowed" }, { status: 405 }));
+      }
+      let body: Record<string, unknown>;
+      try {
+        body = (await request.json()) as Record<string, unknown>;
+      } catch {
+        return withCors(Response.json({ error: "invalid_json" }, { status: 400 }));
+      }
+      const res = await startTrialRun(env.LEADERBOARD_DB, body);
+      if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
+      return withCors(Response.json(res));
+    }
+    if (url.pathname === "/api/runs/complete") {
+      if (!env.LEADERBOARD_DB) {
+        return withCors(Response.json({ error: "leaderboard_unconfigured" }, { status: 503 }));
+      }
+      if (request.method !== "POST") {
+        return withCors(Response.json({ error: "method_not_allowed" }, { status: 405 }));
+      }
+      let body: Record<string, unknown>;
+      try {
+        body = (await request.json()) as Record<string, unknown>;
+      } catch {
+        return withCors(Response.json({ error: "invalid_json" }, { status: 400 }));
+      }
+      const res = await completeTrialRun(env.LEADERBOARD_DB, body);
+      if (!res.ok) return withCors(Response.json({ error: res.error }, { status: res.status }));
+      return withCors(Response.json(res));
+    }
     if (url.pathname === "/api/scores" || url.pathname === "/api/submit") {
       if (!env.LEADERBOARD_DB) {
         return withCors(
@@ -178,6 +214,7 @@ export default {
           JSON.stringify({
             protocol: ONLINE_PROTOCOL,
             trackBakeVersion: TRACK_BAKE_VERSION,
+            leaderboardRulesVersion: LEADERBOARD_RULES_VERSION,
             tracks: listTrackIds(),
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }

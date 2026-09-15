@@ -72,7 +72,7 @@ function loadSandbox(hostSearch = `?partyHost=${encodeURIComponent(PARTY_HOST)}`
       removeItem: () => {},
     },
     OnlineSim: {
-      ONLINE_PROTOCOL: 4,
+      ONLINE_PROTOCOL: 5,
       TRACK_BAKE_VERSION: 2,
       STEPS_PER_INPUT: 2,
       FIXED_DT: DT,

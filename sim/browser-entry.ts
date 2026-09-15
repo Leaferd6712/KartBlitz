@@ -28,3 +28,14 @@ export {
 export { resolveKartCollisions } from "./collision";
 export { OnlineRaceSim, type OnlineRaceConfig, type RacePlayer } from "./raceOnline";
 export { loadTrackBake, listTrackIds } from "./tracks";
+export {
+  LEADERBOARD_RULES_VERSION,
+  TRIAL_RUN_MAX_STEPS,
+  packInputFlags,
+  unpackInputFlags,
+  encodeTrialInputs,
+  decodeTrialInputsBase64,
+  verifyTrialReplay,
+  minPlausibleLapSec,
+  trialRunSpec,
+} from "./trial-run";

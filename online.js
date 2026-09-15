@@ -130,6 +130,13 @@
     this.lastError = '';
     this.authority = 'server';
     this.netDebug = netDebugEnabled();
+    this.seatId = null;
+    this.reconnectToken = null;
+    this.reconnectGraceMs = 45000;
+    this._lastMeta = null;
+    this._reconnectAttempts = 0;
+    this._reconnectTimer = null;
+    this._connGen = 0;
   }
 
   OnlineSession.prototype.on = function (ev, fn) {
@@ -151,7 +158,7 @@
   };
 
   OnlineSession.prototype.isActive = function () {
-    return this.phase === 'lobby' || this.phase === 'racing';
+    return this.phase === 'lobby' || this.phase === 'racing' || this.phase === 'reconnecting';
   };
 
   /** Lobby admin (settings / start), not physics authority. */
@@ -205,20 +212,38 @@
     } catch (e) {}
   };
 
-  OnlineSession.prototype.connect = function (roomId, meta) {
+  OnlineSession.prototype.connect = function (roomId, meta, opts) {
     var self = this;
-    this.leave(true);
-    this._wantClose = false;
+    opts = opts || {};
+    var resume = !!opts.resume;
+    this._lastMeta = meta || this._lastMeta || {};
+    if (!resume) {
+      this.leave(true);
+      this.reconnectToken = null;
+      this.seatId = null;
+      this._reconnectAttempts = 0;
+      this._clearReconnectTimer();
+    } else {
+      this._wantClose = false;
+      if (this.ws) {
+        try { this.ws.close(); } catch (e0) {}
+        this.ws = null;
+      }
+    }
     this.host = defaultHost();
     this.roomId = String(roomId || makeRoomCode()).toUpperCase();
-    this.phase = 'lobby';
-    this.statusText = 'Connecting…';
+    this.phase = resume ? 'reconnecting' : 'lobby';
+    this.statusText = resume ? 'Reconnecting…' : 'Connecting…';
     this.lastError = '';
-    this.remoteInputs = {};
-    this._resetInterp();
-    this.localSlot = -1;
-    this.order = [];
+    if (!resume) {
+      this.remoteInputs = {};
+      this._resetInterp();
+      this.localSlot = -1;
+      this.order = [];
+    }
     this.netDebug = netDebugEnabled();
+    this._connGen = (this._connGen || 0) + 1;
+    var connGen = this._connGen;
 
     var url = wsUrl(this.host, this.roomId);
     var ws;
@@ -227,7 +252,7 @@
       ws.binaryType = 'arraybuffer';
     } catch (e) {
       this.lastError = 'Could not open WebSocket to ' + url;
-      this.phase = 'idle';
+      if (!resume) this.phase = 'idle';
       this.emit('error', { message: this.lastError });
       this.emit('change');
       return Promise.reject(e);
@@ -240,24 +265,31 @@
         if (settled) return;
         settled = true;
         self.lastError = 'Connection timed out to ' + self.host + '. Clear localStorage kartblitz_party_host or open with ?partyHost=' + PRODUCTION_HOST;
-        self.phase = 'idle';
+        if (!resume) self.phase = 'idle';
         try { ws.close(); } catch (e2) {}
         self.emit('error', { message: self.lastError });
         self.emit('change');
         reject(new Error(self.lastError));
       }, 8000);
 
+      function settleOk() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        self._reconnectAttempts = 0;
+        self._clearReconnectTimer();
+        resolve(self);
+      }
+      function settleErr(errMsg) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(new Error(errMsg || 'Lobby error'));
+      }
+
       ws.onopen = function () {
-        self.statusText = 'Connected';
-        var upgrades = typeof global.getOnlineUpgrades === 'function' ? global.getOnlineUpgrades() : null;
-        self.send({
-          type: 'hello',
-          name: (meta && meta.name) || 'RACER',
-          color: (meta && meta.color) || '#00f5ff',
-          deviceToken: typeof global.getKartBlitzDeviceToken === 'function' ? global.getKartBlitzDeviceToken() : null,
-          protocol: ONLINE_PROTOCOL,
-          upgrades: upgrades
-        });
+        self.statusText = resume ? 'Reconnecting…' : 'Connected';
+        self._sendHello(meta);
         self.emit('change');
       };
 
@@ -273,15 +305,14 @@
           self._noteBytes('in', (ev.data && ev.data.length) || 0);
         } catch (e) { return; }
         self._handleMessage(msg);
-        if (!settled && msg.type === 'welcome') {
-          settled = true;
-          clearTimeout(timer);
-          resolve(self);
+        if (msg.type === 'resumeRequired' && self.reconnectToken) {
+          self._sendHello(meta);
+        }
+        if (!settled && (msg.type === 'welcome' || msg.type === 'resumeRace')) {
+          settleOk();
         }
         if (!settled && msg.type === 'error') {
-          settled = true;
-          clearTimeout(timer);
-          reject(new Error(msg.message || 'Lobby error'));
+          settleErr(msg.message || 'Lobby error');
         }
       };
 
@@ -293,22 +324,96 @@
 
       ws.onclose = function () {
         clearTimeout(timer);
+        if (connGen !== self._connGen) return; // superseded by a newer socket
         if (self._wantClose) {
           self.phase = 'idle';
           self.emit('change');
           return;
         }
-        var wasRacing = self.phase === 'racing';
+        var wasRacing = self.phase === 'racing' || self.phase === 'reconnecting' || resume;
+        if (wasRacing && self.reconnectToken && self.roomId) {
+          self.phase = 'reconnecting';
+          self.statusText = 'Connection lost — reconnecting…';
+          self.emit('reconnecting', {
+            attempt: self._reconnectAttempts,
+            graceMs: self.reconnectGraceMs
+          });
+          self.emit('change');
+          self._scheduleReconnect();
+          if (!settled) settleErr(self.lastError || 'Disconnected');
+          return;
+        }
         self.phase = 'idle';
         self.statusText = 'Disconnected';
-        self.emit('disconnected', { wasRacing: wasRacing });
+        self.emit('disconnected', { wasRacing: false, permanent: true });
         self.emit('change');
-        if (!settled) {
-          settled = true;
-          reject(new Error(self.lastError || 'Disconnected'));
-        }
+        if (!settled) settleErr(self.lastError || 'Disconnected');
       };
     });
+  };
+
+  OnlineSession.prototype._sendHello = function (meta) {
+    meta = meta || this._lastMeta || {};
+    var upgrades = typeof global.getOnlineUpgrades === 'function' ? global.getOnlineUpgrades() : null;
+    var payload = {
+      type: 'hello',
+      name: (meta && meta.name) || 'RACER',
+      color: (meta && meta.color) || '#00f5ff',
+      deviceToken: typeof global.getKartBlitzDeviceToken === 'function' ? global.getKartBlitzDeviceToken() : null,
+      protocol: ONLINE_PROTOCOL,
+      upgrades: upgrades
+    };
+    if (this.reconnectToken) {
+      payload.reconnectToken = this.reconnectToken;
+      payload.seatId = this.seatId || this.you;
+    }
+    this.send(payload);
+  };
+
+  OnlineSession.prototype._clearReconnectTimer = function () {
+    if (this._reconnectTimer) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = null;
+    }
+  };
+
+  OnlineSession.prototype._scheduleReconnect = function () {
+    var self = this;
+    if (this._reconnectTimer) return;
+    if (this._wantClose) return;
+    if (!this.reconnectToken || !this.roomId) {
+      this._failReconnect('Missing reconnect credentials.');
+      return;
+    }
+    if (this._reconnectAttempts >= 12) {
+      this._failReconnect('Could not reconnect before the grace period ended.');
+      return;
+    }
+    var delay = Math.min(6000, 400 * Math.pow(1.45, this._reconnectAttempts));
+    this._reconnectTimer = setTimeout(function () {
+      self._reconnectTimer = null;
+      if (self._wantClose || self.phase === 'idle') return;
+      self._reconnectAttempts += 1;
+      self.statusText = 'Reconnecting (attempt ' + self._reconnectAttempts + ')…';
+      self.emit('change');
+      self.connect(self.roomId, self._lastMeta || {}, { resume: true }).then(function () {
+        self.statusText = 'Reconnected';
+        self.emit('reconnected', { you: self.you, seatId: self.seatId });
+        self.emit('change');
+      }).catch(function () {
+        if (self.phase === 'reconnecting') self._scheduleReconnect();
+      });
+    }, delay);
+  };
+
+  OnlineSession.prototype._failReconnect = function (message) {
+    this._clearReconnectTimer();
+    this.phase = 'idle';
+    this.statusText = 'Disconnected';
+    this.lastError = message || 'Reconnect failed';
+    this.reconnectToken = null;
+    this.emit('disconnected', { wasRacing: true, permanent: true, message: this.lastError });
+    this.emit('change');
   };
 
   OnlineSession.prototype.hostLobby = function (meta) {
@@ -345,6 +450,7 @@
 
   OnlineSession.prototype.leave = function (silent) {
     this._wantClose = true;
+    this._clearReconnectTimer();
     if (this.ws) {
       try { this.ws.close(); } catch (e) {}
       this.ws = null;
@@ -357,6 +463,9 @@
     this.order = [];
     this.localSlot = -1;
     this.remoteInputs = {};
+    this.reconnectToken = null;
+    this.seatId = null;
+    this._reconnectAttempts = 0;
     this._resetInterp();
     if (!silent) this.emit('change');
   };
@@ -461,12 +570,14 @@
   OnlineSession.prototype._handleMessage = function (msg) {
     var type = msg.type;
     if (type === 'welcome' || type === 'roster' || type === 'lobby') {
-      var wasRacing = this.phase === 'racing';
+      var wasRacing = this.phase === 'racing' || this.phase === 'reconnecting';
       if (msg.you) this.you = msg.you;
+      if (msg.seatId) this.seatId = msg.seatId;
+      if (msg.reconnectToken) this.reconnectToken = msg.reconnectToken;
+      if (msg.reconnectGraceMs) this.reconnectGraceMs = Number(msg.reconnectGraceMs) || this.reconnectGraceMs;
       if (msg.hostId) this.hostId = msg.hostId;
       if (msg.players) this.players = msg.players;
       if (msg.settings) this.settings = msg.settings;
-      // lobby messages always mean lobby even if phase omitted (legacy)
       if (type === 'lobby') this.phase = 'lobby';
       else if (msg.phase) this.phase = msg.phase === 'racing' ? 'racing' : 'lobby';
       if (msg.authority) this.authority = msg.authority;
@@ -483,11 +594,24 @@
           try { this.ws && this.ws.close(); } catch (e) {}
           return;
         }
+        if (msg.resumed) {
+          this.phase = 'racing';
+          this.statusText = 'Reconnected';
+        } else {
+          this.statusText = 'In lobby';
+        }
+      } else {
+        this.statusText = this.phase === 'racing' ? 'Racing' : 'In lobby';
       }
-      this.statusText = 'In lobby';
       this.emit('roster', msg);
       this.emit('change');
       if (type === 'lobby' && wasRacing) this.emit('raceEnded', msg);
+      return;
+    }
+    if (type === 'resumeRequired') {
+      this.statusText = 'Authenticating reconnect…';
+      if (msg.graceMs) this.reconnectGraceMs = Number(msg.graceMs) || this.reconnectGraceMs;
+      this.emit('change');
       return;
     }
     if (type === 'lobbySettings') {
@@ -496,33 +620,46 @@
       this.emit('change');
       return;
     }
-    if (type === 'playerLeft') {
+    if (type === 'playerLeft' || type === 'playerDisconnected') {
       this.hostId = msg.hostId || this.hostId;
       this.players = msg.players || this.players;
       if (msg.id) delete this.remoteInputs[msg.id];
-      this.emit('playerLeft', msg);
+      this.emit(type === 'playerDisconnected' ? 'playerDisconnected' : 'playerLeft', msg);
+      this.emit('change');
+      return;
+    }
+    if (type === 'playerResumed') {
+      this.hostId = msg.hostId || this.hostId;
+      this.players = msg.players || this.players;
+      this.emit('playerResumed', msg);
       this.emit('change');
       return;
     }
     if (type === 'hostMigrated') {
-      // Legacy — server authority no longer migrates physics host mid-race
       this.hostId = msg.hostId || this.hostId;
       this.players = msg.players || this.players;
       this.emit('hostMigrated', msg);
       this.emit('change');
       return;
     }
-    if (type === 'startRace') {
+    if (type === 'startRace' || type === 'resumeRace') {
       this.phase = 'racing';
       this.settings = msg.settings || this.settings;
-      this.order = msg.order || [];
+      this.order = msg.order || this.order || [];
       this.players = msg.players || this.players;
       this.hostId = msg.hostId || this.hostId;
+      if (msg.you) this.you = msg.you;
+      if (msg.reconnectGraceMs) this.reconnectGraceMs = Number(msg.reconnectGraceMs) || this.reconnectGraceMs;
       if (msg.authority) this.authority = msg.authority;
       this.localSlot = this.order.indexOf(this.you);
-      this.remoteInputs = {};
-      this._resetInterp();
-      this.emit('startRace', msg);
+      if (type === 'startRace') {
+        this.remoteInputs = {};
+        this._resetInterp();
+        this.emit('startRace', msg);
+      } else {
+        this.emit('resumeRace', msg);
+      }
+      this.statusText = 'Racing';
       this.emit('change');
       return;
     }
@@ -561,6 +698,11 @@
     }
     if (type === 'error') {
       this.lastError = msg.message || 'Error';
+      if (msg.code === 'expired' || msg.code === 'forfeited' || msg.code === 'racing') {
+        if (this.phase === 'reconnecting') {
+          this._failReconnect(msg.message || 'Reconnect rejected');
+        }
+      }
       this.emit('error', msg);
       this.emit('change');
     }
@@ -647,6 +789,12 @@
     k._onlineDisconnected = !!s.disconnected;
     if (typeof s.maxSpeed === 'number' && isFinite(s.maxSpeed) && s.maxSpeed > 1) {
       k.maxSpeed = s.maxSpeed;
+    }
+    // Track-limit / off-track HUD — always from server snapshot (local + remotes).
+    if (s.isOffTrack != null) k.isOffTrack = !!s.isOffTrack;
+    if (s._isCompletelyOff != null) k._isCompletelyOff = !!s._isCompletelyOff;
+    if (typeof s._penaltyTimer === 'number' && isFinite(s._penaltyTimer)) {
+      k._penaltyTimer = Math.max(0, s._penaltyTimer);
     }
   }
 

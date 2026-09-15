@@ -422,7 +422,7 @@
       if (val) liItems.push('      <li>' + bulletTextToHTML(val) + '</li>');
     });
 
-    return `<!-- PATCH NOTES (once per page load) -->
+    return `<!-- PATCH NOTES (versioned; show once per CURRENT_PATCH_VERSION) -->
 <div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
   <div id="patch-notes-card">
     <h2 id="patch-notes-title">PATCH NOTES</h2>
@@ -433,6 +433,24 @@ ${liItems.join('\n')}
     <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
   </div>
 </div>`;
+  }
+
+  function todayPatchVersion() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function bumpCurrentPatchVersion(html, version) {
+    if (/const CURRENT_PATCH_VERSION\s*=\s*['"][^'"]*['"]/.test(html)) {
+      return html.replace(
+        /const CURRENT_PATCH_VERSION\s*=\s*['"][^'"]*['"]/,
+        `const CURRENT_PATCH_VERSION = '${version}'`
+      );
+    }
+    return html;
   }
 
   // ── Save ─────────────────────────────────────────────────
@@ -468,9 +486,9 @@ ${liItems.join('\n')}
 
     setStatus('Writing file…', 'info');
 
-    // Replace the patch notes block in index.html
+    // Replace the patch notes block in index.html (supports legacy + versioned comments)
     const newBlock = buildNewPatchNotesBlock();
-    const pattern = /<!-- PATCH NOTES \(once per page load\) -->[\s\S]*?<\/div>\s*<\/div>/;
+    const pattern = /<!-- PATCH NOTES[^>]*-->[\s\S]*?<\/div>\s*<\/div>/;
 
     if (!pattern.test(originalContent)) {
       setStatus('Could not find the patch notes block in index.html. Make sure you selected the right file.', 'err');
@@ -478,14 +496,16 @@ ${liItems.join('\n')}
       return;
     }
 
-    const newContent = originalContent.replace(pattern, newBlock);
+    const version = todayPatchVersion();
+    let newContent = originalContent.replace(pattern, newBlock);
+    newContent = bumpCurrentPatchVersion(newContent, version);
 
     try {
       const writable = await fileHandle.createWritable();
       await writable.write(newContent);
       await writable.close();
       originalContent = newContent; // update in memory so re-saves work
-      setStatus('✓ Saved successfully! Refresh index.html to see the changes.', 'ok');
+      setStatus('✓ Saved successfully! Bumped CURRENT_PATCH_VERSION to ' + version + '. Refresh index.html to see the changes.', 'ok');
 
       // Save password to session for convenience
       try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {}
