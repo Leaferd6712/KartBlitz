@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="stylesheet" href="ml/lab.css?v=20260915">
+<link rel="stylesheet" href="ml/lab.css?v=20260915c">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
@@ -10714,6 +10714,9 @@ function advanceRace(now, opts) {
   } else {
     if(race.mode === 'trial') recordTrialRunInputs(elapsed);
     race.update(elapsed);
+    if(window.KartBlitzMLLab && typeof window.KartBlitzMLLab.captureRaceFrame === 'function') {
+      window.KartBlitzMLLab.captureRaceFrame(race, elapsed, typeof getP1Input === 'function' ? getP1Input() : null);
+    }
   }
   if(doRender) {
     race.render();
@@ -18212,7 +18215,7 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
 })();
 
 </script>
-<script src="ml/runtime.js?v=20260915"></script>
-<script src="ml/lab.js?v=20260915"></script>
+<script src="ml/runtime.js?v=20260915c"></script>
+<script src="ml/lab.js?v=20260915c"></script>
 </body>
 </html>

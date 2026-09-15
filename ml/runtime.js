@@ -9,6 +9,14 @@
     'corner_demand', 'target_speed_error', 'off_track',
     'progress_delta', 'stuck'
   ];
+  const OBSERVATIONS_V2 = [
+    'speed_norm', 'lateral_norm', 'heading_sin', 'heading_cos',
+    'look_80_sin', 'look_180_sin', 'look_360_sin', 'look_650_sin',
+    'curvature_80', 'curvature_180', 'curvature_360', 'curvature_peak',
+    'edge_margin', 'target_speed_error', 'off_track', 'progress_velocity',
+    'yaw_rate', 'previous_steer', 'previous_throttle', 'previous_brake',
+    'ers_charge', 'drs_available', 'tyre_grip', 'stuck'
+  ];
   const DISCRETE_ACTIONS = [
     { up: true,  down: false, steer: -1 },
     { up: true,  down: false, steer:  0 },
@@ -69,6 +77,19 @@
     return best;
   }
 
+  function indexAtDistance(track, startIndex, distance) {
+    const spline = track.spline || [];
+    const n = spline.length;
+    if (!n) return 0;
+    const cum = track.cum;
+    const total = Number(track.totalLen) || (Array.isArray(cum) && cum.length ? Number(cum[cum.length - 1]) : 0);
+    if (!cum || cum.length !== n || !total) return mod(startIndex + Math.max(1, Math.round(n * distance / Math.max(1, total || n * 18))), n);
+    const target = (Number(cum[startIndex]) + distance) % total;
+    let lo = 0, hi = n - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (Number(cum[mid]) < target) lo = mid + 1; else hi = mid; }
+    return lo;
+  }
+
   function observe(kart, track, state) {
     state = state || {};
     const spline = track && track.spline;
@@ -120,15 +141,74 @@
     ];
   }
 
+  function observeV2(kart, track, state) {
+    state = state || {};
+    const spline = track && track.spline;
+    if (!kart || !spline || spline.length < 8) return new Array(OBSERVATIONS_V2.length).fill(0);
+    const n = spline.length;
+    const idx = nearestIndex(kart, track, Number.isFinite(kart._nearestSplineIdx) ? kart._nearestSplineIdx : state.nearest);
+    state.nearest = idx;
+    const tang = tangentAt(spline, idx, 3);
+    const center = spline[idx];
+    const width = Math.max(30, Number(track.trackWidth) || 160);
+    const lateral = ((kart.x - center.x) * -tang.y + (kart.y - center.y) * tang.x) / (width * 0.5);
+    const angle = Number(kart.angle) || 0;
+    const lookDistances = [80, 180, 360, 650];
+    const lookIndices = lookDistances.map(distance => indexAtDistance(track, idx, distance));
+    const looks = lookIndices.map(index => {
+      const p = spline[index];
+      return Math.sin(wrap(Math.atan2(p.y - kart.y, p.x - kart.x) - angle));
+    });
+    const curvatureGap = Math.max(3, Math.round(n * 0.008));
+    const curves = lookIndices.slice(0, 3).map(index => signedCurvature(spline, index, curvatureGap));
+    let peak = 0;
+    for (let distance = 60; distance <= 700; distance += 55) {
+      const value = signedCurvature(spline, indexAtDistance(track, idx, distance), curvatureGap);
+      if (Math.abs(value) > Math.abs(peak)) peak = value;
+    }
+    const maxSpeed = Math.max(1, Number(kart.maxSpeed) || 520);
+    const speedNorm = clamp(Math.abs(Number(kart.speed) || 0) / maxSpeed, 0, 1.5);
+    const cornerDemand = clamp(Math.max(Math.abs(looks[0]), Math.abs(looks[1]) * .9, Math.abs(looks[2]) * .72,
+      Math.abs(curves[0]) * 1.35, Math.abs(curves[1]) * 1.15, Math.abs(peak)) * (.42 + speedNorm * .78), 0, 1.5);
+    const targetSpeed = clamp(1.05 - cornerDemand * .76, .28, 1.04);
+    const progress = idx / n;
+    let progressDelta = 0;
+    if (Number.isFinite(state.progress)) {
+      progressDelta = progress - state.progress;
+      if (progressDelta < -.5) progressDelta += 1;
+      if (progressDelta > .5) progressDelta -= 1;
+    }
+    state.progress = progress;
+    const moved = Number.isFinite(state.x) ? Math.hypot(kart.x - state.x, kart.y - state.y) : 99;
+    state.x = kart.x; state.y = kart.y;
+    if (moved < .7 && speedNorm < .08) state.stuckFrames = (state.stuckFrames || 0) + 1;
+    else state.stuckFrames = Math.max(0, (state.stuckFrames || 0) - 2);
+    let yawRate = 0;
+    if (Number.isFinite(state.angle)) yawRate = clamp(wrap(angle - state.angle) / .11, -1.5, 1.5);
+    state.angle = angle;
+    const headingError = wrap(tang.angle - angle);
+    const tyreGrip = Number.isFinite(kart.tyreGripPct) ? kart.tyreGripPct : (Number.isFinite(kart.grip) ? kart.grip : 1);
+    return [
+      speedNorm, clamp(lateral, -2.5, 2.5), Math.sin(headingError), Math.cos(headingError),
+      looks[0], looks[1], looks[2], looks[3], curves[0], curves[1], curves[2], peak,
+      clamp(1 - Math.abs(lateral), -1.5, 1), clamp(speedNorm - targetSpeed, -1.2, 1.2), kart.isOffTrack ? 1 : 0,
+      clamp(progressDelta * n * .2, -1.5, 1.5), yawRate,
+      clamp(state.previousSteer || 0, -1, 1), clamp(state.previousThrottle || 0, 0, 1), clamp(state.previousBrake || 0, 0, 1),
+      clamp(Number(kart.ersCharge) || 0, 0, 1), kart.drsAvailable && kart.drsInZone ? 1 : 0,
+      clamp(tyreGrip, 0, 1.5), state.stuckFrames > 45 ? 1 : 0
+    ];
+  }
+
   function validateModel(model) {
     if (!model || model.format !== FORMAT) throw new Error('Not a KartBlitz ML model.');
-    if (model.observationVersion !== 1 || model.observationCount !== OBSERVATIONS.length) {
+    const names = model.observationVersion === 2 ? OBSERVATIONS_V2 : OBSERVATIONS;
+    if (![1, 2].includes(model.observationVersion) || model.observationCount !== names.length) {
       throw new Error('This model uses an incompatible sensor format.');
     }
     if (!model.policy || !Array.isArray(model.policy.layers) || !model.policy.layers.length) {
       throw new Error('Model weights are missing.');
     }
-    let inputs = OBSERVATIONS.length;
+    let inputs = names.length;
     model.policy.layers.forEach((layer, index) => {
       if (!Array.isArray(layer.kernel) || !Array.isArray(layer.bias) || layer.kernel.length !== layer.bias.length) {
         throw new Error(`Invalid weights in layer ${index + 1}.`);
@@ -141,6 +221,9 @@
       if (layer.bias.some(v => !Number.isFinite(v))) throw new Error(`Invalid bias in layer ${index + 1}.`);
       inputs = layer.bias.length;
     });
+    if (!['discrete-9', 'continuous-3', 'continuous-3-v2'].includes(model.actionSpace)) {
+      throw new Error('This model uses an incompatible action space.');
+    }
     const expected = model.actionSpace === 'discrete-9' ? 9 : 3;
     if (inputs !== expected) throw new Error(`Expected ${expected} outputs, found ${inputs}.`);
     return true;
@@ -158,12 +241,24 @@
     return values;
   }
 
-  function outputsToInput(model, outputs, kart) {
+  function outputsToInput(model, outputs, kart, state) {
     let result;
     if (model.actionSpace === 'discrete-9') {
       let best = 0;
       for (let i = 1; i < outputs.length; i++) if (outputs[i] > outputs[best]) best = i;
       result = Object.assign({}, DISCRETE_ACTIONS[best]);
+    } else if (model.actionSpace === 'continuous-3-v2') {
+      const targetSteer = Math.tanh(outputs[0] || 0);
+      let targetThrottle = (Math.tanh(outputs[1] || 0) + 1) * .5;
+      let targetBrake = (Math.tanh(outputs[2] || 0) + 1) * .5;
+      if (targetBrake > .12) targetThrottle *= Math.max(0, 1 - targetBrake * 1.35);
+      if (targetBrake < .045) targetBrake = 0;
+      state = state || {};
+      const steer = (state.previousSteer || 0) + (targetSteer - (state.previousSteer || 0)) * .42;
+      const throttle = (state.previousThrottle || 0) + (targetThrottle - (state.previousThrottle || 0)) * .34;
+      const brake = (state.previousBrake || 0) + (targetBrake - (state.previousBrake || 0)) * .46;
+      state.previousSteer = steer; state.previousThrottle = throttle; state.previousBrake = brake;
+      result = { up: throttle > .12, down: brake > .12, steer, throttle, brake };
     } else {
       const steer = Math.tanh(outputs[0] || 0);
       const throttle = 1 / (1 + Math.exp(-(outputs[1] || 0)));
@@ -185,8 +280,8 @@
     return {
       fn: function () {
         if (!kart) return { up: false, down: false, left: false, right: false, steer: 0, ers: false, drs: false };
-        const obs = observe(kart, track, state);
-        return outputsToInput(model, forward(model, obs), kart);
+        const obs = model.observationVersion === 2 ? observeV2(kart, track, state) : observe(kart, track, state);
+        return outputsToInput(model, forward(model, obs), kart, state);
       },
       set: function (value) {
         kart = value;
@@ -221,8 +316,8 @@
   };
 
   root.KartBlitzMLRuntime = {
-    FORMAT, OBSERVATIONS, DISCRETE_ACTIONS, DEFAULT_MODEL,
-    validateModel, observe, forward, outputsToInput, makeController,
-    nearestIndex, signedCurvature
+    FORMAT, OBSERVATIONS, OBSERVATIONS_V2, DISCRETE_ACTIONS, DEFAULT_MODEL,
+    validateModel, observe, observeV2, forward, outputsToInput, makeController,
+    nearestIndex, indexAtDistance, signedCurvature
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,41 +1,63 @@
 KARTBLITZ ML TRAINER - TRANSFER AND SETUP
 =========================================
 
-WHAT THE DOWNLOAD CONTAINS
-- KartBlitz Python/PyTorch PPO trainer
-- Local ML Lab companion server
-- PowerShell install and start scripts
-- The actual geometry for all KartBlitz tracks
+WHAT THIS TRAINS
+- One neural driver for all KartBlitz circuits
+- 24 track-relative sensors and continuous steering/throttle/brake
+- A fixed 10% imitation warm-start followed by 90% PPO reinforcement learning
+- Curriculum training with randomized kart physics and starting situations
+- Five evaluation runs per track plus real checkpoint trajectories
 
-ON THE NVIDIA TRAINING LAPTOP
+ON THE NVIDIA TRAINING COMPUTER
 1. Install Python 3.11 or newer from https://www.python.org/downloads/
 2. Extract KartBlitz-ML-Trainer.zip into a writable folder.
 3. Open PowerShell in the extracted KartBlitz folder.
-4. Run: powershell -ExecutionPolicy Bypass -File .\ml_training\install.ps1
+4. FIRST TIME ONLY - RUN THIS NOW:
+   powershell -ExecutionPolicy Bypass -File .\ml_training\install.ps1
 5. Confirm the final line says "CUDA available: True".
-6. Run: powershell -ExecutionPolicy Bypass -File .\ml_training\start.ps1
-7. Keep that terminal open and copy its URL and six-digit pairing code.
+6. EVERY TRAINING SESSION - RUN THIS NOW:
+   powershell -ExecutionPolicy Bypass -File .\ml_training\start.ps1
+7. Keep the terminal open. Copy its URL and six-digit pairing code.
 
-IN KARTBLITZ
+FROM THE KARTBLITZ ML LAB
 1. Open Controls & Settings and turn ML Lab ON.
-2. Open ML Lab, choose rewards, then open the Train step.
-3. Enter the trainer URL and pairing code.
-4. Start a Quick, Standard, or Deep training run.
-5. When training finishes, Your Model is saved in the browser.
-6. Export the .kartml.json weights if you want a portable backup.
+2. In Build, adjust reward weights. Each slider explains its trade-off.
+3. Optional: click DO NOW: RECORD A LAP and complete a clean lap. Human examples
+   replace part of the built-in teacher's 10% allowance. They never reduce PPO's 90%.
+4. In Train, enter the trainer URL and pairing code, then click DO NOW: CONNECT.
+5. Choose Lesson (300k), Competitive (3m), or Endurance (10m).
+6. Click DO NOW: START 90% PPO TRAINING. Watch the imitation and PPO phases.
+7. Inspect Watch and the per-track evaluation table.
+8. Export Your Model as a .kartml.json portable backup.
 
-COMMAND-LINE TRAINING (NO GAME UI)
-python -m ml_training.train --steps 750000 --envs 64
+COMMAND-LINE TRAINING
+python -m ml_training.train --steps 3000000 --envs 48
 
-The default output is:
+WHAT --steps MEANS
+The value is the total learning budget. A 3,000,000-step run contains:
+- 300,000 imitation samples (10%) to teach a safe starting behaviour
+- 2,700,000 PPO experience steps (90%) to improve through reward and trial/error
+
+WITH EXPORTED HUMAN DEMONSTRATIONS
+python -m ml_training.train --steps 3000000 --envs 48 --demo kartblitz-human-demonstrations.json
+
+DEFAULT OUTPUT
 ml_training\runs\player-model.kartml.json
 
-Import that file from ML Lab -> Race -> Your Model -> Import.
+WHAT THE IMPORTANT PARAMETERS MEAN
+- Learning rate: update size. Too high is unstable; too low is slow.
+- Future reward (gamma): how strongly later progress matters.
+- Advantage smoothing (GAE lambda): bias/noise balance in PPO estimates.
+- PPO clip range: limits policy change during one update.
+- Exploration bonus: keeps controls varied while learning.
+- Rollout horizon: experience steps per environment before an update.
+- Parallel environments: CPU simulations collecting experience at once.
+- Imitation epochs: passes over teacher and recorded human examples.
 
 IMPORTANT
-- Training uses every track in sim\tracks\bakes.json.
-- A CUDA-enabled PyTorch build is installed only when nvidia-smi detects an NVIDIA GPU.
-- CPU fallback works but is slower.
-- Simulator evaluation is not the same as final browser-physics validation.
-- Only models using the kartblitz-ml-v1 contract can be imported.
-
+- CUDA accelerates neural-network updates. The lightweight parallel racing
+  environments in this version run on CPU, so CPU performance still matters.
+- Training rotates through every track in sim\tracks\bakes.json.
+- A simulation-qualified result is not proof of human-level pace.
+- Validate weights in the real game and compare median laps on every track.
+- Older v1 models remain importable, but new training exports v2 continuous models.

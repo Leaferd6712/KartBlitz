@@ -12,11 +12,12 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .environment import load_tracks
-from .train import train_model
+from .train import split_training_budget, train_model
 
 JOBS: dict[str, dict[str, Any]] = {}
 LOCK = threading.Lock()
 PAIRING_CODE = ""
+MAX_JOB_BYTES = 10 * 1024 * 1024
 
 
 def torch_status() -> dict[str, Any]:
@@ -60,7 +61,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/status":
-            self._json(200, {**torch_status(), "trackCount": len(load_tracks()), "pairingRequired": True, "apiVersion": 1}); return
+            self._json(200, {**torch_status(), "trackCount": len(load_tracks()), "pairingRequired": True, "apiVersion": 2, "capabilities": ["continuous-control", "imitation", "curriculum", "human-demos"]}); return
         if path.startswith("/api/jobs/"):
             if not self._authorized(): self._json(401, {"error": "Incorrect trainer pairing code"}); return
             job_id = path.rsplit("/", 1)[-1]
@@ -72,10 +73,12 @@ class Handler(BaseHTTPRequestHandler):
         if urlparse(self.path).path != "/api/jobs": self._json(404, {"error": "Not found"}); return
         if not self._authorized(): self._json(401, {"error": "Incorrect trainer pairing code"}); return
         try:
-            length = min(int(self.headers.get("Content-Length", "0")), 64_000)
+            length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0 or length > MAX_JOB_BYTES:
+                raise ValueError("Training job must be between 1 byte and 10 MB")
             config = json.loads(self.rfile.read(length) or b"{}")
             if config.get("format") != "kartblitz-training-job-v1": raise ValueError("Unsupported training job format")
-            total = max(4096, min(int(config.get("totalSteps", 150000)), 10_000_000)); job_id = uuid.uuid4().hex
+            total, _, _ = split_training_budget(config.get("totalSteps", 3_000_000)); job_id = uuid.uuid4().hex
             job = {"id": job_id, "status": "queued", "step": 0, "totalSteps": total, "meanReward": None, "device": "—", "logs": ["Training job queued"]}
             with LOCK: JOBS[job_id] = job
             threading.Thread(target=run_job, args=(job_id, {**config, "totalSteps": total}), daemon=True).start(); self._json(202, job)
@@ -101,4 +104,3 @@ def main() -> None:
 
 
 if __name__ == "__main__": main()
-

@@ -47,6 +47,16 @@ vm.createContext(context);
 vm.runInContext(fs.readFileSync('ml/runtime.js', 'utf8'), context, { filename: 'ml/runtime.js' });
 vm.runInContext(fs.readFileSync('ml/lab.js', 'utf8'), context, { filename: 'ml/lab.js' });
 
+assert.equal(typeof context.KartBlitzMLLab.copyCommand, 'function', 'training commands should have a copy action');
+
+const lessonResult = context.KartBlitzMLLab.scoreDecision('fastLeft', { steer: 'left', pedal: 'brake' });
+assert.equal(lessonResult.score, 2, 'decision lesson should score the intended corner response');
+const weights = { progress: 1, speed: .2, line: .15, heading: .2, offTrack: 1.5, smoothness: .05, stuck: 1, lap: 3 };
+const safeReward = context.KartBlitzMLLab.calculateRewardFrame(weights, { progress: 1, speed: .7, alignment: .9, smooth: .2, offTrack: false, lap: false });
+const offTrackReward = context.KartBlitzMLLab.calculateRewardFrame(weights, { progress: 0, speed: .7, alignment: .9, smooth: .2, offTrack: true, lap: false });
+assert.ok(safeReward.total > 0, 'forward on-track driving should receive a positive teaching example');
+assert.ok(offTrackReward.total < 0, 'off-track driving should receive a negative teaching example');
+
 const button = { disabled: false, textContent: 'DOWNLOAD TRAINER PACK (.ZIP)' };
 await context.KartBlitzMLLab.downloadTrainerPack(button);
 assert.equal(downloadedName, 'KartBlitz-ML-Trainer.zip');
