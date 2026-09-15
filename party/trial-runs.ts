@@ -251,11 +251,14 @@ async function upsertVerifiedScore(
       )
       .run();
   }
-  const faster = await db.prepare(
-    `SELECT COUNT(*) AS count FROM scores
-     WHERE mode = 'trial' AND track_id = ? AND best_lap < ?`
-  ).bind(trackId, bestLap).first<{ count: number }>();
-  return { saved: true, bestLap, rank: Number(faster?.count || 0) + 1 };
+  const ranked = await db.prepare(
+    `SELECT rank FROM (
+       SELECT verified_run_id,
+              ROW_NUMBER() OVER (ORDER BY best_lap ASC, updated_at ASC, id ASC) AS rank
+       FROM scores WHERE mode = 'trial' AND track_id = ?
+     ) WHERE verified_run_id = ?`
+  ).bind(trackId, runId).first<{ rank: number }>();
+  return { saved: true, bestLap, rank: Number(ranked?.rank || 999) };
 }
 
 async function storeTopTenGhost(
@@ -281,7 +284,7 @@ async function storeTopTenGhost(
      WHERE track_id = ? AND run_id NOT IN (
        SELECT verified_run_id FROM scores
        WHERE mode = 'trial' AND track_id = ? AND trust_level = 'verified'
-       ORDER BY best_lap ASC LIMIT 10
+       ORDER BY best_lap ASC, updated_at ASC, id ASC LIMIT 10
      )`
   ).bind(trackId, trackId).run();
 }

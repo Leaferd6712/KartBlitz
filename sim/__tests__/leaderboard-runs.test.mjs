@@ -187,8 +187,8 @@ async function main() {
     const ghost = { v: 1, trackId: 0, lapTime: 41.25, frames: Array.from({ length: 8 }, (_, i) => [i * 100, i, 0, 0, 100, 1, 0, 1000, 0, 1000]) };
     const topTenDb = mockDb({
       first: (sql) => String(sql).includes("JOIN ghost_replays")
-        ? { username_snapshot: "FASTDRIVER", track_id: 0, best_lap: 41.25, trust_level: "verified", ghost_json: JSON.stringify(ghost) }
-        : String(sql).includes("COUNT(*)") ? { count: 4 } : null,
+        ? { username_snapshot: "FASTDRIVER", track_id: 0, best_lap: 41.25, trust_level: "verified", rank: 5, ghost_json: JSON.stringify(ghost) }
+        : null,
     });
     const available = await LB.getLeaderboardGhost(topTenDb, runId);
     assert.equal(available.ok, true);
@@ -196,13 +196,11 @@ async function main() {
     assert.equal(available.username, "FASTDRIVER");
 
     const droppedDb = mockDb({
-      first: (sql) => String(sql).includes("JOIN ghost_replays")
-        ? { username_snapshot: "OLDFAST", track_id: 0, best_lap: 50, trust_level: "verified", ghost_json: JSON.stringify(ghost) }
-        : String(sql).includes("COUNT(*)") ? { count: 10 } : null,
+      first: () => null,
     });
     const unavailable = await LB.getLeaderboardGhost(droppedDb, runId);
     assert.equal(unavailable.ok, false);
-    assert.equal(unavailable.error, "ghost_not_top_10");
+    assert.equal(unavailable.error, "ghost_not_found");
   }
 
   // Lifecycle guards (unknown / mismatch / expired / consumed idempotent)

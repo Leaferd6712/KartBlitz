@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="stylesheet" href="ml/lab.css?v=20260915d">
+<link rel="stylesheet" href="ml/lab.css?v=20260915e">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
@@ -1893,7 +1893,7 @@ body::after{
       </div>
       <div class="menu-car-stage" id="menu-car-stage">
         <canvas id="menu-car-canvas"></canvas>
-        <div class="menu-car-hint">DRAG TO SPIN · PAINT PARTS TINT 3D · STOCK = ORIGINAL</div>
+        <div class="menu-car-hint"></div>
         <div class="menu-car-status" id="menu-car-status">LOADING CAR…</div>
       </div>
       <div class="menu-paint-strip" id="menu-paint-strip">
@@ -7647,7 +7647,8 @@ function syncPauseGhostToggleBtn() {
   btn.style.display = trial ? '' : 'none';
   if (!trial) return;
   const on = isPbGhostEnabled();
-  btn.textContent = on ? 'PB GHOST: ON' : 'PB GHOST: OFF';
+  const source = race && race.karts && race.karts[0] && race.karts[0]._ghostSourceName;
+  btn.textContent = `${source || 'PB'} GHOST: ${on ? 'ON' : 'OFF'}`;
   btn.style.borderColor = on ? 'rgba(0,245,255,.45)' : 'rgba(255,255,255,.2)';
   btn.style.color = on ? '#9ef' : 'rgba(255,255,255,.55)';
 }
@@ -12516,7 +12517,8 @@ async function autoSaveLapToLeaderboard(trackId, lapTime, totalTime) {
     const result = await completeVerifiedTrialRun();
     if(result && result.saved) {
       const t = Number(result.bestLap);
-      showLbToast(Number.isFinite(t) ? `VERIFIED LAP ${fmtTime(t)}` : 'LAP SAVED TO LEADERBOARD');
+      const ghostNote = result.ghostSaved ? ` · #${result.rank} GHOST PUBLISHED` : '';
+      showLbToast(Number.isFinite(t) ? `VERIFIED LAP ${fmtTime(t)}${ghostNote}` : 'LAP SAVED TO LEADERBOARD');
     } else if(result && (result.reason === 'not_better' || result.idempotent)) {
       const t = Number(result.bestLap);
       showLbToast(Number.isFinite(t) ? `VERIFIED ${fmtTime(t)}` : 'LAP RECORDED');
@@ -18287,7 +18289,7 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
 })();
 
 </script>
-<script src="ml/runtime.js?v=20260915d"></script>
-<script src="ml/lab.js?v=20260915d"></script>
+<script src="ml/runtime.js?v=20260915e"></script>
+<script src="ml/lab.js?v=20260915e"></script>
 </body>
 </html>

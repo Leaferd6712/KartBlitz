@@ -440,7 +440,7 @@ export async function getLeaderboard(
               EXISTS(SELECT 1 FROM ghost_replays g WHERE g.run_id = scores.verified_run_id) AS has_ghost
        FROM scores
        WHERE mode = ? AND track_id = ?
-       ORDER BY best_lap ASC
+       ORDER BY best_lap ASC, updated_at ASC, id ASC
        LIMIT ?`
     )
     .bind(mode, Math.floor(trackId), TOP_N)
@@ -478,26 +478,27 @@ export async function getLeaderboardGhost(
   }
   await ensureLeaderboardSchema(db);
   const row = await db.prepare(
-    `SELECT s.username_snapshot, s.track_id, s.best_lap, s.trust_level, g.ghost_json
-     FROM scores s
+    `WITH ranked AS (
+       SELECT username_snapshot, track_id, best_lap, trust_level, verified_run_id,
+              ROW_NUMBER() OVER (PARTITION BY track_id ORDER BY best_lap ASC, updated_at ASC, id ASC) AS rank
+       FROM scores WHERE mode = 'trial'
+     )
+     SELECT s.username_snapshot, s.track_id, s.best_lap, s.trust_level, s.rank, g.ghost_json
+     FROM ranked s
      JOIN ghost_replays g ON g.run_id = s.verified_run_id
-     WHERE s.mode = 'trial' AND s.verified_run_id = ?`
+     WHERE s.verified_run_id = ? AND s.rank <= 10`
   ).bind(runId).first<{
     username_snapshot: string;
     track_id: number;
     best_lap: number;
     trust_level: string;
+    rank: number;
     ghost_json: string;
   }>();
   if (!row || row.trust_level !== "verified") {
     return { ok: false, error: "ghost_not_found", status: 404 };
   }
-  const faster = await db.prepare(
-    `SELECT COUNT(*) AS count FROM scores
-     WHERE mode = 'trial' AND track_id = ? AND best_lap < ?`
-  ).bind(Number(row.track_id), Number(row.best_lap)).first<{ count: number }>();
-  const rank = Number(faster?.count || 0) + 1;
-  if (rank > 10) return { ok: false, error: "ghost_not_top_10", status: 404 };
+  const rank = Number(row.rank);
   let ghost: Record<string, unknown>;
   try {
     ghost = JSON.parse(row.ghost_json) as Record<string, unknown>;

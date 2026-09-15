@@ -44,6 +44,7 @@ jobs:
           cp ml_training/start.ps1 public/ml_training/
           cp ml_training/README.md public/ml_training/
           cp ml_training/KartBlitz-ML-Setup.txt public/ml_training/
+          cp sim/*.mjs public/sim/
           cp sim/tracks/bakes.json public/sim/tracks/
 
       - name: Verify required game assets
@@ -55,6 +56,8 @@ jobs:
           test -f public/ml/models/our-model.json
           test -f public/ml_training/train.py
           test -f public/ml_training/KartBlitz-ML-Setup.txt
+          test -f public/sim/pb-ghost.mjs
+          test -f public/sim/player-save.mjs
           test -f public/sim/tracks/bakes.json
 
       - name: Upload Pages artifact

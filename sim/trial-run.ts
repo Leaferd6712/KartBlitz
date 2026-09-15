@@ -91,8 +91,9 @@ export function decodeTrialInputsBase64(b64: string): Uint8Array | null {
     let bin = "";
     if (typeof atob === "function") {
       bin = atob(raw);
-    } else if (typeof Buffer !== "undefined") {
-      bin = Buffer.from(raw, "base64").toString("binary");
+    } else if (typeof (globalThis as unknown as { Buffer?: { from(value: string, encoding: string): { toString(encoding: string): string } } }).Buffer !== "undefined") {
+      const NodeBuffer = (globalThis as unknown as { Buffer: { from(value: string, encoding: string): { toString(encoding: string): string } } }).Buffer;
+      bin = NodeBuffer.from(raw, "base64").toString("binary");
     } else {
       return null;
     }
