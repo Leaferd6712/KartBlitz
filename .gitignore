@@ -6,3 +6,7 @@ dist/
 *.log
 .DS_Store
 backups/leaderboard-full.sql
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

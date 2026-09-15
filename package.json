@@ -23,7 +23,11 @@
     "test:online-reconnect": "node --experimental-strip-types sim/__tests__/online-reconnect.test.mjs",
     "test:leaderboard-runs": "node --experimental-strip-types sim/__tests__/leaderboard-runs.test.mjs",
     "test:car-stage-dispose": "node sim/__tests__/car-stage-dispose.test.mjs",
-    "test": "npm run test:sim && npm run test:display && npm run test:rewards && npm run test:rnd && npm run test:tyre-wear && npm run test:corner-cut && npm run test:competitive && npm run test:player-save && npm run test:programme && npm run test:mastery && npm run test:pb-ghost && npm run test:online-track-limit && npm run test:online-reconnect && npm run test:leaderboard-runs && npm run test:car-stage-dispose && npm run test:live",
+    "test:speed-feel": "node sim/__tests__/speed-feel.test.mjs",
+    "test:unit": "npm run test:display && npm run test:rewards && npm run test:rnd && npm run test:tyre-wear && npm run test:corner-cut && npm run test:competitive && npm run test:player-save && npm run test:programme && npm run test:mastery && npm run test:pb-ghost && npm run test:online-track-limit && npm run test:online-reconnect && npm run test:leaderboard-runs && npm run test:car-stage-dispose && npm run test:speed-feel",
+    "test:browser": "playwright test",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:sim && npm run test:browser && npm run test:live",
     "rl:train": "node scripts/rl-train.mjs",
     "preparty:deploy": "npm run tracks:export && npm run sim:browser && npm run test:sim",
     "deploy:online": "npm run party:deploy",
@@ -35,6 +39,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260424.1",
+    "@playwright/test": "^1.63.0",
     "typescript": "^5.6.3",
     "wrangler": "^4.14.0"
   }
