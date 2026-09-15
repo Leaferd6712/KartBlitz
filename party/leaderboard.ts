@@ -426,7 +426,13 @@ export async function getLeaderboard(
               trust_level, rules_version, verified_run_id
        FROM scores
        WHERE mode = ? AND track_id = ?
-       ORDER BY best_lap ASC
+       ORDER BY
+         CASE COALESCE(trust_level, 'legacy')
+           WHEN 'verified' THEN 0
+           WHEN 'unverified' THEN 1
+           ELSE 2
+         END ASC,
+         best_lap ASC
        LIMIT ?`
     )
     .bind(mode, Math.floor(trackId), TOP_N)

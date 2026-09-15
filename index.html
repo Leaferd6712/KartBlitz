@@ -20,7 +20,9 @@ import * as KartBlitzSpeedFeel from './sim/speed-feel.mjs';
 window.KartBlitzRewards = KartBlitzRewards;
 window.KartBlitzRnD = KartBlitzRnD;
 window.KartBlitzSave = KartBlitzSave;
-window.KartBlitzProgramme = KartBlitzProgramme;
+window.KartBlitzProgramme = KartBlitzProgramme.default && KartBlitzProgramme.normalizeProgrammeState
+  ? KartBlitzProgramme
+  : (KartBlitzProgramme.default || KartBlitzProgramme);
 window.KartBlitzMastery = KartBlitzMastery;
 window.KartBlitzGhost = KartBlitzGhost;
 window.KartBlitzSpeedFeel = KartBlitzSpeedFeel;
@@ -1880,7 +1882,7 @@ body::after{
   <div class="menu-shell">
     <div class="menu-hero-panel">
       <div class="menu-hero-top">
-        <div class="portal-tag">BROWSER ARCADE RACER</div>
+        <div class="portal-tag" id="menu-player-tag">RACER</div>
         <div id="menu-coins" class="menu-coins">
           <div class="menu-currency-chip" id="menu-coins-chip">COINS 0</div>
           <div class="menu-currency-chip gems" id="menu-gems-chip">GEMS 0</div>
@@ -1894,7 +1896,6 @@ body::after{
       </div>
       <div class="menu-car-stage" id="menu-car-stage">
         <canvas id="menu-car-canvas"></canvas>
-        <div class="menu-car-hint">DRAG TO SPIN · PAINT PARTS TINT 3D · STOCK = ORIGINAL</div>
         <div class="menu-car-status" id="menu-car-status">LOADING CAR…</div>
       </div>
       <div class="menu-paint-strip" id="menu-paint-strip">
@@ -2890,6 +2891,7 @@ function showScreen(id) {
     if (!window._menuShownOnce) { window._menuShownOnce = true; CG.loadingStop(); }
     const pd = getPlayerData();
     updateCurrencyDisplays(pd);
+    updateMenuPlayerTag();
     if(typeof window.mountMenuCarStage === 'function') window.mountMenuCarStage();
     if(typeof window.buildMenuPaintStrip === 'function') window.buildMenuPaintStrip();
   } else if(typeof window.pauseMenuCarStage === 'function') {
@@ -11359,7 +11361,7 @@ function beginOnlineRaceFromNet(msg) {
 function getOnlineUpgrades() {
   try {
     let claimed = null;
-    const Prog = window.KartBlitzProgramme;
+    const Prog = getProgrammeApi();
     if (Prog && typeof Prog.exportProgrammeUpgradeStats === 'function') {
       const pd = getPlayerData();
       const setup = resolvePlayerSetup(pd, 'p1') || {};
@@ -12202,6 +12204,15 @@ function sanitizeLeaderboardName(raw) {
 function validLeaderboardName(name) {
   return /^[A-Z0-9]{3,12}$/.test(name);
 }
+/** Home hero tag shows the locked leaderboard username when available. */
+function updateMenuPlayerTag() {
+  const el = document.getElementById('menu-player-tag');
+  if (!el) return;
+  const name = (_kbIdentity && _kbIdentity.registered && _kbIdentity.username)
+    ? _kbIdentity.username
+    : 'RACER';
+  el.textContent = name;
+}
 function setSaveStatus(msg, isErr) {
   const el = document.getElementById('save-name-status');
   if(!el) return;
@@ -12268,6 +12279,7 @@ async function fetchDeviceIdentity(force) {
     _kbLastError = formatLbError(e);
     _kbIdentity = { loaded:false, registered:false, username:'', error:_kbLastError };
   }
+  updateMenuPlayerTag();
   return _kbIdentity;
 }
 async function ensureRegisteredIdentity(nameRaw) {
@@ -12281,6 +12293,7 @@ async function ensureRegisteredIdentity(nameRaw) {
   });
   _kbLastError = '';
   _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username || username), error:'' };
+  updateMenuPlayerTag();
   return _kbIdentity;
 }
 function openAutoRegisterPrompt() {
@@ -12346,6 +12359,7 @@ async function submitCloudScore(payload) {
   if(data && data.username) {
     _kbLastError = '';
     _kbIdentity = { loaded:true, registered:true, username: sanitizeLeaderboardName(data.username), error:'' };
+    updateMenuPlayerTag();
   }
   return data;
 }
@@ -12711,7 +12725,17 @@ async function buildLeaderboardScreen() {
     try {
       const data = await leaderboardFetchJson(`/api/leaderboard?mode=${encodeURIComponent(lbMode)}&trackId=${encodeURIComponent(trackId)}&t=${Date.now()}`);
       if(seq !== _lbBuildSeq) return;
-      entries = ((data && data.scores) || []).slice().sort((a, b) => a.bestLap - b.bestLap).slice(0, 50);
+      entries = ((data && data.scores) || []).slice().sort((a, b) => {
+        const trustRank = (e) => {
+          const t = String((e && (e.trustLevel || e.trust_level)) || 'legacy');
+          if (t === 'verified') return 0;
+          if (t === 'unverified') return 1;
+          return 2; // legacy always ranks below current runs
+        };
+        const ra = trustRank(a), rb = trustRank(b);
+        if (ra !== rb) return ra - rb;
+        return (Number(a.bestLap) || 0) - (Number(b.bestLap) || 0);
+      }).slice(0, 50);
     } catch(e) {
       if(seq !== _lbBuildSeq) return;
       if(head) head.style.display = 'none';
@@ -12758,7 +12782,7 @@ async function buildLeaderboardScreen() {
       </div>`;
   }).join('');
 
-  html += `<div class="lb-foot">${isOnlineWins ? `Showing top ${entries.length} · cloud + seed file` : `Showing top ${entries.length} · cloud leaderboard${lbMode === 'trial' ? ' · ✓ = verified run' : ''}`}</div>`;
+  html += `<div class="lb-foot">${isOnlineWins ? `Showing top ${entries.length} · cloud + seed file` : `Showing top ${entries.length} · cloud leaderboard${lbMode === 'trial' ? ' · ✓ verified ranks above legacy' : ''}`}</div>`;
   content.innerHTML = html;
 
   if(lbMode === 'trial' && typeof CG !== 'undefined' && CG.showBoard) {
@@ -12838,7 +12862,6 @@ void fetchDeviceIdentity();
 
 // ── UPGRADE / COIN / PAINT SYSTEM ──────────────────────
 const PAINT_COLORS = [
-  {id:'stock',  label:'STOCK',   body:'#cccccc', shadow:'#888888'},
   {id:'cyan',   label:'CYAN',    body:'#00ccff', shadow:'#005f8f'},
   {id:'orange', label:'ORANGE',  body:'#ff6b35', shadow:'#8f2f00'},
   {id:'lime',   label:'LIME',    body:'#39ff14', shadow:'#1a7000'},
@@ -12859,16 +12882,23 @@ const PAINT_PARTS = [
   { id:'accents',   label:'ACCENTS',    meshHints:['wheelcovers', 'rearlight'] },
 ];
 
+/** Map retired STOCK/original paint ids onto a real colour. */
+function migratePaintId(id) {
+  if (id === 'stock' || id == null || id === '') return 'cyan';
+  return id;
+}
+
 function getPaintColor(id) {
-  return PAINT_COLORS.find(c => c.id === id) || PAINT_COLORS[0];
+  const want = migratePaintId(id);
+  return PAINT_COLORS.find(c => c.id === want) || PAINT_COLORS[0];
 }
 
 function defaultLivery(primaryId, accentId) {
-  const primary = primaryId || 'stock';
-  const accent = accentId || 'stock';
+  const primary = getPaintColor(primaryId).id;
+  const accent = getPaintColor(accentId || primary).id;
   return {
     chassis: primary,
-    frontWing: primary === 'stock' ? 'stock' : 'white',
+    frontWing: 'white',
     rearWing: primary,
     nose: primary,
     accents: accent,
@@ -12876,12 +12906,12 @@ function defaultLivery(primaryId, accentId) {
 }
 
 function normalizeLivery(raw, fallbackPrimary) {
-  const base = defaultLivery(fallbackPrimary || 'stock');
+  const base = defaultLivery(fallbackPrimary || 'cyan');
   const src = raw && typeof raw === 'object' ? raw : {};
   const out = { ...base };
   PAINT_PARTS.forEach(part => {
     const id = src[part.id];
-    out[part.id] = getPaintColor(id).id;
+    out[part.id] = getPaintColor(id != null ? id : base[part.id]).id;
   });
   return out;
 }
@@ -12889,7 +12919,7 @@ function normalizeLivery(raw, fallbackPrimary) {
 function getPlayerLivery(player) {
   const pd = getPlayerData();
   const key = (player === 'p2') ? 'p2livery' : 'p1livery';
-  const fallback = (player === 'p2') ? (pd.p2paint || 'stock') : (pd.p1paint || 'stock');
+  const fallback = (player === 'p2') ? (pd.p2paint || 'orange') : (pd.p1paint || 'cyan');
   return normalizeLivery(pd[key], fallback);
 }
 
@@ -12897,7 +12927,7 @@ function setPlayerLiveryPart(player, partId, colorId) {
   if(!PAINT_PARTS.some(p => p.id === partId)) return;
   const pd = getPlayerData();
   const key = (player === 'p2') ? 'p2livery' : 'p1livery';
-  const liv = normalizeLivery(pd[key], player === 'p2' ? (pd.p2paint || 'stock') : (pd.p1paint || 'stock'));
+  const liv = normalizeLivery(pd[key], player === 'p2' ? (pd.p2paint || 'orange') : (pd.p1paint || 'cyan'));
   liv[partId] = getPaintColor(colorId).id;
   pd[key] = liv;
   // Keep legacy single paint in sync with chassis for older paths.
@@ -13910,8 +13940,8 @@ function getPlayerData() {
   try {
     const d = JSON.parse(localStorage.getItem('kartblitz_player')||'{}');
     const def = () => ({speed:0,accel:0,traction:0,braking:0,handling:0});
-    const p1paint = d.p1paint||'cyan';
-    const p2paint = d.p2paint||'orange';
+    const p1paint = migratePaintId(d.p1paint || 'cyan');
+    const p2paint = migratePaintId(d.p2paint || 'orange');
     const out = {
       coins: d.coins||0,
       gems: d.gems||0,
@@ -13945,6 +13975,8 @@ function getPlayerData() {
       revision: Number.isFinite(Number(d.revision)) ? Number(d.revision) : 0,
       updatedAt: Number.isFinite(Number(d.updatedAt)) ? Number(d.updatedAt) : 0,
     };
+    out.p1paint = out.p1livery.chassis;
+    out.p2paint = out.p2livery.chassis;
     return ensurePlayerProgramme(out);
   } catch(e) {
     return ensurePlayerProgramme({
@@ -13975,7 +14007,7 @@ function getPlayerData() {
 
 /** One-time migrate DEV+R&D into unified programme; persist refunds. */
 function ensurePlayerProgramme(pd) {
-  const Prog = window.KartBlitzProgramme;
+  const Prog = getProgrammeApi();
   if (!Prog || !pd) return pd;
   try {
     const already = pd.programme && pd.programme.migrated;
@@ -14292,6 +14324,7 @@ function showGarage() {
   waitForSaveSyncReady().then(() => {
     initAudio();
     garageTab = 'upgrades';
+    window._garageProgrammeRetry = 0;
     buildGarageScreen();
     showScreen('garage');
   });
@@ -14312,6 +14345,15 @@ function buildGarageScreen() {
   refreshGarageAdButton();
 }
 
+/** Resolve programme API whether exposed as namespace or default export. */
+function getProgrammeApi() {
+  const P = window.KartBlitzProgramme;
+  if (!P) return null;
+  if (typeof P.normalizeProgrammeState === 'function' && P.PROGRAMME_BRANCHES) return P;
+  if (P.default && typeof P.default.normalizeProgrammeState === 'function') return P.default;
+  return null;
+}
+
 function buildGarageContent() {
   const pd = getPlayerData();
   updateCurrencyDisplays(pd);
@@ -14326,7 +14368,7 @@ function buildGarageContent() {
     const stageWrap = document.createElement('div');
     stageWrap.className = 'garage-car-stage';
     const previewPl = window._garagePaintPreview === 'p2' ? 'p2' : 'p1';
-    stageWrap.innerHTML = `<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">${previewPl.toUpperCase()} LIVERY · DRAG TO SPIN · STOCK = ORIGINAL</div>`;
+    stageWrap.innerHTML = `<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">${previewPl.toUpperCase()} LIVERY</div>`;
     content.appendChild(stageWrap);
 
     ['p1','p2'].forEach(pl => {
@@ -14374,11 +14416,25 @@ function buildGarageContent() {
   }
 
   // Unified upgrade programme (replaces BUILD + R&D HQ).
-  const Prog = window.KartBlitzProgramme;
+  const Prog = getProgrammeApi();
   if (!Prog) {
     content.innerHTML = '<div class="upgrade-card">Upgrade programme loading…</div>';
+    // Module script may still be resolving — retry briefly instead of leaving a dead garage.
+    if (!window._garageProgrammeRetry) {
+      window._garageProgrammeRetry = 0;
+    }
+    if (window._garageProgrammeRetry < 40) {
+      window._garageProgrammeRetry += 1;
+      setTimeout(() => {
+        if (garageTab === 'upgrades' && document.getElementById('screen-garage')
+          && !document.getElementById('screen-garage').classList.contains('hidden')) {
+          buildGarageContent();
+        }
+      }, 120);
+    }
     return;
   }
+  window._garageProgrammeRetry = 0;
   const programme = Prog.normalizeProgrammeState(pd.programme);
   const progress = Prog.programmeProgressCount(programme);
   const bonuses = Prog.computeProgrammeBonuses(programme);
@@ -14452,7 +14508,7 @@ function buildGarageContent() {
 }
 
 function purchaseProgrammeUpgrade(nodeId) {
-  const Prog = window.KartBlitzProgramme;
+  const Prog = getProgrammeApi();
   if (!Prog) return;
   const pd = getPlayerData();
   const result = Prog.purchaseProgrammeNode(pd.programme, nodeId, pd.coins);
@@ -14468,7 +14524,7 @@ function purchaseProgrammeUpgrade(nodeId) {
 /** @deprecated Use purchaseProgrammeUpgrade — kept so old onclick HTML does not throw. */
 function advanceDevelopment(partId, maybePartId) {
   if (maybePartId) partId = maybePartId;
-  const Prog = window.KartBlitzProgramme;
+  const Prog = getProgrammeApi();
   if (!Prog) return;
   const mapped = Prog.DEV_TO_PROGRAMME[partId];
   if (mapped) purchaseProgrammeUpgrade(mapped);
@@ -14866,7 +14922,7 @@ function confirmSetupAndStart() {
 
 function getTeamDevelopmentBonuses(pd) {
   // Unified programme replaces max(p1dev,p2dev) stacking.
-  const Prog = window.KartBlitzProgramme;
+  const Prog = getProgrammeApi();
   if (Prog && pd && pd.programme) {
     const b = Prog.computeProgrammeBonuses(pd.programme);
     return {
@@ -14911,7 +14967,7 @@ function applyUpgradesToKart(kart, player) {
   kart._baseAccel = kart.accel;
   kart._baseBrakeForce = kart.brakeForce;
 
-  const Prog = window.KartBlitzProgramme;
+  const Prog = getProgrammeApi();
   const wearMult = Prog
     ? Prog.computeProgrammeTyreWearMult(pd.programme)
     : Math.max(0.7, Math.min(1.08, 1 - ((devBonus.tyreWear || 0) + (devBonus.reliability || 0))));
@@ -15201,7 +15257,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
     if (modal) { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
   };
   window.computeRnDTyreWearMult = function() {
-    const Prog = window.KartBlitzProgramme;
+    const Prog = getProgrammeApi();
     if (!Prog) return 1;
     try { return Prog.computeProgrammeTyreWearMult(getPlayerData().programme); }
     catch (e) { return 1; }

@@ -214,10 +214,13 @@ async function upsertVerifiedScore(
     .bind(device.deviceToken, trackId)
     .first<{ id: number; best_lap: number; trust_level?: string }>();
 
-  if (existing && Number(existing.best_lap) <= bestLap) {
-    // Prefer keeping a verified row even if legacy was slightly better? No — keep better time,
-    // but if existing is legacy and new is verified with equal/worse, still attach verification only if better.
-    return { saved: false, bestLap: Number(existing.best_lap), reason: "not_better" };
+  if (existing) {
+    const existingTrust = String(existing.trust_level || "legacy");
+    const existingBetterOrEqual = Number(existing.best_lap) <= bestLap;
+    // Fresh verified runs always displace legacy times — even if the number is slower.
+    if (existingTrust !== "legacy" && existingBetterOrEqual) {
+      return { saved: false, bestLap: Number(existing.best_lap), reason: "not_better" };
+    }
   }
 
   if (existing) {
