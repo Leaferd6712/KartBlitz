@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="stylesheet" href="ml/lab.css?v=20260915">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
@@ -8292,6 +8293,8 @@ class Race {
     } else if(mode === 'ai') {
       this.aiDifficulty = window._aiDifficulty || 'medium';
       const numAI = Math.max(1, Math.min(10, window._aiCount || 3));
+      const mlRaceConfig = window._mlRaceConfig || null;
+      window._mlRaceConfig = null; // A lab model is consumed by one race only.
       this.karts.push(new Kart(0, sp.x, sp.y+8, ang, p1pc.body, p1pc.shadow, getP1Input));
       this.karts[0].livery = p1Liv;
       applyUpgradesToKart(this.karts[0], 'p1');
@@ -8308,11 +8311,19 @@ class Race {
         {body:'#f5f5f5',shadow:'#7a7a7a'},
       ];
       for(let ai = 0; ai < numAI; ai++) {
-        const ctrl = makeAIInput(trackData, this.aiDifficulty, ai);
+        const mlRace = mlRaceConfig;
+        const useLabDriver = ai === 0 && mlRace && mlRace.model;
+        const usePlayerML = useLabDriver && mlRace.modelType === 'player' && window.KartBlitzMLRuntime;
+        const ctrl = usePlayerML
+          ? window.KartBlitzMLRuntime.makeController(trackData, mlRace.model)
+          : makeAIInput(trackData, this.aiDifficulty, ai);
         const aiKart = new Kart(ai+1, sp.x - (ai+1)*30, sp.y + (ai+1)*18, ang,
           aiColors[ai % aiColors.length].body, aiColors[ai % aiColors.length].shadow, ctrl.fn);
         aiKart.isAI = true;
+        aiKart._mlDriver = !!usePlayerML;
+        aiKart._mlLabDriver = !!useLabDriver;
         ctrl.set(aiKart);
+        if(useLabDriver && !usePlayerML) aiKart.mlModelName = 'KartBlitz Pre-Tuned Driver';
         applyUpgradesToKart(aiKart, 'p1');
         this.karts.push(aiKart);
       }
@@ -11506,6 +11517,17 @@ function startTimeTrial() {
   playUIClick();
   selectMode('trial');
 }
+
+/** Narrow bridge used by the optional ML Lab without exposing mutable race internals. */
+function startMLLabRace(idx, config) {
+  currentMode = 'ai';
+  window._mlRaceConfig = config;
+  window._aiCount = 1;
+  window._aiDifficulty = 'extreme';
+  window._skipNextQuali = true;
+  selectTrackStart(idx);
+}
+window.startMLLabRace = startMLLabRace;
 
 function getP1Input() {
   const b = BINDINGS.p1;
@@ -18190,5 +18212,7 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
 })();
 
 </script>
+<script src="ml/runtime.js?v=20260915"></script>
+<script src="ml/lab.js?v=20260915"></script>
 </body>
 </html>

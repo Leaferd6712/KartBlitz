@@ -79,6 +79,17 @@ npm run sim:browser
 npm run test:sim
 ```
 
+### ML Lab (optional)
+
+Turn on **ML Lab** in Controls & Settings to reveal the learning, training, replay, and model-racing interface. Training runs through a loopback-only Python companion because the hosted game cannot execute Python or CUDA directly.
+
+```powershell
+.\ml_training\install.ps1
+.\ml_training\start.ps1
+```
+
+Enter the pairing code printed by the trainer in the ML Lab. The trainer uses PyTorch PPO, rotates through all exported KartBlitz tracks, and automatically selects CUDA when available. See [ml_training/README.md](ml_training/README.md) for the model contract, command-line training, and validation notes.
+
 ---
 
 ## Project layout
@@ -90,6 +101,8 @@ npm run test:sim
 | `party/` | Cloudflare Worker / Durable Object for online races |
 | `online.js`, `online-sim.js`, `online-codec.js` | Browser online client and netcode |
 | `server/` | Optional legacy local leaderboard (Python) |
+| `ml/` | In-game ML Lab, browser policy runtime, and bundled developer model |
+| `ml_training/` | Local PyTorch/CUDA trainer, all-track environment, and companion API |
 | `deploy.md` | Deployment guide for Netlify and Cloudflare |
 
 ---

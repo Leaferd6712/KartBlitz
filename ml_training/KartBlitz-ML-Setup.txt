@@ -1,0 +1,41 @@
+KARTBLITZ ML TRAINER - TRANSFER AND SETUP
+=========================================
+
+WHAT THE DOWNLOAD CONTAINS
+- KartBlitz Python/PyTorch PPO trainer
+- Local ML Lab companion server
+- PowerShell install and start scripts
+- The actual geometry for all KartBlitz tracks
+
+ON THE NVIDIA TRAINING LAPTOP
+1. Install Python 3.11 or newer from https://www.python.org/downloads/
+2. Extract KartBlitz-ML-Trainer.zip into a writable folder.
+3. Open PowerShell in the extracted KartBlitz folder.
+4. Run: powershell -ExecutionPolicy Bypass -File .\ml_training\install.ps1
+5. Confirm the final line says "CUDA available: True".
+6. Run: powershell -ExecutionPolicy Bypass -File .\ml_training\start.ps1
+7. Keep that terminal open and copy its URL and six-digit pairing code.
+
+IN KARTBLITZ
+1. Open Controls & Settings and turn ML Lab ON.
+2. Open ML Lab, choose rewards, then open the Train step.
+3. Enter the trainer URL and pairing code.
+4. Start a Quick, Standard, or Deep training run.
+5. When training finishes, Your Model is saved in the browser.
+6. Export the .kartml.json weights if you want a portable backup.
+
+COMMAND-LINE TRAINING (NO GAME UI)
+python -m ml_training.train --steps 750000 --envs 64
+
+The default output is:
+ml_training\runs\player-model.kartml.json
+
+Import that file from ML Lab -> Race -> Your Model -> Import.
+
+IMPORTANT
+- Training uses every track in sim\tracks\bakes.json.
+- A CUDA-enabled PyTorch build is installed only when nvidia-smi detects an NVIDIA GPU.
+- CPU fallback works but is slower.
+- Simulator evaluation is not the same as final browser-physics validation.
+- Only models using the kartblitz-ml-v1 contract can be imported.
+
