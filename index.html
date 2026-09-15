@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="stylesheet" href="ml/lab.css?v=20260915c">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
@@ -2244,11 +2245,11 @@ body::after{
 <div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
   <div id="patch-notes-card">
     <h2 id="patch-notes-title">PATCH NOTES</h2>
-    <div class="patch-date">AUGUST 20</div>
+    <div class="patch-date">September 15</div>
     <ul>
-      <li>Game will be updated in September 11-18</li>
-      <li>Further changes introduced</li>
-      <li>Leaderboard is open</li>
+      <li>Online Mode is Currently Down</li>
+      <li>ML AI Driving will be added soon</li>
+      <li>Time Trial uses equal cars</li>
     </ul>
     <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
   </div>
@@ -2900,7 +2901,7 @@ function showScreen(id) {
   if (_ftueEl && canvas.style.display !== 'block') _ftueEl.style.display = 'none';
 }
 // Bump this when shipping new patch-note content (patch-notes-editor updates it on save).
-const CURRENT_PATCH_VERSION = '2025-08-20';
+const CURRENT_PATCH_VERSION = '2026-09-15';
 const PATCH_VERSION_LS_KEY = 'kartblitz_last_patch_version';
 
 let _onboardingStep = null; // null | 'patch' | 'device' | 'done'
@@ -8292,6 +8293,8 @@ class Race {
     } else if(mode === 'ai') {
       this.aiDifficulty = window._aiDifficulty || 'medium';
       const numAI = Math.max(1, Math.min(10, window._aiCount || 3));
+      const mlRaceConfig = window._mlRaceConfig || null;
+      window._mlRaceConfig = null; // A lab model is consumed by one race only.
       this.karts.push(new Kart(0, sp.x, sp.y+8, ang, p1pc.body, p1pc.shadow, getP1Input));
       this.karts[0].livery = p1Liv;
       applyUpgradesToKart(this.karts[0], 'p1');
@@ -8308,11 +8311,19 @@ class Race {
         {body:'#f5f5f5',shadow:'#7a7a7a'},
       ];
       for(let ai = 0; ai < numAI; ai++) {
-        const ctrl = makeAIInput(trackData, this.aiDifficulty, ai);
+        const mlRace = mlRaceConfig;
+        const useLabDriver = ai === 0 && mlRace && mlRace.model;
+        const usePlayerML = useLabDriver && mlRace.modelType === 'player' && window.KartBlitzMLRuntime;
+        const ctrl = usePlayerML
+          ? window.KartBlitzMLRuntime.makeController(trackData, mlRace.model)
+          : makeAIInput(trackData, this.aiDifficulty, ai);
         const aiKart = new Kart(ai+1, sp.x - (ai+1)*30, sp.y + (ai+1)*18, ang,
           aiColors[ai % aiColors.length].body, aiColors[ai % aiColors.length].shadow, ctrl.fn);
         aiKart.isAI = true;
+        aiKart._mlDriver = !!usePlayerML;
+        aiKart._mlLabDriver = !!useLabDriver;
         ctrl.set(aiKart);
+        if(useLabDriver && !usePlayerML) aiKart.mlModelName = 'KartBlitz Pre-Tuned Driver';
         applyUpgradesToKart(aiKart, 'p1');
         this.karts.push(aiKart);
       }
@@ -10703,6 +10714,9 @@ function advanceRace(now, opts) {
   } else {
     if(race.mode === 'trial') recordTrialRunInputs(elapsed);
     race.update(elapsed);
+    if(window.KartBlitzMLLab && typeof window.KartBlitzMLLab.captureRaceFrame === 'function') {
+      window.KartBlitzMLLab.captureRaceFrame(race, elapsed, typeof getP1Input === 'function' ? getP1Input() : null);
+    }
   }
   if(doRender) {
     race.render();
@@ -11506,6 +11520,17 @@ function startTimeTrial() {
   playUIClick();
   selectMode('trial');
 }
+
+/** Narrow bridge used by the optional ML Lab without exposing mutable race internals. */
+function startMLLabRace(idx, config) {
+  currentMode = 'ai';
+  window._mlRaceConfig = config;
+  window._aiCount = 1;
+  window._aiDifficulty = 'extreme';
+  window._skipNextQuali = true;
+  selectTrackStart(idx);
+}
+window.startMLLabRace = startMLLabRace;
 
 function getP1Input() {
   const b = BINDINGS.p1;
@@ -18190,5 +18215,7 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
 })();
 
 </script>
+<script src="ml/runtime.js?v=20260915c"></script>
+<script src="ml/lab.js?v=20260915c"></script>
 </body>
 </html>
