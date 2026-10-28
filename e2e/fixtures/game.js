@@ -3,7 +3,7 @@ import { test as base, expect } from '@playwright/test';
 export { expect };
 
 const PATCH_VERSION_LS_KEY = 'kartblitz_last_patch_version';
-const CURRENT_PATCH_VERSION = '2025-08-20';
+const CURRENT_PATCH_VERSION = '2026-09-15';
 
 function crazyGamesStub() {
   window.CrazyGames = {
@@ -101,7 +101,7 @@ export function playerSaveJson(overrides = {}) {
 
 export async function gotoGame(page, opts = {}) {
   if (opts.storage) await seedStorage(page, opts.storage);
-  await page.goto('/');
+  await page.goto(opts.path || '/');
   await page.waitForFunction(() =>
     window.KartBlitzProgramme
     && window.KartBlitzRewards

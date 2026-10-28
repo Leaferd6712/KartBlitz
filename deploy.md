@@ -12,14 +12,16 @@ Open [docs/online-mode.html](docs/online-mode.html) in a browser. That is the fu
 
 | File | Role |
 |------|------|
-| `KartBlitz.html` | The game |
+| `index.html` | Screen markup and explicit asset/runtime order |
+| `ui/` | Base stylesheet and scoped KartBlitz theme |
+| `js/` | Main game, shared bridge, preview stages, editor, and preview marker |
 | `leaderboard-admin.html` | Password-protected admin station for leaderboards, tracks, and patch notes |
 | `online.js` | Online lobby / netcode client |
 | `online-codec.js` | Binary snapshot/input codec |
 | `online-sim.js` | Shared physics (same as Worker `sim/`) for local prediction |
 | `rb6.glb` | Menu/garage 3D cover car |
 
-Upload **all five** into the **same folder** on Netlify (rename HTML to `index.html` if your site expects that).
+Upload the complete static set, preserving the `ui/`, `js/`, `ml/`, `ml_training/`, and `sim/` folder structure. GitHub Pages packaging in `.github/workflows/deploy.yml` copies and verifies these paths automatically on `main` only.
 
 **Always ship Netlify assets and the Worker together** after online changes. Mismatched `ONLINE_PROTOCOL` (currently **3**) or `TRACK_BAKE_VERSION` (**2**) causes a hard disconnect / bake error.
 
@@ -31,7 +33,7 @@ Online races are **server-authoritative**: the Cloudflare Durable Object runs th
 
 1. Close old terminals you do not need.
 2. Rebuild browser sim if you changed `sim/`: `npm run sim:browser` (also runs via `preparty:deploy`).
-3. Upload/replace `KartBlitz.html`, `online.js`, `online-codec.js`, `online-sim.js`, `rb6.glb`.
+3. Upload/replace `index.html`, the complete `ui/` and `js/` folders, `online.js`, `online-codec.js`, `online-sim.js`, `rb6.glb`, and the other folders listed above.
 4. Open your Netlify URL over `https://`.
 5. Online Lobby needs **no server IP** — the Worker host is baked into `online.js` as `kartblitz-online.kartblitz.workers.dev`.
 6. After Worker / sim changes, also run `npx wrangler deploy` (section B).
@@ -187,7 +189,7 @@ Quick tunnels get a **new** URL each restart — share the new one.
 
 ## Checklist
 
-- [ ] Netlify has `KartBlitz.html`, `online.js`, `online-codec.js`, `online-sim.js`, `rb6.glb`
+- [ ] Netlify has `index.html`, complete `ui/` and `js/` folders, `online.js`, `online-codec.js`, `online-sim.js`, and `rb6.glb`
 - [ ] Worker deployed (`npx wrangler deploy`) → `kartblitz-online.kartblitz.workers.dev`
 - [ ] Client + Worker share `ONLINE_PROTOCOL` (hard-refresh after deploy)
 - [ ] Online Lobby: Host Game / Join Game works (no SERVER field)

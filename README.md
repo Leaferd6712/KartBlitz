@@ -58,6 +58,7 @@ Rebind keys and toggle ERS/DRS between hold and toggle modes from **Controls & S
 Serve the game from the repo root:
 
 ```bash
+npm ci --legacy-peer-deps
 python -m http.server 8000
 ```
 
@@ -96,13 +97,23 @@ Enter the pairing code printed by the trainer in the ML Lab. The trainer uses Py
 
 | Path | Purpose |
 |------|---------|
-| `index.html` | Full offline game (rendering, UI, physics, tracks) |
+| `index.html` | Screen markup, import map, stylesheet links, and explicit runtime order |
+| `ui/base.css` | Extracted legacy game and screen styles |
+| `ui/kartblitz.css` | Discord-inspired KartBlitz theme scoped to `body.kb-ui` |
+| `js/shared-modules.js` | Browser bridge for shared modules from `sim/` |
+| `js/game.js` | Main classic game runtime, tracks, rendering, UI handlers, and race logic |
+| `js/programme-runtime.js` | Upgrade programme and ERS compatibility hooks |
+| `js/car-stage.js` | Three.js menu and garage car previews |
+| `js/track-editor.js` | Embedded track editor runtime |
+| `js/ui-preview.js` | Conditional `testing-ui-extra` preview marker |
 | `sim/` | Shared physics used by online multiplayer and client prediction |
 | `party/` | Cloudflare Worker / Durable Object for online races |
 | `online.js`, `online-sim.js`, `online-codec.js` | Browser online client and netcode |
 | `server/` | Optional legacy local leaderboard (Python) |
 | `ml/` | In-game ML Lab, browser policy runtime, and bundled developer model |
 | `ml_training/` | Local PyTorch/CUDA trainer, all-track environment, and companion API |
+| `design.md` | UI tokens, component rules, accessibility, and responsive scope |
+| `docs/ui-testing.md` | UI architecture, preview setup, verification, and rollback |
 | `deploy.md` | Deployment guide for Netlify and Cloudflare |
 
 ---

@@ -32,6 +32,9 @@ jobs:
       - name: Build browser simulator
         run: npm run sim:browser
 
+      - name: Verify static asset layout
+        run: npm run test:static
+
       - name: Unit tests
         run: npm run test:unit
 
