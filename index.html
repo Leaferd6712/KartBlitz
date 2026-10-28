@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="ui/base.css">
 <link rel="stylesheet" href="ui/kartblitz.css">
 </head>
-<body>
+<body class="kb-ui">
 
 <!-- MENU (Just Checking)-->
 <div id="screen-menu" class="screen">
@@ -41,7 +41,7 @@
       </div>
       <div class="title-wrap">
         <div class="title-logo">KART<br>BLITZ</div>
-        <div class="title-sub">PORTAL-READY CHAMPIONSHIP RACING</div>
+        <div class="title-sub">QUICK LAPS. CLOSE RACES.</div>
         <div class="title-decor"></div>
       </div>
       <div class="menu-car-stage" id="menu-car-stage">
@@ -62,18 +62,18 @@
     </div>
     <div class="menu-action-panel">
       <div class="menu-panel-kicker">READY TO RACE</div>
-      <div class="menu-panel-title">Launch straight into the grid</div>
-      <div class="menu-panel-sub">Time Trial jumps straight to circuit select. Custom Race opens versus, AI, online, and shootout setup.</div>
+      <div class="menu-panel-title">Your next race starts here</div>
+      <div class="menu-panel-sub">Chase your best lap, race the AI, or join friends online.</div>
       <div class="menu-actions">
         <button class="btn btn-cyan" onclick="startTimeTrial()"> TIME TRIAL</button>
-        <button class="btn btn-gold btn-sm" onclick="initAudio();playUIClick();showScreen('mode');"> CUSTOM RACE</button>
-        <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()"> GARAGE</button>
-        <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');"> LEADERBOARD</button>
-        <button class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();showControlsScreen()"> CONTROLS &amp; SETTINGS</button>
-        <button type="button" class="btn btn-sm" id="btn-admin" style="color:#3dd6c6;" onclick="openAdminStation()"> ADMIN</button>
+        <button class="btn btn-sm menu-secondary-action" onclick="initAudio();playUIClick();showScreen('mode');"> CUSTOM RACE</button>
+        <button class="btn btn-sm menu-secondary-action" onclick="initAudio();playUIClick();showGarage()"> GARAGE</button>
+        <button class="btn btn-sm menu-secondary-action" onclick="initAudio();playUIClick();showScreen('leaderboard');"> LEADERBOARD</button>
+        <button class="btn btn-sm menu-secondary-action" onclick="initAudio();playUIClick();showControlsScreen()"> CONTROLS &amp; SETTINGS</button>
+        <button type="button" class="btn btn-sm menu-secondary-action" id="btn-admin" onclick="openAdminStation()"> ADMIN</button>
       </div>
       <div class="menu-utility-card">
-        <div class="menu-utility-title">Desktop Layout</div>
+        <div class="menu-utility-title">Driving controls</div>
         <div class="menu-utility-copy">Keyboard: P1 WASD, P2 arrows. Touch: on-screen joysticks — versus uses face-to-face seating.</div>
       </div>
     </div>
@@ -97,7 +97,7 @@
       <div class="m-icon"></div>
       <div class="m-name">ONLINE LOBBY</div>
       <div class="m-desc">Host or join a room.<br>Up to 6 players online.</div>
-      <div class="m-tag">FREE · PARTYKIT</div>
+      <div class="m-tag">PUBLIC LOBBIES · UP TO 6 PLAYERS</div>
     </button>
     <button type="button" class="mode-card" onclick="showAIDifficultyUI()" aria-label="AI Race — solo versus AI">
       <div class="m-icon"></div>
@@ -133,31 +133,31 @@
           <button class="btn btn-sm" style="padding:6px 12px;font-size:11px;" onclick="refreshOnlineLobbyList()">REFRESH</button>
         </div>
         <div class="online-roster" id="online-lobby-list"></div>
-        <div class="online-status" id="online-join-status" style="margin-top:8px;">Loading lobbies…</div>
+        <div class="online-status" id="online-join-status" role="status" aria-live="polite" aria-atomic="true" style="margin-top:8px;">Loading lobbies…</div>
       </div>
-      <div class="online-status" id="online-status">Host a game for friends, or join an open lobby.</div>
+      <div class="online-status" id="online-status" role="status" aria-live="polite" aria-atomic="true">Host a game for friends, or join an open lobby.</div>
     </div>
     <div class="online-panel" id="online-room-panel" style="display:none;">
       <div style="text-align:center;font-size:12px;opacity:.65;letter-spacing:.12em;">YOUR LOBBY</div>
       <div class="online-code" id="online-room-code" style="font-size:18px;letter-spacing:.12em;">WAITING</div>
-      <div class="online-status" id="online-room-status"></div>
+      <div class="online-status" id="online-room-status" role="status" aria-live="polite" aria-atomic="true"></div>
       <div class="online-roster" id="online-roster"></div>
       <div class="online-host-only" id="online-host-settings" style="display:none;margin-top:14px;">
         <div class="setup-section-label" style="text-align:center;">HOST SETTINGS</div>
         <div class="online-row" style="margin-top:8px;">
-          <select class="online-select" id="online-track-select" onchange="syncOnlineHostSettings()"></select>
-          <select class="online-select" id="online-laps-select" onchange="syncOnlineHostSettings()">
+          <select class="online-select" id="online-track-select" aria-label="Circuit" onchange="syncOnlineHostSettings()"></select>
+          <select class="online-select" id="online-laps-select" aria-label="Laps" onchange="syncOnlineHostSettings()">
             <option value="2">2 LAPS</option>
             <option value="3" selected>3 LAPS</option>
             <option value="5">5 LAPS</option>
             <option value="8">8 LAPS</option>
           </select>
-          <select class="online-select" id="online-weather-select" onchange="syncOnlineHostSettings()">
+          <select class="online-select" id="online-weather-select" aria-label="Weather" onchange="syncOnlineHostSettings()">
             <option value="dry">DRY</option>
             <option value="wet">WET</option>
             <option value="heavy">HEAVY RAIN</option>
           </select>
-          <select class="online-select" id="online-collision-select" onchange="syncOnlineHostSettings()">
+          <select class="online-select" id="online-collision-select" aria-label="Collisions" onchange="syncOnlineHostSettings()">
             <option value="collision">COLLISION ON</option>
             <option value="nocollision">GHOST CARS</option>
           </select>
@@ -572,8 +572,8 @@
         <button type="button" id="te-btnCloseEditor">Close</button>
       </div>
     </header>
-    
-  
+
+
 
   <aside class="toolbar" id="te-toolbar">
     <button type="button" data-tool="select" class="active" title="Select (V)">Select</button>

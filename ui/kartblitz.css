@@ -1,1 +1,672 @@
-/* KartBlitz interface theme; populated in the UI redesign commit. */
+/* KartBlitz dark arcade UI. Scoped so legacy/admin surfaces can opt out. */
+body.kb-ui {
+  --kb-background: #111325;
+  --kb-panel: #1d213a;
+  --kb-raised: #282e4b;
+  --kb-border: #454e73;
+  --kb-text: #f7f8ff;
+  --kb-text-supporting: #c1c8e4;
+  --kb-primary: #78e7f5;
+  --kb-selection: #b7a4ff;
+  --kb-reward: #ffe18a;
+  --kb-success: #8aefb2;
+  --kb-error: #ff9eae;
+  --bg: var(--kb-background);
+  --sky: var(--kb-primary);
+  --cyan: var(--kb-primary);
+  --purple: var(--kb-selection);
+  --orange: var(--kb-selection);
+  --gold: var(--kb-reward);
+  --text: var(--kb-text);
+  --focus-ring: var(--kb-primary);
+  --focus-ring-outer: #07141f;
+  color: var(--kb-text);
+  background: var(--kb-background);
+  color-scheme: dark;
+}
+
+body.kb-ui::before {
+  background:
+    linear-gradient(rgba(120, 231, 245, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 231, 245, .025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 1;
+}
+
+body.kb-ui * {
+  scrollbar-color: var(--kb-border) rgba(17, 19, 37, .65);
+}
+
+body.kb-ui *::-webkit-scrollbar-thumb {
+  background: var(--kb-border);
+  border: 2px solid var(--kb-background);
+}
+
+body.kb-ui *::-webkit-scrollbar-track {
+  background: rgba(17, 19, 37, .65);
+}
+
+body.kb-ui .screen {
+  color: var(--kb-text);
+  background:
+    radial-gradient(circle at 14% 0%, rgba(120, 231, 245, .10), transparent 34%),
+    radial-gradient(circle at 94% 92%, rgba(183, 164, 255, .10), transparent 38%),
+    var(--kb-background);
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+}
+
+body.kb-ui .screen::before {
+  background: none;
+}
+
+body.kb-ui .screen.hidden,
+body.kb-ui [hidden] {
+  display: none !important;
+}
+
+body.kb-ui :focus-visible {
+  outline: 3px solid var(--kb-primary) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(17, 19, 37, .92) !important;
+}
+
+body.kb-ui button,
+body.kb-ui input,
+body.kb-ui select,
+body.kb-ui textarea,
+body.kb-ui summary {
+  font-family: 'Nunito', sans-serif;
+}
+
+body.kb-ui button,
+body.kb-ui select,
+body.kb-ui input[type="button"],
+body.kb-ui input[type="submit"] {
+  min-height: 44px;
+}
+
+body.kb-ui button:disabled,
+body.kb-ui input:disabled,
+body.kb-ui select:disabled,
+body.kb-ui .disabled {
+  cursor: not-allowed !important;
+  opacity: .48 !important;
+  filter: saturate(.55);
+}
+
+body.kb-ui .btn,
+body.kb-ui .menu-secondary-action,
+body.kb-ui .lb-tab,
+body.kb-ui .gtab,
+body.kb-ui .ctrl-tab,
+body.kb-ui .lap-opt,
+body.kb-ui .diff-pill,
+body.kb-ui .key-btn,
+body.kb-ui .pit-plan-preset,
+body.kb-ui .lb-ghost-btn {
+  min-height: 44px;
+  border: 1px solid var(--kb-border);
+  border-radius: 10px;
+  background: var(--kb-raised);
+  color: var(--kb-text);
+  text-shadow: none;
+  box-shadow: none;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+
+body.kb-ui .btn:hover,
+body.kb-ui .menu-secondary-action:hover,
+body.kb-ui .lb-tab:hover,
+body.kb-ui .gtab:hover,
+body.kb-ui .ctrl-tab:hover,
+body.kb-ui .lap-opt:hover,
+body.kb-ui .diff-pill:hover,
+body.kb-ui .key-btn:hover,
+body.kb-ui .pit-plan-preset:hover,
+body.kb-ui .lb-ghost-btn:hover {
+  transform: none;
+  filter: none;
+  color: var(--kb-text) !important;
+  border-color: var(--kb-text-supporting);
+  background: #343b60;
+  box-shadow: none;
+}
+
+body.kb-ui .btn:active,
+body.kb-ui .menu-secondary-action:active {
+  transform: none;
+  background: #202541;
+  box-shadow: none;
+}
+
+body.kb-ui .btn-cyan {
+  border-color: var(--kb-primary);
+  background: var(--kb-primary);
+  color: #10162a;
+}
+
+body.kb-ui .btn-cyan:hover {
+  border-color: #b8f5fb;
+  background: #9deef7;
+  color: #10162a !important;
+}
+
+body.kb-ui .btn-gold,
+body.kb-ui .btn-orange,
+body.kb-ui .btn-purple,
+body.kb-ui .btn-pink {
+  border-color: var(--kb-border);
+  background: var(--kb-raised);
+  color: var(--kb-text);
+}
+
+body.kb-ui .section-title {
+  border: 1px solid var(--kb-border);
+  border-radius: 16px;
+  background: var(--kb-panel);
+  color: var(--kb-text);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+body.kb-ui .section-sub,
+body.kb-ui .menu-panel-sub,
+body.kb-ui .menu-utility-copy,
+body.kb-ui .mode-card .m-desc,
+body.kb-ui .setup-desc,
+body.kb-ui .track-target,
+body.kb-ui .online-player .op-meta,
+body.kb-ui .lb-meta,
+body.kb-ui .lb-date,
+body.kb-ui .ctrl-action-label,
+body.kb-ui .info-v,
+body.kb-ui .pit-ui-sub {
+  color: var(--kb-text-supporting);
+  opacity: 1;
+}
+
+body.kb-ui .menu-panel-sub,
+body.kb-ui .menu-utility-card {
+  display: block;
+}
+
+body.kb-ui .back-btn {
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px));
+  width: auto;
+  min-width: 72px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--kb-border);
+  border-radius: 10px;
+  background: var(--kb-panel);
+  color: var(--kb-text);
+  font-size: 0;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+body.kb-ui .back-btn::after {
+  content: 'BACK';
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  color: currentColor;
+}
+
+body.kb-ui .back-btn:hover {
+  border-color: var(--kb-text-supporting);
+  background: var(--kb-raised);
+}
+
+body.kb-ui .menu-shell {
+  gap: 24px;
+}
+
+body.kb-ui .menu-hero-panel,
+body.kb-ui .menu-action-panel,
+body.kb-ui .online-panel,
+body.kb-ui .results-card,
+body.kb-ui .lb-panel,
+body.kb-ui .lb-filters,
+body.kb-ui .ctrl-player-card,
+body.kb-ui .info-block,
+body.kb-ui .upgrade-card,
+body.kb-ui .pit-plan-panel,
+body.kb-ui .save-conflict-card,
+body.kb-ui .pit-ui-card {
+  border: 1px solid var(--kb-border);
+  border-radius: 16px;
+  background: var(--kb-panel);
+  box-shadow: 0 16px 36px rgba(4, 6, 18, .26);
+  backdrop-filter: none;
+}
+
+body.kb-ui .menu-hero-panel,
+body.kb-ui .menu-action-panel {
+  border-radius: 16px;
+}
+
+body.kb-ui .portal-tag,
+body.kb-ui .portal-pill,
+body.kb-ui .menu-currency-chip,
+body.kb-ui .menu-utility-card {
+  border: 1px solid var(--kb-border);
+  background: var(--kb-raised);
+  color: var(--kb-text-supporting);
+  box-shadow: none;
+}
+
+body.kb-ui .portal-tag,
+body.kb-ui .portal-pill,
+body.kb-ui .menu-currency-chip {
+  border-radius: 999px;
+}
+
+body.kb-ui .menu-utility-card {
+  border-radius: 16px;
+}
+
+body.kb-ui .menu-currency-chip,
+body.kb-ui .menu-utility-title,
+body.kb-ui .coins-disp,
+body.kb-ui .coins-earn,
+body.kb-ui .result-val,
+body.kb-ui .upgrade-level,
+body.kb-ui .medal-banner,
+body.kb-ui .winner-banner {
+  color: var(--kb-reward);
+}
+
+body.kb-ui .menu-currency-chip.gems {
+  color: var(--kb-selection);
+  border-color: var(--kb-border);
+}
+
+body.kb-ui .menu-currency-chip.save-sync[data-state="synced"] {
+  color: var(--kb-success);
+  border-color: var(--kb-success);
+}
+
+body.kb-ui .menu-currency-chip.save-sync[data-state="conflict"],
+body.kb-ui .menu-currency-chip.save-sync[data-state="error"] {
+  color: var(--kb-error);
+  border-color: var(--kb-error);
+}
+
+body.kb-ui .title-logo {
+  color: var(--kb-text);
+  -webkit-text-fill-color: var(--kb-text);
+  -webkit-text-stroke: 2px #080a18;
+  text-shadow: 0 5px 0 #080a18, 0 12px 28px rgba(0, 0, 0, .35);
+}
+
+body.kb-ui .title-sub,
+body.kb-ui .menu-panel-kicker {
+  color: var(--kb-primary);
+  opacity: 1;
+}
+
+body.kb-ui .title-decor {
+  background: linear-gradient(90deg, var(--kb-primary), var(--kb-selection));
+}
+
+body.kb-ui .menu-car-stage,
+body.kb-ui .garage-car-stage {
+  border: 1px solid var(--kb-border);
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 50% 75%, rgba(120, 231, 245, .14), rgba(17, 19, 37, .94) 68%);
+}
+
+body.kb-ui .menu-paint-part {
+  min-height: 44px;
+  border: 1px solid var(--kb-border);
+  background: var(--kb-raised);
+  color: var(--kb-text-supporting);
+}
+
+body.kb-ui .menu-paint-part.sel,
+body.kb-ui .lb-tab.active,
+body.kb-ui .gtab.active,
+body.kb-ui .lap-opt.sel,
+body.kb-ui .ctrl-tab.active,
+body.kb-ui .diff-pill.sel,
+body.kb-ui .key-btn-active,
+body.kb-ui .pit-plan-preset.sel {
+  border-color: var(--kb-selection) !important;
+  background: rgba(183, 164, 255, .18) !important;
+  color: var(--kb-text) !important;
+  box-shadow: inset 3px 0 0 var(--kb-selection);
+}
+
+body.kb-ui .mode-card,
+body.kb-ui .track-card,
+body.kb-ui .setup-card,
+body.kb-ui .wx-card,
+body.kb-ui .tyre-card,
+body.kb-ui .pit-plan-tyre,
+body.kb-ui .pit-ui-choice {
+  border: 1px solid var(--kb-border);
+  border-radius: 16px;
+  background: var(--kb-raised);
+  color: var(--kb-text);
+  box-shadow: none;
+  backdrop-filter: none;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+body.kb-ui .mode-card:hover,
+body.kb-ui .track-card:hover,
+body.kb-ui .setup-card:hover,
+body.kb-ui .wx-card:hover,
+body.kb-ui .tyre-card:hover,
+body.kb-ui .pit-plan-tyre:hover,
+body.kb-ui .pit-ui-choice:hover {
+  transform: none;
+  border-color: var(--kb-text-supporting);
+  background: #343b60;
+  box-shadow: none;
+}
+
+body.kb-ui .setup-card.sel,
+body.kb-ui .wx-card.sel,
+body.kb-ui .tyre-card.sel,
+body.kb-ui .pit-plan-tyre.sel,
+body.kb-ui .pit-ui-choice.sel {
+  border-color: var(--kb-selection);
+  background: rgba(183, 164, 255, .18);
+  box-shadow: inset 0 0 0 1px var(--kb-selection);
+}
+
+body.kb-ui .mode-card .m-tag {
+  color: var(--kb-primary);
+  opacity: 1;
+}
+
+body.kb-ui .track-info,
+body.kb-ui .online-player,
+body.kb-ui .coins-group,
+body.kb-ui .pit-plan-kpi div,
+body.kb-ui .setup-slider-card {
+  border: 1px solid rgba(69, 78, 115, .72);
+  background: var(--kb-raised);
+}
+
+body.kb-ui .online-equal-banner,
+body.kb-ui .coins-earn,
+body.kb-ui .winner-banner,
+body.kb-ui .howto-tip,
+body.kb-ui .info-tip {
+  border-color: rgba(255, 225, 138, .55);
+  background: rgba(255, 225, 138, .10);
+  color: var(--kb-reward) !important;
+}
+
+body.kb-ui .online-input,
+body.kb-ui .online-select,
+body.kb-ui .name-input,
+body.kb-ui input[type="text"],
+body.kb-ui input[type="number"],
+body.kb-ui textarea {
+  min-height: 44px;
+  border: 1px solid var(--kb-border);
+  border-radius: 10px;
+  background: #14172c;
+  color: var(--kb-text);
+  box-shadow: none;
+}
+
+body.kb-ui .online-input:hover,
+body.kb-ui .online-select:hover,
+body.kb-ui .name-input:hover {
+  border-color: var(--kb-text-supporting);
+}
+
+body.kb-ui .online-status {
+  color: var(--kb-text-supporting);
+  opacity: 1;
+}
+
+body.kb-ui .online-status.err {
+  color: var(--kb-error);
+}
+
+body.kb-ui .online-code,
+body.kb-ui .result-val.cyan,
+body.kb-ui .lb-time {
+  color: var(--kb-primary);
+}
+
+body.kb-ui .result-val.green {
+  color: var(--kb-success);
+}
+
+body.kb-ui .result-val.red {
+  color: var(--kb-error);
+}
+
+body.kb-ui .result-val,
+body.kb-ui .lb-time,
+body.kb-ui .lb-rank,
+body.kb-ui .lb-date,
+body.kb-ui .coins-part,
+body.kb-ui .setup-slider-val,
+body.kb-ui .pit-plan-value,
+body.kb-ui .pit-plan-kpi b {
+  font-variant-numeric: tabular-nums;
+}
+
+body.kb-ui .lb-head,
+body.kb-ui .lb-row,
+body.kb-ui .result-row,
+body.kb-ui .ctrl-action-row,
+body.kb-ui .info-block-body {
+  border-color: rgba(69, 78, 115, .58);
+}
+
+body.kb-ui .lb-row.lb-top {
+  background: rgba(255, 225, 138, .09);
+}
+
+body.kb-ui .lb-rank {
+  background: var(--kb-raised);
+}
+
+body.kb-ui .lb-rank:first-child {
+  background: rgba(255, 225, 138, .16);
+  color: var(--kb-reward);
+}
+
+body.kb-ui .stat-bar-bg {
+  background: rgba(193, 200, 228, .14);
+}
+
+body.kb-ui .stat-bar-fill,
+body.kb-ui .upgrade-bar.filled {
+  background: var(--kb-primary);
+  border-color: var(--kb-primary);
+}
+
+body.kb-ui .setup-slider-card:hover {
+  transform: none;
+  border-color: var(--kb-text-supporting);
+}
+
+body.kb-ui .setup-live-chip,
+body.kb-ui .setup-fx,
+body.kb-ui .setup-baseline-note {
+  border-color: var(--kb-border);
+  background: rgba(40, 46, 75, .74);
+}
+
+body.kb-ui .ctrl-pane {
+  scrollbar-gutter: stable;
+}
+
+body.kb-ui .info-block summary:hover {
+  transform: none;
+  background: var(--kb-raised);
+  box-shadow: none;
+}
+
+body.kb-ui #shootout-difficulty,
+body.kb-ui #ai-difficulty,
+body.kb-ui #device-prompt,
+body.kb-ui #pause-overlay,
+body.kb-ui #pit-ui-overlay,
+body.kb-ui #save-conflict-overlay,
+body.kb-ui #patch-notes-overlay {
+  background: rgba(9, 11, 25, .88) !important;
+  backdrop-filter: blur(10px);
+}
+
+body.kb-ui #device-prompt,
+body.kb-ui #pause-overlay .pause-btns,
+body.kb-ui .pit-ui-card {
+  border-radius: 16px;
+}
+
+body.kb-ui #pause-overlay .pause-title {
+  color: var(--kb-text);
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+
+body.kb-ui .pit-ui-title {
+  color: var(--kb-reward);
+}
+
+body.kb-ui #kb-ui-preview-marker {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  z-index: 500;
+  padding: 7px 10px;
+  border: 1px solid var(--kb-primary);
+  border-radius: 999px;
+  background: rgba(17, 19, 37, .92);
+  color: var(--kb-primary);
+  font: 900 10px/1 'Nunito', sans-serif;
+  letter-spacing: .08em;
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .28);
+}
+
+@media (max-width: 720px) and (min-height: 461px) {
+  body.kb-ui .screen {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  body.kb-ui #screen-menu {
+    padding-top: max(12px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+  }
+
+  body.kb-ui .menu-shell {
+    width: min(100%, 560px);
+    gap: 12px;
+  }
+
+  body.kb-ui .menu-hero-panel,
+  body.kb-ui .menu-action-panel {
+    padding: 20px 16px;
+  }
+
+  body.kb-ui .menu-car-stage {
+    height: min(230px, 30vh);
+  }
+
+  body.kb-ui .menu-actions {
+    gap: 8px;
+  }
+
+  body.kb-ui .mode-card {
+    min-height: 0;
+  }
+
+  body.kb-ui .online-row > .online-select,
+  body.kb-ui .online-row > .btn {
+    flex: 1 1 160px;
+  }
+
+  body.kb-ui .results-card {
+    padding: 20px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  body.kb-ui #kb-ui-preview-marker {
+    right: max(5px, env(safe-area-inset-right, 0px));
+    bottom: max(5px, env(safe-area-inset-bottom, 0px));
+    padding: 4px 6px;
+    font-size: 7px;
+    opacity: .84;
+  }
+}
+
+@media (max-height: 460px) and (orientation: landscape) {
+  body.kb-ui #screen-menu {
+    justify-content: flex-start;
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  }
+
+  body.kb-ui .menu-shell {
+    align-items: start;
+    max-height: none;
+  }
+
+  body.kb-ui .menu-panel-sub,
+  body.kb-ui .menu-utility-card {
+    display: block !important;
+  }
+
+  body.kb-ui .menu-action-panel {
+    justify-content: flex-start;
+  }
+
+  body.kb-ui .menu-utility-card {
+    padding: 10px 12px;
+  }
+
+  body.kb-ui .menu-utility-copy,
+  body.kb-ui .menu-panel-sub {
+    margin-top: 4px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  body.kb-ui #screen-mode,
+  body.kb-ui #screen-track,
+  body.kb-ui #screen-online,
+  body.kb-ui #screen-results,
+  body.kb-ui #screen-setup,
+  body.kb-ui #screen-garage,
+  body.kb-ui #screen-controls,
+  body.kb-ui #screen-leaderboard {
+    overflow-y: auto !important;
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.kb-ui *,
+  body.kb-ui *::before,
+  body.kb-ui *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+html[data-reduced-motion="1"] body.kb-ui *,
+html[data-reduced-motion="1"] body.kb-ui *::before,
+html[data-reduced-motion="1"] body.kb-ui *::after {
+  scroll-behavior: auto !important;
+  transition-duration: .01ms !important;
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+}

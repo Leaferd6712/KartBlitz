@@ -2,7 +2,7 @@
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const MENU_PAGE_BG = '#7b6fca';
+const MENU_PAGE_BG = '#111325';
 const RACE_VIEW_MAX_EDGE = 1920;
 let W = 1280, H = 720;
 let _raceFillBg = null;
