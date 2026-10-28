@@ -486,6 +486,10 @@ ${liItems.join('\n')}
   }
 
   function bumpCurrentPatchVersion(html, version) {
+    const metaPattern = /(<meta\s+name=["']kartblitz-patch-version["']\s+content=["'])[^"']*(["']\s*\/?>)/i;
+    if (metaPattern.test(html)) {
+      return html.replace(metaPattern, `$1${version}$2`);
+    }
     if (/const CURRENT_PATCH_VERSION\s*=\s*['"][^'"]*['"]/.test(html)) {
       return html.replace(
         /const CURRENT_PATCH_VERSION\s*=\s*['"][^'"]*['"]/,
@@ -547,7 +551,7 @@ ${liItems.join('\n')}
       await writable.write(newContent);
       await writable.close();
       originalContent = newContent; // update in memory so re-saves work
-      setStatus('✓ Saved successfully! Bumped CURRENT_PATCH_VERSION to ' + version + '. Refresh index.html to see the changes.', 'ok');
+      setStatus('✓ Saved successfully! Bumped the patch version to ' + version + '. Refresh index.html to see the changes.', 'ok');
 
       // Save password to session for convenience
       try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {}

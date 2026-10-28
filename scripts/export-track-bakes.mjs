@@ -1,5 +1,5 @@
 /**
- * Extract TRACKS waypoints from index.html (or KartBlitz.html) and bake splines/checkpoints
+ * Extract TRACKS waypoints from js/game.js (with legacy HTML fallbacks) and bake splines/checkpoints
  * into sim/tracks/bakes.json for Durable Object authority.
  *
  * Usage: node scripts/export-track-bakes.mjs
@@ -10,10 +10,10 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
-const htmlCandidates = ["index.html", "KartBlitz.html"].map((name) => path.join(root, name));
-const htmlPath = htmlCandidates.find((p) => fs.existsSync(p));
-if (!htmlPath) {
-  throw new Error("Could not find index.html or KartBlitz.html in " + root);
+const sourceCandidates = ["js/game.js", "index.html", "KartBlitz.html"].map((name) => path.join(root, name));
+const sourcePath = sourceCandidates.find((candidate) => fs.existsSync(candidate));
+if (!sourcePath) {
+  throw new Error("Could not find js/game.js, index.html, or KartBlitz.html in " + root);
 }
 const outPath = path.join(root, "sim", "tracks", "bakes.json");
 
@@ -110,12 +110,12 @@ function bakeTrack(raw) {
   };
 }
 
-function extractTracks(html) {
+function extractTracks(source) {
   // Pull each track object that has id + waypoints — lightweight regex scan
   const tracks = [];
   const re = /\{\s*id\s*:\s*(\d+)[\s\S]*?waypoints\s*:\s*\[([\s\S]*?)\]\s*,/g;
   let m;
-  while ((m = re.exec(html))) {
+  while ((m = re.exec(source))) {
     const id = parseInt(m[1], 10);
     const wpBody = m[2];
     const waypoints = [];
@@ -127,7 +127,7 @@ function extractTracks(html) {
     if (waypoints.length < 4) continue;
 
     // Find startPos / trackWidth near this id block (search forward limited)
-    const chunk = html.slice(m.index, m.index + 8000);
+    const chunk = source.slice(m.index, m.index + 8000);
     const sp = chunk.match(/startPos\s*:\s*\{\s*x\s*:\s*(-?[\d.]+)\s*,\s*y\s*:\s*(-?[\d.]+)/);
     const sa = chunk.match(/startAngle\s*:\s*(-?[\d.]+)/);
     const tw = chunk.match(/trackWidth\s*:\s*(\d+)/);
@@ -161,8 +161,8 @@ function extractTracks(html) {
   return tracks;
 }
 
-const html = fs.readFileSync(htmlPath, "utf8");
-const rawTracks = extractTracks(html);
+const source = fs.readFileSync(sourcePath, "utf8");
+const rawTracks = extractTracks(source);
 const out = { version: 2, tracks: {} };
 for (const raw of rawTracks) {
   const baked = bakeTrack(raw);

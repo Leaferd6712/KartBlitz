@@ -316,8 +316,8 @@ function showScreen(id) {
   const _ftueEl = document.getElementById('ftue-hint');
   if (_ftueEl && canvas.style.display !== 'block') _ftueEl.style.display = 'none';
 }
-// Bump this when shipping new patch-note content (patch-notes-editor updates it on save).
-const CURRENT_PATCH_VERSION = '2026-09-15';
+// Bump the index.html metadata when shipping patch notes (the editor updates it on save).
+const CURRENT_PATCH_VERSION = document.querySelector('meta[name="kartblitz-patch-version"]')?.content?.trim() || '2026-09-15';
 const PATCH_VERSION_LS_KEY = 'kartblitz_last_patch_version';
 
 let _onboardingStep = null; // null | 'patch' | 'device' | 'done'
