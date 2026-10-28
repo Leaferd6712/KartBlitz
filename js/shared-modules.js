@@ -1,0 +1,14 @@
+import * as KartBlitzRewards from '../sim/rewards.mjs';
+import * as KartBlitzRnD from '../sim/rnd-progress.mjs';
+import * as KartBlitzSave from '../sim/player-save.mjs';
+import * as KartBlitzProgramme from '../sim/upgrade-programme.mjs';
+import * as KartBlitzMastery from '../sim/track-mastery.mjs';
+import * as KartBlitzGhost from '../sim/pb-ghost.mjs';
+import * as KartBlitzSpeedFeel from '../sim/speed-feel.mjs';
+window.KartBlitzRewards = KartBlitzRewards;
+window.KartBlitzRnD = KartBlitzRnD;
+window.KartBlitzSave = KartBlitzSave;
+window.KartBlitzProgramme = KartBlitzProgramme;
+window.KartBlitzMastery = KartBlitzMastery;
+window.KartBlitzGhost = KartBlitzGhost;
+window.KartBlitzSpeedFeel = KartBlitzSpeedFeel;
