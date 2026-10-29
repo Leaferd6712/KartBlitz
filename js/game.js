@@ -7750,6 +7750,9 @@ class Race {
       showCoinsEarned(awardCoins(window._lastResult));
     }
 
+    // Python persistence is intentionally deferred until gameplay has ended.
+    saveCompletedResultToPython(window._lastResult);
+
     // Show mid-roll ad then reveal the results screen
     CG.requestMidroll(() => {
       const el = document.getElementById('screen-results');
@@ -9669,6 +9672,42 @@ function showLbToast(msg, isErr) {
   if(_lbToastTimer) clearTimeout(_lbToastTimer);
   _lbToastTimer = setTimeout(function(){ el.classList.remove('show'); }, isErr ? 4200 : 2600);
 }
+function saveCompletedResultToPython(result) {
+  if(!result || !window.KartBlitzPython || !KartBlitzPython.isEnabled()) return;
+  let bestLap = Number(result.bestLap);
+  let total = Number.isFinite(Number(result.total)) ? Number(result.total) : null;
+  if(result.mode === 'versus') {
+    bestLap = Math.min(Number(result.p1Best), Number(result.p2Best));
+    const totals = [result.p1Total, result.p2Total].map(Number).filter(Number.isFinite);
+    total = totals.length ? Math.min(...totals) : null;
+  }
+  if(!Number.isFinite(bestLap) || !(bestLap > 0)) return;
+  let clientResultId = '';
+  try { clientResultId = crypto.randomUUID().replace(/-/g, ''); } catch(e) {}
+  if(!clientResultId) clientResultId = `kb${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  const details = {};
+  ['finished','position','fieldSize','winner','win','aiDiff','pbImproved','cleanRace'].forEach(function(key) {
+    if(result[key] !== undefined && result[key] !== null) details[key] = result[key];
+  });
+  KartBlitzPython.saveResult({
+    clientResultId: clientResultId,
+    playerId: getDeviceToken(),
+    playerName: (_kbIdentity && _kbIdentity.username) || '',
+    mode: result.mode,
+    trackId: Number(result.trackId),
+    trackName: String(result.trackName || ''),
+    bestLapSeconds: bestLap,
+    totalSeconds: total,
+    laps: Math.max(1, Number(result.laps) || 1),
+    details: details
+  });
+}
+
+window.addEventListener('kartblitz:python-backend', function(event) {
+  const detail = event && event.detail;
+  if(!detail || detail.type !== 'result') return;
+  showLbToast(detail.leaderboardSaved ? 'PYTHON RESULT + PB SAVED' : 'PYTHON RESULT SAVED');
+});
 function updateSaveIdentityUi(identity) {
   const input = document.getElementById('nameInput');
   const title = document.getElementById('save-name-title');

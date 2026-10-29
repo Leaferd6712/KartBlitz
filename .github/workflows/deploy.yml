@@ -55,6 +55,7 @@ jobs:
           test -f public/index.html
           test -f public/ui/base.css
           test -f public/ui/kartblitz.css
+          test -f public/js/python-backend.js
           test -f public/js/shared-modules.js
           test -f public/js/game.js
           test -f public/js/programme-runtime.js

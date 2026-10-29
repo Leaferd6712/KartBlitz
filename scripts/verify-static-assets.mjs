@@ -7,6 +7,7 @@ const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const required = [
   'ui/base.css',
   'ui/kartblitz.css',
+  'js/python-backend.js',
   'js/shared-modules.js',
   'js/game.js',
   'js/programme-runtime.js',
@@ -25,6 +26,7 @@ for (const relativePath of required) {
 }
 
 const orderedScripts = [
+  'js/python-backend.js',
   'js/shared-modules.js',
   'js/game.js',
   'js/programme-runtime.js',
