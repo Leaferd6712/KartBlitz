@@ -5737,17 +5737,16 @@ class Race {
       for(let ai = 0; ai < numAI; ai++) {
         const mlRace = mlRaceConfig;
         const useLabDriver = ai === 0 && mlRace && mlRace.model;
-        const usePlayerML = useLabDriver && mlRace.modelType === 'player' && window.KartBlitzMLRuntime;
-        const ctrl = usePlayerML
+        const useModelRuntime = useLabDriver && window.KartBlitzMLRuntime;
+        const ctrl = useModelRuntime
           ? window.KartBlitzMLRuntime.makeController(trackData, mlRace.model)
           : makeAIInput(trackData, this.aiDifficulty, ai);
         const aiKart = new Kart(ai+1, sp.x - (ai+1)*30, sp.y + (ai+1)*18, ang,
           aiColors[ai % aiColors.length].body, aiColors[ai % aiColors.length].shadow, ctrl.fn);
         aiKart.isAI = true;
-        aiKart._mlDriver = !!usePlayerML;
+        aiKart._mlDriver = !!useModelRuntime;
         aiKart._mlLabDriver = !!useLabDriver;
         ctrl.set(aiKart);
-        if(useLabDriver && !usePlayerML) aiKart.mlModelName = 'KartBlitz Pre-Tuned Driver';
         applyUpgradesToKart(aiKart, 'p1');
         this.karts.push(aiKart);
       }

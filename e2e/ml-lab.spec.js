@@ -71,7 +71,7 @@ test('ML Lab teaches through prediction, reward experiments, and training stages
   await expect(page.locator('#ml-command-start')).toHaveText('powershell -ExecutionPolicy Bypass -File .\\ml_training\\start.ps1');
   await expect(page.getByRole('button', { name: 'COPY' })).toHaveCount(2);
   await page.getByRole('button', { name: /4 UPDATE/ }).click();
-  await expect(page.locator('#ml-phase-explanation')).toContainText('Update carefully with PPO');
+  await expect(page.locator('#ml-phase-explanation')).toContainText('Reinforcement learning with PPO (90%)');
   await expect(page.locator('#ml-run-explain')).toContainText('300,000');
   await expect(page.locator('#ml-run-explain')).toContainText('2,700,000');
   await expect(page.locator('#ml-run-explain')).toContainText('12,288 RL experiences');
