@@ -180,6 +180,28 @@ Quick tunnels get a **new** URL each restart — share the new one.
 | Play local static game | `python -m http.server 8000` → `http://localhost:8000/KartBlitz.html` | Yes, that server |
 | Test online multiplayer locally | `npm run party:dev` + static game on localhost | Yes, wrangler |
 | Production online races | `npx wrangler deploy` once; play on Netlify | No |
+
+## E. Python-enabled testing deployment
+
+The FastAPI service in `backend/` is optional and separate from the production
+static site. It handles completed results, profiles, race history, and a testing
+leaderboard only. JavaScript remains responsible for all live gameplay and the
+browser sends no Python requests while a race is active.
+
+GitHub Pages and Netlify cannot run Python. For a testing environment:
+
+1. Deploy `backend.main:app` to a Python 3.12-capable service with persistent
+   disk or provide a persistent `KARTBLITZ_DATABASE_PATH`.
+2. Include `sim/tracks/bakes.json` and set `KARTBLITZ_TRACK_BAKES_PATH` if the
+   deployment layout differs from the repository.
+3. Set `KARTBLITZ_CORS_ORIGINS` to the exact testing frontend origin.
+4. Open the testing frontend with
+   `?backend=https://your-testing-fastapi.example`.
+5. Check `GET /api/health` and run a completed-race submission test.
+
+Do not add the backend parameter to production or change the `main` deployment
+workflows without an explicit production review. See `backend/README.md` for
+the complete local and API instructions.
 | Legacy local leaderboard | `python server/app.py` + `cloudflared tunnel --url http://localhost:8787` | Yes, both |
 | Production online + cloud leaderboard | Worker deployed with D1 bound + static site uploaded | No laptop needed |
 

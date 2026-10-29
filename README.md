@@ -64,6 +64,23 @@ python -m http.server 8000
 
 Open [http://localhost:8000/index.html](http://localhost:8000/index.html) in your browser.
 
+### Python testing backend (optional)
+
+FastAPI provides completed-result validation, SQLite profiles, race history,
+and a testing leaderboard. Live gameplay remains entirely in JavaScript and
+does not make Python requests.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8001
+```
+
+Keep the static server on port 8000, then open
+`http://127.0.0.1:8000/index.html?backend=http://127.0.0.1:8001`.
+See [`backend/README.md`](backend/README.md) for API, environment, testing, and
+deployment details.
+
 ### Online multiplayer (optional)
 
 ```bash
@@ -106,10 +123,13 @@ Enter the pairing code printed by the trainer in the ML Lab. The trainer uses Py
 | `js/car-stage.js` | Three.js menu and garage car previews |
 | `js/track-editor.js` | Embedded track editor runtime |
 | `js/ui-preview.js` | Conditional `testing-ui-extra` preview marker |
+| `js/python-backend.js` | Optional post-race FastAPI client; never used by the gameplay loop |
 | `sim/` | Shared physics used by online multiplayer and client prediction |
 | `party/` | Cloudflare Worker / Durable Object for online races |
 | `online.js`, `online-sim.js`, `online-codec.js` | Browser online client and netcode |
 | `server/` | Optional legacy local leaderboard (Python) |
+| `backend/` | FastAPI profiles, race history, result validation, and testing leaderboard |
+| `tests/python/` | Pytest rules, persistence, CORS, and API integration coverage |
 | `ml/` | In-game ML Lab, browser policy runtime, and bundled developer model |
 | `ml_training/` | Local PyTorch/CUDA trainer, all-track environment, and companion API |
 | `design.md` | UI tokens, component rules, accessibility, and responsive scope |
