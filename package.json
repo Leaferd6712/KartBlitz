@@ -27,6 +27,8 @@
     "test:ml": "node sim/__tests__/ml-runtime.test.mjs && node sim/__tests__/ml-download.test.mjs && python -m unittest ml_training.test_environment",
     "test:unit": "npm run test:display && npm run test:rewards && npm run test:rnd && npm run test:tyre-wear && npm run test:corner-cut && npm run test:competitive && npm run test:player-save && npm run test:programme && npm run test:mastery && npm run test:pb-ghost && npm run test:online-track-limit && npm run test:online-reconnect && npm run test:leaderboard-runs && npm run test:car-stage-dispose && npm run test:speed-feel && npm run test:ml",
     "test:browser": "playwright test",
+    "test:python": "python -m pytest tests/python -q",
+    "test:performance": "playwright test e2e/performance.spec.js",
     "test:static": "node scripts/verify-static-assets.mjs",
     "test:e2e": "playwright test",
     "test": "npm run test:static && npm run test:unit && npm run test:sim && npm run test:browser && npm run test:live",
