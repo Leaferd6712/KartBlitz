@@ -1,4 +1,5 @@
 node_modules/
+.venv/
 .partykit/
 .wrangler/
 .dev.vars
@@ -13,3 +14,8 @@ playwright/.cache/
 ml_training/runs/
 ml_training/__pycache__/
 ml_training/**/*.pyc
+__pycache__/
+*.py[cod]
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal

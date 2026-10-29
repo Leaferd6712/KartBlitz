@@ -32,10 +32,26 @@ run FastAPI. A Python-enabled testing deployment needs a separate backend URL.
 | Keyboard, pointer, and touch input | Browser | Input needs immediate feedback and cannot wait for a network round trip. |
 | Local animation and client prediction | Browser | `requestAnimationFrame` keeps motion smooth between server updates. |
 | Existing online race simulation | Cloudflare Worker | It is already authoritative, deployed, and covered by parity/reconnect tests. |
-| Python testing sessions and lap/checkpoint rules | FastAPI | This makes the rule flow readable, structured, and independently testable. |
-| Python testing leaderboard and score acceptance | FastAPI + SQLite | Scores can be validated against a server-owned session before persistence. |
+| Completed-result validation | FastAPI | Plausibility and data-shape checks run after gameplay has ended. |
+| Profiles, race history, and testing leaderboard | FastAPI + SQLite | These are persistent, non-frame-critical backend concerns. |
 | Production leaderboard and verified input replay | Cloudflare Worker + D1 | Retained to avoid weakening or duplicating the live production authority. |
 | Player preferences and cached progress | Browser/CrazyGames save | Existing saves must remain compatible. |
+
+## Performance boundary
+
+Performance is the first architectural priority. Movement, acceleration,
+steering, braking, physics, collision response, input, canvas/WebGL rendering,
+camera updates, animation frames, client prediction, and interpolation remain in
+JavaScript. Python is never called by the render loop, simulation step, input
+handlers, or checkpoint logic. The browser never waits for FastAPI before
+updating or drawing a frame.
+
+The target is a stable 60 FPS or better on supported hardware, treated as a
+measured target rather than a guarantee. Repeatable Playwright telemetry records
+average FPS, 5th-percentile FPS, 95th/99th-percentile frame time, long frames,
+JavaScript task time, network requests during active gameplay, and memory where
+Chromium exposes it. Shared-simulation parity tests continue to protect physics
+consistency.
 
 ## Python-enabled testing flow
 
@@ -43,22 +59,19 @@ The FastAPI service is opt-in. With no backend URL configured, production makes
 no Python requests and behaves exactly as before. A testing URL can be supplied
 through the `backend` query parameter or `KARTBLITZ_BACKEND_URL` global.
 
-1. The browser creates a time-trial session through REST.
-2. Checkpoint crossings are sent asynchronously; rendering and input never wait.
-3. The Python engine checks the exact checkpoint sequence, session expiry, lap
-   bounds derived from the canonical track bake, and monotonically increasing
-   actions.
-4. A finish action can only produce an accepted lap after all checkpoints have
-   been observed in order.
-5. The session manager stores reconnect-safe state and SQLite stores accepted
-   personal-best scores.
-6. The browser can fetch the Python testing leaderboard through the same client
-   module. Backend errors degrade to the existing browser/Worker behaviour.
+1. The JavaScript engine completes a race or the player ends a time-trial
+   session without involving Python.
+2. After gameplay has ended, the browser submits one compact result through
+   REST. No Python request is made for frames, inputs, physics, or checkpoints.
+3. Python validates the mode, canonical track, lap bounds, totals, and payload.
+4. SQLite appends an idempotent race-history record, updates the device profile,
+   and replaces the personal best only when the accepted lap is faster.
+5. Profile and leaderboard reads use REST outside active gameplay. Backend
+   failures do not stop local play or rendering.
 
-This session protocol is intentionally REST rather than WebSocket: checkpoint
-events are infrequent, are not used to animate the kart, and do not justify a
-second continuous real-time channel. Existing multiplayer continues to use its
-WebSocket connection.
+WebSockets are not added to the Python service. Existing multiplayer continues
+to use its established Cloudflare WebSocket authority and shared JavaScript
+simulation.
 
 ## Migration plan
 
@@ -66,19 +79,20 @@ WebSocket connection.
    asset paths depend on it; finish the frontend split with a focused Python API
    client module rather than moving files into a new `frontend/` directory.
 2. Add `backend/` with a FastAPI application, Pydantic contracts, deterministic
-   session engine, SQLite repository, configurable CORS, and health/readiness
-   endpoints.
+   completed-result validator, SQLite repository, configurable CORS, and a
+   health endpoint.
 3. Keep FastAPI routing separate from game rules and persistence.
-4. Integrate time-trial lifecycle/checkpoint events without putting requests in
-   the render loop or blocking local gameplay.
-5. Add pytest coverage for rules, validation, persistence, session expiry, and
-   API integration, plus browser tests for configuration and failure handling.
+4. Submit a single result after gameplay ends; never call Python from the input,
+   simulation, collision, checkpoint, camera, or rendering paths.
+5. Add pytest coverage for validation, idempotency, profiles, history,
+   persistence, and API integration, plus browser performance/network tests.
 6. Document local development and a separate testing deployment. Production
    workflows remain restricted to `main` and are not changed or deployed.
 
 ## Explicit non-goals
 
 - No Python rendering or per-frame browser round trips.
+- No Python movement, steering, braking, physics, collision, or prediction.
 - No replacement of the production Cloudflare multiplayer service.
 - No schema or save-format break.
 - No automatic production deployment.
