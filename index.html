@@ -5,9 +5,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
-<meta name="description" content="Small karts. Big racing. Play KartBLitz: quick races, personal best laps, split-screen and a kart to make your own.">
+<meta name="description" content="Small karts. Big racing. Play KartBlitz: quick races, personal best laps, split-screen and a kart to make your own.">
 <meta name="theme-color" content="#30253f">
 <link rel="icon" type="image/svg+xml" href="ui/app-icon.svg">
+<script src="ui/customisation.bundle.js"></script>
 <script src="ui/platform.js"></script>
 <script src="ui/player-experience.js" defer></script>
 <script type="module" src="core/shell.js"></script>
@@ -2147,7 +2148,7 @@ body::after{
       <span id="garage-gems-chip" style="color:#7dd3fc;">GEMS 0</span>
     </div>
   </div>
-  <div class="garage-welcome"><strong>MAKE IT YOURS</strong><p id="garage-first-goal">Paint is free. Race to earn your first upgrade.</p></div>
+  <div class="garage-welcome"><strong>MAKE IT YOURS</strong><p id="garage-first-goal">White is yours. Unlock more colours with race coins.</p></div>
   <div style="text-align:center;margin-bottom:8px;">
     <button class="btn btn-sm btn-cyan" onclick="watchAdForCoins()" id="garage-ad-btn" title="Optional boost — racing pays more over time.">VIDEO · +18 COINS</button>
     <div id="garage-ad-hint" style="font-size:11px;opacity:.55;margin-top:6px;letter-spacing:.06em;">Optional boost · racing is the main way to progress</div>
@@ -2250,7 +2251,7 @@ body::after{
     <div class="patch-date">October 30, 2026</div>
     <ul>
       <li>Quick Race and a hands-on driving guide help you get started.</li>
-      <li>New touch layouts, clearer boost feedback, and a free paint workshop.</li>
+      <li>New touch layouts, clearer boost feedback, and a paint workshop.</li>
       <li>Time Trial keeps equal stock karts and saves your personal bests.</li>
     </ul>
     <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
@@ -2359,7 +2360,7 @@ body::after{
 </div>
 
 <div class="experience-modal" id="welcome-dialog" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
-  <div class="experience-card"><div class="experience-eyebrow">YOUR FIRST LAP STARTS HERE</div><h1 id="welcome-title">Welcome to KartBLitz</h1><p>Small karts. Big racing. Pick a short race, chase your best lap, or race a friend.</p><div class="welcome-steps"><span><b>01</b> Accelerate</span><span><b>02</b> Steer &amp; brake</span><span><b>03</b> Find your boost</span></div><p id="welcome-input"></p><div class="welcome-controls"><button class="key-btn" id="welcome-keyboard">KEYBOARD</button><button class="key-btn" id="welcome-touch">TOUCH</button></div><div class="experience-actions"><button class="btn btn-cyan" id="welcome-play">LET’S GO</button><button class="btn btn-sm btn-orange" id="welcome-practice">TRY THE DRIVING GUIDE</button></div><small>No account needed for local racing.</small></div>
+  <div class="experience-card"><div class="experience-eyebrow">YOUR FIRST LAP STARTS HERE</div><h1 id="welcome-title">Welcome to KartBlitz</h1><p>Small karts. Big racing. Pick a short race, chase your best lap, or race a friend.</p><div class="welcome-steps"><span><b>01</b> Accelerate</span><span><b>02</b> Steer &amp; brake</span><span><b>03</b> Find your boost</span></div><p id="welcome-input"></p><div class="welcome-controls"><button class="key-btn" id="welcome-keyboard">KEYBOARD</button><button class="key-btn" id="welcome-touch">TOUCH</button></div><div class="experience-actions"><button class="btn btn-cyan" id="welcome-play">LET’S GO</button><button class="btn btn-sm btn-orange" id="welcome-practice">TRY THE DRIVING GUIDE</button></div><small>No account needed for local racing.</small></div>
 </div>
 <div class="experience-modal" id="leave-dialog" role="dialog" aria-modal="true" aria-labelledby="leave-title" hidden><div class="experience-card"><div class="experience-eyebrow">TAKE A PIT STOP?</div><h2 id="leave-title">Leave this race?</h2><p>Your current race will end. Upgrades, paint, and previously completed sessions stay saved.</p><div class="experience-actions"><button class="btn btn-cyan" id="leave-stay">KEEP RACING</button><button class="btn btn-orange" id="leave-confirm">YES, CONTINUE</button></div></div></div>
 <aside class="driving-guide" id="driving-guide" aria-label="Driving guide" hidden><strong id="guide-step"></strong><p id="guide-copy"></p><small id="guide-keys"></small><button class="text-action" id="guide-dismiss">Got it · hide guide</button></aside>
@@ -13020,83 +13021,21 @@ if(lbAutoNameInput) {
 void fetchDeviceIdentity();
 
 // ── UPGRADE / COIN / PAINT SYSTEM ──────────────────────
-const PAINT_COLORS = [
-  {id:'stock',  label:'STOCK',   body:'#cccccc', shadow:'#888888'},
-  {id:'cyan',   label:'CYAN',    body:'#00ccff', shadow:'#005f8f'},
-  {id:'orange', label:'ORANGE',  body:'#ff6b35', shadow:'#8f2f00'},
-  {id:'lime',   label:'LIME',    body:'#39ff14', shadow:'#1a7000'},
-  {id:'pink',   label:'PINK',    body:'#ff00cc', shadow:'#880066'},
-  {id:'gold',   label:'GOLD',    body:'#ffd700', shadow:'#806800'},
-  {id:'white',  label:'WHITE',   body:'#e8e8e8', shadow:'#606060'},
-  {id:'red',    label:'RED',     body:'#ff2222', shadow:'#880000'},
-  {id:'purple', label:'PURPLE',  body:'#aa44ff', shadow:'#550088'},
-  {id:'black',  label:'BLACK',   body:'#1a1a22', shadow:'#050508'},
-  {id:'navy',   label:'NAVY',    body:'#1e3a8a', shadow:'#0b1638'},
-];
-
-const PAINT_PARTS = [
-  { id:'chassis',   label:'CHASSIS',    meshHints:['car_livery', 'car '] },
-  { id:'frontWing', label:'FRONT WING', meshHints:['front wing'] },
-  { id:'rearWing',  label:'REAR WING',  meshHints:['rear wing'] },
-  { id:'nose',      label:'NOSE',       meshHints:['nose'] },
-  { id:'accents',   label:'ACCENTS',    meshHints:['wheelcovers', 'rearlight'] },
-];
-
-function getPaintColor(id) {
-  return PAINT_COLORS.find(c => c.id === id) || PAINT_COLORS[0];
-}
-
-function defaultLivery(primaryId, accentId) {
-  const primary = primaryId || 'stock';
-  const accent = accentId || 'stock';
-  return {
-    chassis: primary,
-    frontWing: primary === 'stock' ? 'stock' : 'white',
-    rearWing: primary,
-    nose: primary,
-    accents: accent,
-  };
-}
-
-function normalizeLivery(raw, fallbackPrimary) {
-  const base = defaultLivery(fallbackPrimary || 'stock');
-  const src = raw && typeof raw === 'object' ? raw : {};
-  const out = { ...base };
-  PAINT_PARTS.forEach(part => {
-    const id = src[part.id];
-    out[part.id] = getPaintColor(id).id;
-  });
-  return out;
-}
-
+const { PAINT_COLORS, PAINT_PARTS, defaultLivery, normalizeLivery, ownedColours, equipColour } = window.KartBlitzCustomisation;
+function getPaintColor(id) { return PAINT_COLORS.find(c=>c.id===id) || PAINT_COLORS[0]; }
 function getPlayerLivery(player) {
-  const pd = getPlayerData();
-  const key = (player === 'p2') ? 'p2livery' : 'p1livery';
-  const fallback = (player === 'p2') ? (pd.p2paint || 'stock') : (pd.p1paint || 'stock');
-  return normalizeLivery(pd[key], fallback);
+  const pd=getPlayerData(), owned=ownedColours(pd);
+  const livery=normalizeLivery(pd[player+'livery'],pd[player+'paint']);
+  return Object.fromEntries(Object.entries(livery).map(([part,id])=>[part,owned.includes(id)?id:'white']));
 }
-
-function setPlayerLiveryPart(player, partId, colorId) {
-  if(!PAINT_PARTS.some(p => p.id === partId)) return;
-  const pd = getPlayerData();
-  const key = (player === 'p2') ? 'p2livery' : 'p1livery';
-  const liv = normalizeLivery(pd[key], player === 'p2' ? (pd.p2paint || 'stock') : (pd.p1paint || 'stock'));
-  liv[partId] = getPaintColor(colorId).id;
-  pd[key] = liv;
-  // Keep legacy single paint in sync with chassis for older paths.
-  if(partId === 'chassis') pd[player === 'p2' ? 'p2paint' : 'p1paint'] = liv.chassis;
-  savePlayerData(pd);
-  if(typeof window.refreshCarStages === 'function') window.refreshCarStages();
+function setPlayerLiveryPart(player,partId,colorId,purchase=false) {
+  const updated=equipColour(getPlayerData(),player,partId,colorId,{purchase});
+  if(!updated)return false;
+  savePlayerData(updated);
+  if(typeof window.refreshCarStages==='function')window.refreshCarStages();
+  return true;
 }
-
-// Expose for the Three.js menu module (ES modules can't see classic-script const bindings).
-window.PAINT_COLORS = PAINT_COLORS;
-window.PAINT_PARTS = PAINT_PARTS;
-window.getPaintColor = getPaintColor;
-window.defaultLivery = defaultLivery;
-window.normalizeLivery = normalizeLivery;
-window.getPlayerLivery = getPlayerLivery;
-window.setPlayerLiveryPart = setPlayerLiveryPart;
+Object.assign(window,{PAINT_COLORS,PAINT_PARTS,getPaintColor,defaultLivery,normalizeLivery,getPlayerLivery,setPlayerLiveryPart});
 
 // Legacy numeric upgrade tree kept for save migration into the part-based development system.
 const UPG_DEFS = [
@@ -14094,8 +14033,8 @@ function getPlayerData() {
   try {
     const d = JSON.parse(localStorage.getItem('kartblitz_player')||'{}');
     const def = () => ({speed:0,accel:0,traction:0,braking:0,handling:0});
-    const p1paint = d.p1paint||'cyan';
-    const p2paint = d.p2paint||'orange';
+    const p1paint = d.p1paint||'white';
+    const p2paint = d.p2paint||'white';
     const out = {
       coins: d.coins||0,
       gems: d.gems||0,
@@ -14111,6 +14050,7 @@ function getPlayerData() {
       pitStrategyCustom: normalizePitStrategyCustom(d.pitStrategyCustom || getLegacyPitStrategySeed(d.pitStrategy || 'balanced'), normalizeWeatherId(d.weather||'dry')),
       p1paint,
       p2paint,
+      ownedPaints: ownedColours(d),
       p1livery: normalizeLivery(d.p1livery, p1paint),
       p2livery: normalizeLivery(d.p2livery, p2paint),
       weather: normalizeWeatherId(d.weather||'dry'),
@@ -14139,8 +14079,8 @@ function getPlayerData() {
       p1customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },
       p2customSetup:{ speedMult:1.00, turnMult:1.00, tractBonus:0 },
       pitStrategy:'balanced', pitStrategyCustom:createDefaultPitStrategyCustom(),
-      p1paint:'cyan', p2paint:'orange',
-      p1livery: defaultLivery('cyan'), p2livery: defaultLivery('orange'),
+      p1paint:'white', p2paint:'white', ownedPaints:['white'],
+      p1livery: defaultLivery(), p2livery: defaultLivery(),
       weather:'dry', tyres:'med',
       selectedLaps:3,
       unlockedTracks: migrateUnlockedTracks(null),
@@ -14222,16 +14162,17 @@ function savePlayerData(d) {
   if(!d) return;
   d = {
     ...d,
+    ownedPaints: ownedColours(d),
     weather: normalizeWeatherId(d.weather),
     collisionMode: normalizeCollisionMode(d.collisionMode),
     p1dev: normalizeDevelopmentState(d.p1dev, d.p1upg),
     p2dev: normalizeDevelopmentState(d.p2dev, d.p2upg),
     p1customSetup: d.p1customSetup || { speedMult:1.00, turnMult:1.00, tractBonus:0 },
     p2customSetup: d.p2customSetup || { speedMult:1.00, turnMult:1.00, tractBonus:0 },
-    p1livery: normalizeLivery(d.p1livery, d.p1paint || 'cyan'),
-    p2livery: normalizeLivery(d.p2livery, d.p2paint || 'orange'),
-    p1paint: (d.p1livery && d.p1livery.chassis) || d.p1paint || 'cyan',
-    p2paint: (d.p2livery && d.p2livery.chassis) || d.p2paint || 'orange',
+    p1livery: normalizeLivery(d.p1livery, d.p1paint || 'white'),
+    p2livery: normalizeLivery(d.p2livery, d.p2paint || 'white'),
+    p1paint: (d.p1livery && d.p1livery.chassis) || d.p1paint || 'white',
+    p2paint: (d.p2livery && d.p2livery.chassis) || d.p2paint || 'white',
     pitStrategy: d.pitStrategy || 'balanced',
     pitStrategyCustom: normalizePitStrategyCustom(d.pitStrategyCustom || getLegacyPitStrategySeed(d.pitStrategy || 'balanced'), d.weather || 'dry'),
   };
@@ -14514,7 +14455,7 @@ function buildGarageContent() {
     const stageWrap = document.createElement('div');
     stageWrap.className = 'garage-car-stage';
     const previewPl = window._garagePaintPreview === 'p2' ? 'p2' : 'p1';
-    stageWrap.innerHTML = `<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">${previewPl.toUpperCase()} LIVERY · DRAG TO SPIN · STOCK = ORIGINAL</div>`;
+    stageWrap.innerHTML = `<canvas id="garage-car-canvas"></canvas><div class="menu-car-hint">${previewPl.toUpperCase()} LIVERY · DRAG TO SPIN · WHITE = DEFAULT</div>`;
     content.appendChild(stageWrap);
 
     ['p1','p2'].forEach(pl => {
@@ -14538,12 +14479,18 @@ function buildGarageContent() {
         const row = document.createElement('div');
         row.className = 'paint-row';
         PAINT_COLORS.forEach(pc => {
-          const sw = document.createElement('div');
-          sw.className = 'paint-sw' + (liv[part.id] === pc.id ? ' sel' : '');
+          const sw = document.createElement('button');
+          sw.type = 'button';
+          const owned = ownedColours(pd).includes(pc.id);
+          sw.className = 'paint-sw' + (!owned ? ' paint-locked' : '') + (liv[part.id] === pc.id ? ' sel' : '');
           sw.style.background = pc.body;
-          sw.title = pc.label;
+          sw.title = owned ? pc.label+' · OWNED' : pc.label+' · '+pc.cost+' coins';
+          sw.setAttribute('aria-label',owned ? 'Equip '+pc.label+' '+part.label : 'Buy '+pc.label+' for '+pc.cost+' coins');
+          sw.setAttribute('aria-pressed',liv[part.id]===pc.id?'true':'false');
+          if(!owned) {sw.textContent=pc.cost;sw.disabled=pd.coins<pc.cost;}
           sw.onclick = () => {
-            setPlayerLiveryPart(pl, part.id, pc.id);
+            setPlayerLiveryPart(pl, part.id, pc.id, true);
+            updateCurrencyDisplays(getPlayerData());
             window._menuPaintPart = part.id;
             window._garagePaintPreview = pl;
             buildGarageContent();

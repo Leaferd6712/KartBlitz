@@ -42,7 +42,7 @@
     "desktop:dev": "npm run desktop:prepare && electron desktop",
     "desktop:build": "npm run desktop:prepare && electron-builder --config electron-builder.yml",
     "test:desktop": "npm run desktop:prepare && playwright test --config desktop/playwright.config.mjs",
-    "test:activities": "node --test core/activity-host.test.mjs desktop/asset-policy.test.cjs",
+    "test:activities": "node --test core/activity-host.test.mjs desktop/asset-policy.test.cjs sim/__tests__/customisation.test.mjs",
     "test:runtime": "node scripts/verify-runtime.mjs",
     "test:portable": "node desktop/portable-smoke.mjs"
   },
@@ -61,5 +61,5 @@
     "wrangler": "^4.14.0"
   },
   "version": "1.0.0",
-  "description": "KartBLitz browser racing and reusable activity shell"
+  "description": "KartBlitz browser racing and reusable activity shell"
 }

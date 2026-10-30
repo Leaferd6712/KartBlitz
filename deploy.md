@@ -1,6 +1,6 @@
 # Deploying KartBlitz
 
-KartBLitz's primary browser build lives at [GitHub Pages](https://leaferd6712.github.io/KartBlitz/). Online multiplayer and cloud leaderboards use a Cloudflare Worker. Desktop packaging is separate; see [Windows builds](docs/desktop.md).
+KartBlitz's primary browser build lives at [GitHub Pages](https://leaferd6712.github.io/KartBlitz/). Online multiplayer and cloud leaderboards use a Cloudflare Worker. Desktop packaging is separate; see [Windows builds](docs/desktop.md).
 
 ## Online architecture (for sharing)
 
@@ -10,7 +10,7 @@ Open [docs/online-mode.html](docs/online-mode.html) in a browser. That is the fu
 
 ## Static game runtime
 
-Run `npm ci --legacy-peer-deps`, then `npm run build:web` and `npm run test:runtime`. Deploy the complete generated `public/` directory. The explicit asset list in `scripts/prepare-game.mjs` includes `index.html`, online client bundles, shared modules, local renderer/fonts and UI assets. No font or Three.js CDN is required. `rb6.glb` is no longer a runtime dependency.
+Run `npm ci --legacy-peer-deps`, then `npm run build:web` and `npm run test:runtime`. Deploy the complete generated `public/` directory. The explicit asset list in `scripts/prepare-game.mjs` includes `index.html`, online client bundles, shared modules, local renderer/fonts and UI assets. No font or Three.js CDN is required. The original `rb6.glb` is included for the home-page and garage preview.
 
 **Ship browser assets and the Worker together** after online changes. Mismatched `ONLINE_PROTOCOL` or `TRACK_BAKE_VERSION` causes a hard disconnect / bake error; read their current values from the shared source before deploying.
 

@@ -18,13 +18,13 @@ The 25 changes in this pass map to the earlier review, using the existing purple
 14. **Your kart:** a mint outline, Boost highlight and YOU/position labels distinguish the player.
 15. **Minimap:** directional player marker, contrasting opponents and an unobstructed short-touch position.
 16. **Circuit identity:** scenery culling uses the actual render target so cached trees and trackside details can appear correctly.
-17. **Consistent car:** the local procedural showroom model derives from the race car's geometry and part colours; a static fallback keeps play available.
+17. **Consistent car:** the original RB6 showroom model uses the shared part colours; a static fallback keeps play available.
 18. **Track cards:** scenery previews, readable targets and visible names for locked circuits.
 19. **Ability feedback:** charge/active states and on-track Zone availability get clearer labels and cues.
 20. **Motion:** short screen transitions, restrained showroom motion and respect for reduced-motion preferences.
 21. **Safe navigation:** leave/restart confirmations, resume on cancellation, and sound/help in the pause menu.
 22. **Positive results:** personal bests get a clear headline and improvement comparisons; practice is framed as progress.
-23. **Welcoming garage:** free paint opens first, the active tab matches its content, and a first-upgrade goal explains rewards. Portal-only ads stay off the standalone game.
+23. **Welcoming garage:** paint opens first with white included and permanent coin unlocks, the active tab matches its content, and a first-upgrade goal explains rewards. Portal-only ads stay off the standalone game.
 24. **Audio cues:** distinct synthesised tones for ability activation, readiness and empty charge, following volume/mute settings.
 25. **Resilient assets:** bundled fonts/preview, portal-only SDK loading, preview fallback, and one explicit runtime manifest for browser/desktop builds.
 

@@ -1,5 +1,7 @@
 /* Shared interaction surfaces: activities can reuse these without the race HUD. */
 [hidden] { display:none !important; }
+.paint-sw.paint-locked { font:900 9px Nunito,sans-serif; color:#fff; text-shadow:0 1px 3px #000,0 0 3px #000; }
+.paint-sw:disabled { cursor:not-allowed; opacity:.6; }
 .text-action { appearance:none; background:none; border:0; border-bottom:1px solid currentColor; color:#aaf2e0; font:900 .8rem Nunito,sans-serif; cursor:pointer; padding:3px 0; }
 .text-action:hover { color:#ffe18c; }
 .experience-modal { position:fixed; inset:0; z-index:320; display:grid; place-items:center; padding:20px; background:#18142be8; backdrop-filter:blur(7px); }

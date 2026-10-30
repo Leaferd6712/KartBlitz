@@ -1,7 +1,7 @@
 import { createActivityHost } from './activity-host.js';
 const host = createActivityHost();
 host.register({
-  id: 'racing', title: 'KartBLitz',
+  id: 'racing', title: 'KartBlitz',
   start(context, options) { if (options.attach) return; return options.practice ? window.startDrivingPractice(context) : window.startQuickRace(context); },
   pause() { window.pauseGame(); },
   resume() { window.resumeGame(); },

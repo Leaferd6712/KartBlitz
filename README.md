@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ui/brand.svg" alt="KartBLitz — find your line, make it yours" width="760">
+  <img src="ui/brand.svg" alt="KartBlitz — find your line, make it yours" width="760">
 </p>
 
 <p align="center"><strong>Small karts. Big racing.</strong><br>
@@ -9,7 +9,7 @@ A browser kart racer for a quick race, a friendly rivalry, or one more lap chasi
 
 [![Four karts racing at Sunset Speedway, with the player outlined in mint](docs/assets/hero.webp)](https://leaferd6712.github.io/KartBlitz/)
 
-## Play KartBLitz
+## Play KartBlitz
 
 ### In your browser · Available now
 
@@ -33,7 +33,7 @@ There is no published Windows download yet. The release page will carry the port
 - **One more lap.** Time Trial is an open practice session with personal bests, medals and a local personal-best ghost. Leave whenever you are ready.
 - **Bring a rival.** Share a keyboard in two-player split-screen, take on a one-lap AI shootout, or join an online lobby for up to six racers when the online service is reachable.
 - **Learn the circuit.** Eight built-in circuits offer different layouts, surfaces and scenery. Earn rewards and unlock more tracks as you improve.
-- **Make the kart yours.** Paint individual parts for free. Earn coins through racing to research and fit performance upgrades; competitive Time Trial and online racing use equalised performance.
+- **Make the kart yours.** Start with white, then unlock colours with race coins and paint individual parts. Earn coins through racing to research and fit performance upgrades; competitive Time Trial and online racing use equalised performance.
 - **A little extra pace.** Switch Boost on for straights and use the blue speed zones. The HUD shows charge, tyre condition and your position; distinct sounds mark ability activation and readiness.
 
 <img src="docs/assets/garage.webp" alt="The garage paint screen, with a matching kart preview and separate chassis and wing colours" width="100%">
@@ -51,7 +51,7 @@ There is no published Windows download yet. The release page will carry the port
 <details>
 <summary><strong>The paddock</strong></summary>
 
-<img src="docs/assets/menu.webp" alt="The KartBLitz main menu with Quick Race, Time Trial, Custom Race, Garage and Settings" width="100%">
+<img src="docs/assets/menu.webp" alt="The KartBlitz main menu with Quick Race, Time Trial, Custom Race, Garage and Settings" width="100%">
 
 Screenshots above are captures from this branch's running game. The hosted version updates after changes reach the deployment branch.
 

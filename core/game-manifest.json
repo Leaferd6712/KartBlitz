@@ -1,8 +1,8 @@
 {
   "id": "kartblitz",
-  "title": "KartBLitz",
+  "title": "KartBlitz",
   "entry": "index.html",
   "version": "1.0.0",
   "window": { "width": 1280, "height": 800, "minWidth": 640, "minHeight": 360 },
-  "activities": [{ "id": "racing", "title": "KartBLitz" }]
+  "activities": [{ "id": "racing", "title": "KartBlitz" }]
 }

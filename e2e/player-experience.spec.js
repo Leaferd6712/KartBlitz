@@ -11,7 +11,7 @@ test('Quick Race uses a beginner preset without overwriting saved race preferenc
   await page.locator('#race-ctrl-exit').click();await page.getByRole('button',{name:'YES, CONTINUE'}).click();await expect(page.locator('#screen-menu')).toBeVisible();
 });
 
-test('garage opens free paint with matching navigation and no unavailable video offer',async({page})=>{
+test('garage opens paint with matching navigation and no unavailable video offer',async({page})=>{
   await gotoGame(page,{storage:returningPlayerStorage()});await page.getByRole('button',{name:'GARAGE',exact:true}).click();
   await expect(page.locator('#garage-tabs .active')).toHaveText('PAINTS');await expect(page.locator('#garage-ad-btn')).toBeHidden();
   await expect(page.locator('#garage-content')).toContainText('CHASSIS');

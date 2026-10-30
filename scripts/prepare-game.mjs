@@ -8,7 +8,7 @@ if (!outputs.has(output)) throw new Error('Output must be one of the designated 
 // Absolute output is checked above; never remove a source directory.
 await rm(output,{recursive:true,force:true});
 await mkdir(output, { recursive: true });
-const files = ['index.html','online.js','online-codec.js','online-sim.js','LICENSE','core/game-manifest.json','core/activity-host.js','core/shell.js',
+const files = ['index.html','rb6.glb','ui/customisation.bundle.js','online.js','online-codec.js','online-sim.js','LICENSE','core/game-manifest.json','core/activity-host.js','core/shell.js',
   'ml/lab.css','ml/lab.js','ml/runtime.js','ml/models/our-model.json','sim/tracks/bakes.json'];
 for(const entry of await readdir(path.join(root,'sim'))) if(entry.endsWith('.mjs')) files.push(`sim/${entry}`);
 for(const entry of await readdir(path.join(root,'ui'))) if(/\.(css|svg|txt)$/.test(entry) || ['app-icon.png','player-experience.js','platform.js','car-preview.bundle.js'].includes(entry)) files.push(`ui/${entry}`);
