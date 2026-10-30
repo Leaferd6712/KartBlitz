@@ -166,12 +166,12 @@ export function putPbGhost(store, packed) {
   return s;
 }
 
-/** Validate and unpack a public server-generated top-10 ghost. */
+/** Validate and unpack a public server-generated leaderboard ghost. */
 export function unpackLeaderboardGhost(raw) {
   if (!raw || Number(raw.v) !== 1 || !Array.isArray(raw.frames)) return null;
   if (raw.frames.length < PB_GHOST_MIN_FRAMES || raw.frames.length > LEADERBOARD_GHOST_MAX_FRAMES) return null;
   const trackId = Number(raw.trackId), lapTime = Number(raw.lapTime);
-  if (!Number.isInteger(trackId) || trackId < 0 || !Number.isFinite(lapTime) || lapTime <= 0 || lapTime > 600) return null;
+  if (!Number.isInteger(trackId) || trackId < 0 || !Number.isFinite(lapTime) || lapTime <= 0 || lapTime > 720) return null;
   let previousT = -1;
   const frames = [];
   const samples = [];

@@ -261,7 +261,7 @@ async function upsertVerifiedScore(
   return { saved: true, bestLap, rank: Number(ranked?.rank || 999) };
 }
 
-async function storeTopTenGhost(
+export async function storeLeaderboardGhost(
   db: D1Database,
   runId: string,
   trackId: number,
@@ -284,7 +284,7 @@ async function storeTopTenGhost(
      WHERE track_id = ? AND run_id NOT IN (
        SELECT verified_run_id FROM scores
        WHERE mode = 'trial' AND track_id = ? AND trust_level = 'verified'
-       ORDER BY best_lap ASC, updated_at ASC, id ASC LIMIT 10
+         AND verified_run_id IS NOT NULL
      )`
   ).bind(trackId, trackId).run();
 }
@@ -396,8 +396,8 @@ export async function completeTrialRun(
   );
 
   let ghostSaved = false;
-  if (upsert.saved && Number(upsert.rank) <= 10 && verified.ghost) {
-    await storeTopTenGhost(
+  if (upsert.saved && verified.ghost) {
+    await storeLeaderboardGhost(
       db,
       runId,
       Number(run.track_id),

@@ -8,6 +8,8 @@
 <meta name="theme-color" content="#30253f">
 <link rel="icon" type="image/svg+xml" href="ui/app-icon.svg">
 <script src="ui/tool-entry.js"></script>
+<link rel="stylesheet" href="ui/lap-replay.css">
+<script type="module" src="ui/lap-replay.js"></script>
 <script src="ui/customisation.bundle.js"></script>
 <script src="ui/platform.js"></script>
 <script src="ui/player-experience.js" defer></script>
@@ -2871,6 +2873,7 @@ const CG = (() => {
 
 // ── SCREEN ──────────────────────────────────────────────
 function showScreen(id) {
+  if (window.KartBlitzLapReplay?.isOpen()) window.KartBlitzLapReplay.close();
   document.querySelectorAll('.screen').forEach(s => {
     s.classList.add('hidden');
     s.setAttribute('aria-hidden', 'true');
@@ -11647,6 +11650,35 @@ function startMLLabRace(idx, config) {
 }
 window.startMLLabRace = startMLLabRace;
 
+/** Read-only replay rendering: reuse the game artwork without starting a race. */
+window.KartBlitzReplayScene = {
+  getTrack(id, snapshot) {
+    const current = TRACKS.find(t => Number(t.id) === Number(id));
+    if (!current) return null;
+    clearTrackBaseCache();
+    const valid = snapshot && Array.isArray(snapshot.spline) && snapshot.spline.length >= 16
+      && snapshot.spline.length <= 10000 && snapshot.spline.every(p => Number.isFinite(p.x) && Number.isFinite(p.y))
+      && Number.isFinite(snapshot.trackWidth) && snapshot.trackWidth > 0
+      && Array.isArray(snapshot.cpLines) && snapshot.cpLines.every(cp => ['x1','y1','x2','y2'].every(k => Number.isFinite(cp[k])));
+    if (!valid) return current;
+    return { ...current, spline: snapshot.spline, trackWidth: snapshot.trackWidth,
+      cum: snapshot.cum, totalLen: snapshot.totalLen,
+      cpLines: snapshot.cpLines.map(cp => ({ ...cp, cx: (cp.x1 + cp.x2) / 2, cy: (cp.y1 + cp.y2) / 2 })) };
+  },
+  draw(context, track, pose, width, height, overlay) {
+    const cam = { x: pose.x, y: pose.y };
+    clampCamToTrack(cam, track, pose);
+    context.save();
+    drawTrack(context, track, cam.x, cam.y, width, height, 0);
+    overlay(context, cam);
+    Kart.prototype.draw.call({ id: 0, x: pose.x, y: pose.y, angle: pose.a,
+      color: '#6ee7f7', shadowColor: '#286275', isAI: false, flashTimer: 0,
+      ersActive: !!(pose.flags & 16) }, context, cam.x, cam.y, width, height);
+    context.restore();
+  },
+  clear: clearTrackBaseCache,
+};
+
 function getP1Input() {
   const b = BINDINGS.p1;
   const kb = {up:keyActive(b.up),down:keyActive(b.down),left:keyActive(b.left),right:keyActive(b.right),ers:keyActive(b.ers),drs:keyActive(b.drs)};
@@ -12922,20 +12954,27 @@ async function buildLeaderboardScreen() {
     const trustTitle = trust === 'verified'
       ? 'Server-verified Time Trial run'
       : (trust === 'unverified' ? 'Client-reported (not server-verified)' : 'Legacy record (pre-verification)');
-    const ghostActions = !isOnlineWins && lbMode === 'trial' && i < 10 && e.hasGhost && e.verifiedRunId
+    const safeRunId = /^[A-Za-z0-9_-]{16,64}$/.test(String(e.verifiedRunId || '')) ? e.verifiedRunId : null;
+    const hasReplay = !isOnlineWins && lbMode === 'trial' && e.hasGhost && safeRunId;
+    const legacyReplay = !isOnlineWins && lbMode === 'trial' && Number(e.recordingVersion || 0) < 2;
+    const ghostActions = hasReplay
       ? `<div class="lb-ghost-actions"><button class="lb-ghost-btn" onclick="raceLeaderboardGhost('${e.verifiedRunId}')">RACE GHOST</button></div>`
       : '';
+    const escapeLb = value => String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const timeContent = hasReplay
+      ? `<button type="button" class="lb-watch-time" onclick="KartBlitzLapReplay.open('${safeRunId}')" aria-label="Watch ${escapeLb(e.username)} lap ${timeVal}">${timeVal}<span class="lb-watch-hint">${legacyReplay ? 'LEGACY · ' : ''}WATCH LAP</span></button>`
+      : `${timeVal}${!isOnlineWins && lbMode === 'trial' ? `<span class="lb-replay-missing">${legacyReplay ? 'LEGACY · ' : ''}REPLAY UNAVAILABLE</span>` : ''}`;
     return `
       <div class="lb-row${i === 0 ? ' lb-top' : ''}">
         <div class="lb-rank" style="color:${rankColors[i] || 'rgba(255,255,255,.45)'}">${i + 1}</div>
-        <div class="lb-name">${e.username || '—'} <span class="lb-trust" title="${trustTitle}" style="opacity:.55;font-size:10px;letter-spacing:.04em;">${isOnlineWins ? '' : trustLabel}</span></div>
-        <div class="lb-time">${timeVal}</div>
+        <div class="lb-name">${escapeLb(e.username) || '—'} <span class="lb-trust" title="${trustTitle}" style="opacity:.55;font-size:10px;letter-spacing:.04em;">${isOnlineWins ? '' : trustLabel}</span></div>
+        <div class="lb-time">${timeContent}</div>
         <div class="lb-meta">${meta}${ghostActions}</div>
         <div class="lb-date">${fmtLbDate(e.createdAt)}</div>
       </div>`;
   }).join('');
 
-  html += `<div class="lb-foot">${isOnlineWins ? `Showing top ${entries.length} · cloud + seed file` : `Showing top ${entries.length} · cloud leaderboard${lbMode === 'trial' ? ' · ✓ = verified run · top-10 ghosts are public and may be used as ML examples' : ''}`}</div>`;
+  html += `<div class="lb-foot">${isOnlineWins ? `Showing top ${entries.length} · cloud + seed file` : `Showing top ${entries.length} · cloud leaderboard${lbMode === 'trial' ? ' · ✓ = verified run · click a recorded time to watch its lap · Legacy = before full recordings · verified top-10 laps may be used as ML examples' : ''}`}</div>`;
   content.innerHTML = html;
 
   if(lbMode === 'trial' && typeof CG !== 'undefined' && CG.showBoard) {
@@ -14937,7 +14976,7 @@ function showSetupScreen(trackIdx) {
       const note = document.getElementById('pb-ghost-note');
       if (note) note.textContent = rivalMatches
         ? `Racing #${rival.rank || '?'} ${rival.username} (${fmtTime(rival.lapTime)}). This verified public ghost replaces your PB ghost for this session.`
-        : 'Your personal-best lap replays as a ghost rival. Select a verified top-10 rival from the leaderboard to race their lap.';
+        : 'Your personal-best lap replays as a ghost rival. Select a recorded leaderboard lap to watch its line or race its ghost.';
     }
   }
 

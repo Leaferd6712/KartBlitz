@@ -1338,6 +1338,8 @@ function verifyTrialReplay(track, packedInputs, opts) {
     let activeGhost = [];
     let bestGhost = null;
     let bestGhostLap = Infinity;
+    let lapStartStep = 0;
+    let sampleStride = 4;
     for (let i = 0; i < packedInputs.length; i++) {
         const inp = unpackInputFlags(packedInputs[i]);
         const lapStartBefore = kart.lapStart;
@@ -1358,21 +1360,41 @@ function verifyTrialReplay(track, packedInputs, opts) {
                 bestGhostLap = lapTime;
                 bestGhost = {
                     v: 1,
+                    recordingVersion: 2,
                     trackId: Number(track.id) || 0,
                     lapTime: Math.round(lapTime * 1000) / 1000,
-                    sampleRateHz: 15,
+                    sampleRateHz: 1 / (FIXED_DT * sampleStride),
                     rulesVersion: LEADERBOARD_RULES_VERSION,
                     trackBakeVersion: TRACK_BAKE_VERSION,
                     maxSpeed: Math.round((kart.baseMaxSpeed || kart.maxSpeed || 1) * 1000) / 1000,
                     frames: activeGhost.slice(),
+                    recording: {
+                        inputEncoding: "digital-flags-base64-v1",
+                        inputsBase64: "",
+                        physicsHz: 1 / FIXED_DT,
+                        lapStartStep,
+                        lapEndStep: i + 1,
+                        weather,
+                        tyres,
+                        carConfig: "stock",
+                    },
                 };
             }
             activeGhost = [ghostFrame(kart, 0, packedInputs[i])];
+            lapStartStep = i + 1;
+            sampleStride = 4;
         }
         else if (kart.lapStart !== null) {
-            if (lapStartBefore === null)
+            if (lapStartBefore === null) {
                 activeGhost = [ghostFrame(kart, 0, packedInputs[i])];
-            else if (i % 4 === 0 && activeGhost.length < TRIAL_GHOST_MAX_FRAMES) {
+                lapStartStep = i + 1;
+                sampleStride = 4;
+            }
+            else if (i % sampleStride === 0) {
+                if (activeGhost.length >= TRIAL_GHOST_MAX_FRAMES - 1) {
+                    activeGhost = activeGhost.filter((_, index) => index % 2 === 0);
+                    sampleStride *= 2;
+                }
                 activeGhost.push(ghostFrame(kart, (nowMs - kart.lapStart) / 1000, packedInputs[i]));
             }
         }
@@ -1389,6 +1411,19 @@ function verifyTrialReplay(track, packedInputs, opts) {
     }
     if (bestLap > 3600) {
         return { ok: false, error: "invalid_verified_lap" };
+    }
+    if (bestGhost?.recording) {
+        let binary = "";
+        for (const byte of packedInputs.subarray(0, bestGhost.recording.lapEndStep)) {
+            binary += String.fromCharCode(byte);
+        }
+        bestGhost.recording.inputsBase64 = btoa(binary);
+        bestGhost.trackSnapshot = {
+            id: track.id, trackWidth: track.trackWidth, spline: track.spline,
+            cum: track.cum, totalLen: track.totalLen, startPos: track.startPos,
+            startAngle: track.startAngle, cpLines: track.cpLines,
+            drsZones: track.drsZones, surface: track.surface,
+        };
     }
     return {
         ok: true,
@@ -1435,6 +1470,7 @@ function verifyTrialReplay(track, packedInputs, opts) {
     packInputFlags: packInputFlags,
     unpackInputFlags: unpackInputFlags,
     encodeTrialInputs: encodeTrialInputs,
+    decodeTrialInputsBase64: decodeTrialInputsBase64,
     verifyTrialReplay: verifyTrialReplay,
     minPlausibleLapSec: minPlausibleLapSec
   };

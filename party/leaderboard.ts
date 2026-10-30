@@ -22,6 +22,7 @@ type ScoreRow = {
   rules_version?: number | null;
   verified_run_id?: string | null;
   has_ghost?: number | null;
+  recording_version?: number | null;
 };
 
 export async function ensureLeaderboardSchema(db: D1Database): Promise<void> {
@@ -377,6 +378,7 @@ export async function getLeaderboard(
         rulesVersion?: number | null;
         verifiedRunId?: string | null;
         hasGhost?: boolean;
+        recordingVersion?: number;
         wins?: number;
       }>;
     }
@@ -437,7 +439,10 @@ export async function getLeaderboard(
     .prepare(
       `SELECT username_snapshot, mode, track_id, track_name, best_lap, total, winner, created_at,
               trust_level, rules_version, verified_run_id,
-              EXISTS(SELECT 1 FROM ghost_replays g WHERE g.run_id = scores.verified_run_id) AS has_ghost
+              EXISTS(SELECT 1 FROM ghost_replays g WHERE g.run_id = scores.verified_run_id) AS has_ghost,
+              COALESCE((SELECT CASE WHEN json_valid(g.ghost_json)
+                THEN json_extract(g.ghost_json, '$.recordingVersion') ELSE 0 END
+                FROM ghost_replays g WHERE g.run_id = scores.verified_run_id), 0) AS recording_version
        FROM scores
        WHERE mode = ? AND track_id = ?
        ORDER BY best_lap ASC, updated_at ASC, id ASC
@@ -461,6 +466,7 @@ export async function getLeaderboard(
       rulesVersion: r.rules_version == null ? null : Number(r.rules_version),
       verifiedRunId: r.verified_run_id || null,
       hasGhost: Number(r.has_ghost) === 1,
+      recordingVersion: Number(r.recording_version) || 0,
     })),
   };
 }
@@ -486,7 +492,7 @@ export async function getLeaderboardGhost(
      SELECT s.username_snapshot, s.track_id, s.best_lap, s.trust_level, s.rank, g.ghost_json
      FROM ranked s
      JOIN ghost_replays g ON g.run_id = s.verified_run_id
-     WHERE s.verified_run_id = ? AND s.rank <= 10`
+     WHERE s.verified_run_id = ?`
   ).bind(runId).first<{
     username_snapshot: string;
     track_id: number;

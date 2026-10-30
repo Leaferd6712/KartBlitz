@@ -2,11 +2,19 @@
 
 The root [README directory](../README.md#tools--feature-directory) lists browser launch links and setup guides. Start a local static server with `python -m http.server 8000` from the repository root to use the tools before deployment.
 
+## Public leaderboard replays
+
+Public Time Trial lap recordings open by clicking a recorded lap time on the normal leaderboard. The viewer has the game follow camera, a full-track line map, play/pause, seeking, playback speed, telemetry, JSON download, and Race Ghost. Click the map's recorded line to seek to that moment; arrow keys on the map move one second. Playback does not run a race or award progression.
+
+New server-verified personal bests retain their recordings at every rank. Saving another player's faster lap no longer removes a recording outside the top ten. Each player's superseded best recording is cleaned up when its replacement is stored. Existing times are kept and labeled **Legacy**; complete existing ghosts remain watchable, and missing/incomplete recordings cannot be reconstructed from their lap times.
+
+New recordings include `recordingVersion: 2`, sampled timestamped poses/telemetry (normally 15 Hz, adaptively reduced for very long laps), the verified 60 Hz **digital** input stream including the flying-lap lead-in, lap step boundaries, stock setup, rules/bake versions, and a track-layout snapshot. The JSON download can reproduce the server simulation with a matching physics version. Inputs remain the existing quantized verification controls, not original analogue joystick values. Public playback availability and eligibility as a top-ten ML example are separate. Deploy the updated game and leaderboard Worker together; no database reset or destructive migration is needed.
+
 ## ML Lab
 
 Open `http://localhost:8000/index.html?tool=ml` directly. The lab loads its course, model runtime and trainer tools only for this URL. The former `kartblitz_ml_lab_enabled` preference no longer adds a menu button or Settings toggle.
 
-In **Build**, select a demonstration circuit, press **Load verified laps**, and choose **Use for ML**. Only ghosts from the top ten leaderboard rows are offered; the replay endpoint checks their eligibility again when imported. Recording and demonstration exports stay in this panel. **Train** contains the trainer ZIP and setup commands; **Race** imports/exports models and starts a comparison race. Returning from a race reopens the lab. The lab's Back button opens the normal game.
+In **Build**, select a demonstration circuit, press **Load verified laps**, and choose **Use for ML**. Only ghosts from the top ten leaderboard rows are offered; the lab checks the server-returned ranking again when importing. Recording and demonstration exports stay in this panel. **Train** contains the trainer ZIP and setup commands; **Race** imports/exports models and starts a comparison race. Returning from a race reopens the lab. The lab's Back button opens the normal game.
 
 See [Python training instructions](../ml_training/README.md). The trainer runs separately; a normal game session neither loads the lab nor connects to Python.
 

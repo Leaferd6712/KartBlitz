@@ -119,6 +119,7 @@ ${body}
     packInputFlags: packInputFlags,
     unpackInputFlags: unpackInputFlags,
     encodeTrialInputs: encodeTrialInputs,
+    decodeTrialInputsBase64: decodeTrialInputsBase64,
     verifyTrialReplay: verifyTrialReplay,
     minPlausibleLapSec: minPlausibleLapSec
   };
