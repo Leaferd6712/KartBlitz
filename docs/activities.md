@@ -1,6 +1,6 @@
 # A foundation for future STEM activities
 
-KartBLitz currently ships one activity: racing. There are no reaction-time games, classroom dashboards or experimental scoring modes in this change.
+KartBlitz currently ships one activity: racing. There are no reaction-time games, classroom dashboards or experimental scoring modes in this change.
 
 `core/activity-host.js` provides a small, framework-free boundary for future activities to share the browser and Windows shell without copying the racing engine. `core/shell.js` registers the existing engine through an adapter; it does not rewrite the physics or save format.
 

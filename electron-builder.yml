@@ -1,5 +1,5 @@
 appId: io.github.leaferd6712.kartblitz
-productName: KartBLitz
+productName: KartBlitz
 directories:
   app: desktop
   output: dist/windows
@@ -14,7 +14,7 @@ win:
   target:
     - target: portable
       arch: [x64]
-  artifactName: KartBLitz-${version}-windows-${arch}-portable.${ext}
+  artifactName: KartBlitz-${version}-windows-${arch}-portable.${ext}
 portable:
   requestExecutionLevel: user
 publish: null

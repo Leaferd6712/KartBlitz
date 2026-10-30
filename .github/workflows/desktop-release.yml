@@ -24,13 +24,13 @@ jobs:
       - name: Verify the packaged application
         run: npx playwright test --config desktop/playwright.config.mjs
         env:
-          KARTBLITZ_PACKAGED_EXE: ${{ github.workspace }}\dist\windows\win-unpacked\KartBLitz.exe
+          KARTBLITZ_PACKAGED_EXE: ${{ github.workspace }}\dist\windows\win-unpacked\KartBlitz.exe
           KARTBLITZ_TEST_USER_DATA: ${{ runner.temp }}\kartblitz-packaged-smoke
       - run: node scripts/release-checksums.mjs
       - run: npm run test:portable
       - uses: actions/upload-artifact@v4
         with:
-          name: KartBLitz-Windows-portable
+          name: KartBlitz-Windows-portable
           path: |
             dist/windows/*-portable.exe
             dist/windows/SHA256SUMS.txt
@@ -43,10 +43,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: KartBLitz-Windows-portable
+          name: KartBlitz-Windows-portable
           path: release-assets
       - name: Prepare a draft for verification before publishing
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --generate-notes --title "KartBLitz $GITHUB_REF_NAME" release-assets/*
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --generate-notes --title "KartBlitz $GITHUB_REF_NAME" release-assets/*

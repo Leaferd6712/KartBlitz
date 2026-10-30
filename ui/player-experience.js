@@ -28,7 +28,7 @@
     if (id !== 'setup') $('setup-advanced')?.removeAttribute('open');
     if (id === 'garage') {
       const coins = getPlayerData().coins || 0;
-      $('garage-first-goal').textContent = coins >= 160 ? 'Your first power upgrade is ready: High-Flow Intake · 160 coins.' : `Paint is free. Race to earn coins — ${160 - coins} more unlocks High-Flow Intake for stronger acceleration.`;
+      $('garage-first-goal').textContent = 'White is yours. Other colours cost 100 coins once — then use them on any part, for either player.';
     }
     if (id !== 'menu') $('menu-tools')?.removeAttribute('open');
     const screen = $('screen-' + id);

@@ -3,7 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const { resolveAsset } = require('./asset-policy.cjs');
 const gameRoot = path.join(__dirname,'game');
-app.setName('KartBLitz');
+app.setName('KartBlitz');
 protocol.registerSchemesAsPrivileged([{scheme:'kbapp',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const externalHosts = new Set(['github.com','leaferd6712.github.io']);
 function openExternal(url) { try { const parsed=new URL(url); if(parsed.protocol==='https:' && externalHosts.has(parsed.hostname)) return shell.openExternal(parsed.href); } catch {} }

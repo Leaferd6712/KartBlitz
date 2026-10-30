@@ -38,7 +38,6 @@ async function installDeterministicRoutes(page) {
   await page.route('https://sdk.crazygames.com/**', (route) => route.abort());
   await page.route('https://fonts.googleapis.com/**', (route) => route.abort());
   await page.route('https://fonts.gstatic.com/**', (route) => route.abort());
-  await page.route('**/rb6.glb', (route) => route.abort());
   await page.route('**/api/**', async (route) => {
     const url = route.request().url();
     if (url.includes('/api/device-status')) {

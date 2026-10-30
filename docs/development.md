@@ -1,4 +1,4 @@
-# Developing KartBLitz
+# Developing KartBlitz
 
 The player entry point is `index.html`. Keep the browser game usable without the desktop wrapper or an online service.
 

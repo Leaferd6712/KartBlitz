@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="320" viewBox="0 0 800 320" role="img" aria-label="Mint KartBLitz race car">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="320" viewBox="0 0 800 320" role="img" aria-label="White KartBlitz race car">
   <ellipse cx="400" cy="253" rx="250" ry="36" fill="#19172b"/>
   <g transform="translate(400 160) rotate(-12)" stroke="#21203a" stroke-width="7" stroke-linejoin="round">
     <rect x="-137" y="-78" width="57" height="64" rx="14" fill="#242537"/><rect x="80" y="-78" width="57" height="64" rx="14" fill="#242537"/>
     <rect x="-137" y="35" width="57" height="64" rx="14" fill="#242537"/><rect x="80" y="35" width="57" height="64" rx="14" fill="#242537"/>
-    <path d="M-94-45H94v27H-94z" fill="#b592e0"/><path d="M-100 66H100v30H-100z" fill="#ffcf63"/>
-    <path d="M-45-90 45-90 68 38 34 76H-34L-68 38z" fill="#78dfcd"/><path d="M-16-100H16L31 25H-31z" fill="#c5ffea"/>
-    <ellipse cx="0" cy="12" rx="26" ry="35" fill="#30283f"/><path d="M-27-1Q0-28 27-1" fill="none" stroke="#ffdc72"/>
+    <path d="M-94-45H94v27H-94z" fill="#FFFFFF"/><path d="M-100 66H100v30H-100z" fill="#FFFFFF"/>
+    <path d="M-45-90 45-90 68 38 34 76H-34L-68 38z" fill="#FFFFFF"/><path d="M-16-100H16L31 25H-31z" fill="#FFFFFF"/>
+    <ellipse cx="0" cy="12" rx="26" ry="35" fill="#30283f"/><path d="M-27-1Q0-28 27-1" fill="none" stroke="#FFFFFF"/>
   </g>
 </svg>

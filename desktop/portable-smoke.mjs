@@ -7,7 +7,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 const root=process.cwd();
 const version=JSON.parse(await (await import('node:fs/promises')).readFile('desktop/package.json','utf8')).version;
-const executable=path.join(root,`dist/windows/KartBLitz-${version}-windows-x64-portable.exe`);
+const executable=path.join(root,`dist/windows/KartBlitz-${version}-windows-x64-portable.exe`);
 const userData=path.join(root,'dist',`portable-smoke-${Date.now()}`);await mkdir(userData,{recursive:true});
 const socket=createServer();await new Promise(resolve=>socket.listen(0,'127.0.0.1',resolve));const port=socket.address().port;await new Promise(resolve=>socket.close(resolve));
 const processHandle=spawn(executable,['--smoke-test',`--user-data-dir=${userData}`,`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{windowsHide:true,stdio:'ignore'});

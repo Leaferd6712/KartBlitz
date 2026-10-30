@@ -22,12 +22,12 @@ node scripts/release-checksums.mjs
 npm run test:portable
 ```
 
-Output: `dist/windows/KartBLitz-1.0.0-windows-x64-portable.exe` and `SHA256SUMS.txt`. The portable launcher extracts its bundled runtime to a temporary directory at launch; it does not install the game or need administrator rights. Saves use Electron's normal per-user application data folder, rather than the executable's directory. “Portable” describes deployment, not saves carried on a USB drive.
+Output: `dist/windows/KartBlitz-1.0.0-windows-x64-portable.exe` and `SHA256SUMS.txt`. The portable launcher extracts its bundled runtime to a temporary directory at launch; it does not install the game or need administrator rights. Saves use Electron's normal per-user application data folder, rather than the executable's directory. “Portable” describes deployment, not saves carried on a USB drive.
 
 To smoke-test the actual packaged application:
 
 ```powershell
-$env:KARTBLITZ_PACKAGED_EXE = "$PWD\dist\windows\win-unpacked\KartBLitz.exe"
+$env:KARTBLITZ_PACKAGED_EXE = "$PWD\dist\windows\win-unpacked\KartBlitz.exe"
 $env:KARTBLITZ_TEST_USER_DATA = "$env:TEMP\kartblitz-packaged-smoke"
 npx playwright test --config desktop/playwright.config.mjs
 ```

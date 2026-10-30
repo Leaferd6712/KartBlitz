@@ -74,6 +74,7 @@ export function progressAxes(data) {
   }
   return {
     coins: Number(d.coins) || 0,
+    paints: Array.isArray(d.ownedPaints) ? new Set(d.ownedPaints).size : 0,
     gems: Number(d.gems) || 0,
     unlocks,
     upgrades: sumUpg(d.p1upg) + sumUpg(d.p2upg),
@@ -92,7 +93,8 @@ export function progressScore(data) {
 
 export function progressFingerprint(data) {
   const a = progressAxes(data);
-  return `${a.coins}|${a.gems}|${a.unlocks}|${a.upgrades}|${a.development}|${a.programme}|${a.medals || 0}|${a.rnd}`;
+  const d = data || {};
+  return `${a.coins}|${a.gems}|${a.unlocks}|${a.upgrades}|${a.development}|${a.programme}|${a.medals || 0}|${a.rnd}|${[...(Array.isArray(d.ownedPaints)?d.ownedPaints:[])].sort().join(',')}|${JSON.stringify([d.p1livery,d.p2livery])}`;
 }
 
 export function axesDivergent(a, b) {
