@@ -1,6 +1,6 @@
 # Deploying KartBlitz
 
-KartBlitz is a browser racer. The game files can live on **Netlify**. Online multiplayer uses a **Cloudflare Worker**. An optional **shared leaderboard** can run on your laptop via Python + Cloudflare Tunnel.
+KartBLitz's primary browser build lives at [GitHub Pages](https://leaferd6712.github.io/KartBlitz/). Online multiplayer and cloud leaderboards use a Cloudflare Worker. Desktop packaging is separate; see [Windows builds](docs/desktop.md).
 
 ## Online architecture (for sharing)
 
@@ -8,33 +8,21 @@ Open [docs/online-mode.html](docs/online-mode.html) in a browser. That is the fu
 
 ---
 
-## Required game files (Netlify)
+## Static game runtime
 
-| File | Role |
-|------|------|
-| `KartBlitz.html` | The game |
-| `leaderboard-admin.html` | Password-protected admin station for leaderboards, tracks, and patch notes |
-| `online.js` | Online lobby / netcode client |
-| `online-codec.js` | Binary snapshot/input codec |
-| `online-sim.js` | Shared physics (same as Worker `sim/`) for local prediction |
-| `rb6.glb` | Menu/garage 3D cover car |
+Run `npm ci --legacy-peer-deps`, then `npm run build:web` and `npm run test:runtime`. Deploy the complete generated `public/` directory. The explicit asset list in `scripts/prepare-game.mjs` includes `index.html`, online client bundles, shared modules, local renderer/fonts and UI assets. No font or Three.js CDN is required. `rb6.glb` is no longer a runtime dependency.
 
-Upload **all five** into the **same folder** on Netlify (rename HTML to `index.html` if your site expects that).
-
-**Always ship Netlify assets and the Worker together** after online changes. Mismatched `ONLINE_PROTOCOL` (currently **3**) or `TRACK_BAKE_VERSION` (**2**) causes a hard disconnect / bake error.
+**Ship browser assets and the Worker together** after online changes. Mismatched `ONLINE_PROTOCOL` or `TRACK_BAKE_VERSION` causes a hard disconnect / bake error; read their current values from the shared source before deploying.
 
 Online races are **server-authoritative**: the Cloudflare Durable Object runs the shared `sim/` at 60 Hz and broadcasts 30 Hz binary snapshots (including `lastProcessedInput` for client replay). Lobby “host” only controls settings / start — not simulation. Tracks are **canonical on the Worker** (`sim/tracks/bakes.json`); clients send `trackId` + protocol only.
 
 ---
 
-## A. Netlify (static game)
+## A. GitHub Pages (static game)
 
-1. Close old terminals you do not need.
-2. Rebuild browser sim if you changed `sim/`: `npm run sim:browser` (also runs via `preparty:deploy`).
-3. Upload/replace `KartBlitz.html`, `online.js`, `online-codec.js`, `online-sim.js`, `rb6.glb`.
-4. Open your Netlify URL over `https://`.
-5. Online Lobby needs **no server IP** — the Worker host is baked into `online.js` as `kartblitz-online.kartblitz.workers.dev`.
-6. After Worker / sim changes, also run `npx wrangler deploy` (section B).
+`.github/workflows/deploy.yml` builds and verifies `public/`, uploads it as the Pages artifact and deploys on pushes to `main` or manual dispatch. Assets use relative paths so they work under `/KartBlitz/`. The workflow does not publish the Windows executable or change the Worker.
+
+For another static host, upload the same complete `public/` directory and serve `index.html` over HTTPS. After shared simulation changes, regenerate the browser simulator and deploy the Worker with `npm run deploy:online` (section B). Online Lobby's default Worker host remains `kartblitz-online.kartblitz.workers.dev`.
 
 ---
 
@@ -70,7 +58,7 @@ npx wrangler d1 execute kartblitz-leaderboard --remote --file d1/leaderboard-sch
 
 The Worker also creates the tables lazily on first leaderboard request, so the SQL file is mainly for explicit setup / inspection.
 
-On first Time Trial lap, the game prompts once for a username per device. After that, every completed lap auto-saves to the cloud leaderboard.
+Local Time Trial works as a guest. Players can register a username from the leaderboard when they want cloud records. Registered devices submit eligible completed laps through the existing run-verification flow.
 
 ### Admin station
 
@@ -81,12 +69,12 @@ Edit leaderboard data and open the track and patch-notes editors from one passwo
    npx wrangler secret put LEADERBOARD_ADMIN_PASSWORD
    ```
 2. Deploy the Worker: `npm run deploy:online`
-3. Upload `leaderboard-admin.html` alongside the game on Netlify (same folder as `index.html`)
+3. Include `leaderboard-admin.html` alongside the game (the web build already does this)
 4. Open `https://YOUR-SITE/leaderboard-admin.html` and log in
 
 Local `wrangler dev` uses a password from `.dev.vars` (copy from `.dev.vars.example`). Production uses only `wrangler secret` — do **not** put the admin password in `wrangler.jsonc` `vars` or deploy will overwrite your remote secret.
 
-The game menu's **Admin** button opens this station. Anyone with the password can use its editor tools and edit leaderboard rows, including real players.
+The game menu's **More options → Admin** action opens this station. Anyone with the password can use its editor tools and edit leaderboard rows, including real players.
 
 Cloud scores are also snapshotted to [`backups/leaderboard.txt`](backups/leaderboard.txt) automatically every 6 hours (GitHub Action). Download a live dump from `/api/leaderboard-backup.txt`, or run `npm run backup:leaderboard` locally. For a full D1 restore file (includes device tokens, keep private): `npx wrangler d1 export kartblitz-leaderboard --remote --output backups/leaderboard-full.sql`.
 

@@ -1,0 +1,10 @@
+import { readdir,readFile,writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import path from 'node:path';
+const directory=path.resolve('dist/windows');
+const files=(await readdir(directory)).filter(file=>file.endsWith('-portable.exe')).sort();
+if(!files.length)throw new Error('No portable executable was built');
+const sums=[];
+for(const file of files)sums.push(`${createHash('sha256').update(await readFile(path.join(directory,file))).digest('hex')}  ${file}`);
+await writeFile(path.join(directory,'SHA256SUMS.txt'),sums.join('\n')+'\n');
+console.log(sums.join('\n'));

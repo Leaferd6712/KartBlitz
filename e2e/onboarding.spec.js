@@ -1,21 +1,21 @@
 import { test, expect, gotoGame, dismissOnboarding, waitForMenu } from './fixtures/game.js';
 
 test.describe('Onboarding', () => {
-  test('clean first launch shows patch notes before device selection', async ({ page }) => {
+  test('clean first launch welcomes players with optional control choice', async ({ page }) => {
     await gotoGame(page);
 
-    await expect(page.locator('#patch-notes-overlay')).toHaveClass(/open/);
+    await expect(page.locator('#welcome-dialog')).toBeVisible();
+    await expect(page.locator('#patch-notes-overlay')).toBeHidden();
     await expect(page.locator('#device-prompt')).toBeHidden();
-    await expect(page.getByRole('button', { name: 'GOT IT' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'LET’S GO' })).toBeVisible();
   });
 
-  test('GOT IT then device choice completes onboarding onto the main menu', async ({ page }) => {
+  test('welcome completes directly onto the main menu and persists', async ({ page }) => {
     await gotoGame(page);
-    await page.getByRole('button', { name: 'GOT IT' }).click();
+    await page.getByRole('button', { name: 'LET’S GO' }).click();
 
     await expect(page.locator('#patch-notes-overlay.open')).toHaveCount(0);
-    await expect(page.locator('#device-prompt')).toBeVisible();
-    await page.getByRole('button', { name: 'KEYBOARD ONLY' }).click();
+    await expect(page.locator('#welcome-dialog')).toBeHidden();
 
     await expect(page.locator('#device-prompt')).toBeHidden();
     await waitForMenu(page);

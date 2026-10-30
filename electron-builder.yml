@@ -1,0 +1,20 @@
+appId: io.github.leaferd6712.kartblitz
+productName: KartBLitz
+directories:
+  app: desktop
+  output: dist/windows
+asar: true
+files:
+  - main.cjs
+  - asset-policy.cjs
+  - package.json
+  - game/**/*
+win:
+  icon: ui/app-icon.ico
+  target:
+    - target: portable
+      arch: [x64]
+  artifactName: KartBLitz-${version}-windows-${arch}-portable.${ext}
+portable:
+  requestExecutionLevel: user
+publish: null

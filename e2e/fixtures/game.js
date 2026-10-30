@@ -1,9 +1,13 @@
 import { test as base, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 export { expect };
 
 const PATCH_VERSION_LS_KEY = 'kartblitz_last_patch_version';
-const CURRENT_PATCH_VERSION = '2025-08-20';
+// Seed returning players against the game's actual version so a new patch
+// does not unexpectedly leave onboarding in front of unrelated test flows.
+const CURRENT_PATCH_VERSION = readFileSync(new URL('../../index.html', import.meta.url), 'utf8')
+  .match(/const CURRENT_PATCH_VERSION = '([^']+)'/)[1];
 
 function crazyGamesStub() {
   window.CrazyGames = {
@@ -112,6 +116,8 @@ export async function gotoGame(page, opts = {}) {
 }
 
 export async function dismissOnboarding(page) {
+  const welcome = page.locator('#welcome-dialog');
+  if (await welcome.isVisible().catch(() => false)) await page.getByRole('button', { name: 'LET’S GO', exact: true }).click();
   const patch = page.locator('#patch-notes-overlay.open');
   if (await patch.isVisible().catch(() => false)) {
     await page.getByRole('button', { name: 'GOT IT' }).click();
@@ -126,7 +132,7 @@ export async function dismissOnboarding(page) {
 
 export async function waitForMenu(page) {
   await expect(page.locator('#screen-menu')).toBeVisible();
-  await expect(page.getByRole('button', { name: /TIME TRIAL/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /QUICK RACE/ })).toBeVisible();
 }
 
 export async function pickFirstTrack(page) {
