@@ -1,6 +1,8 @@
 import { mkdir, cp, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildOfficialCore } from './build-official-core.mjs';
+buildOfficialCore();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(root, process.argv[2] || 'dist/game');
 const outputs = new Set(['dist/game','desktop/game','public'].map(relative=>path.resolve(root,relative)));
@@ -9,7 +11,7 @@ if (!outputs.has(output)) throw new Error('Output must be one of the designated 
 await rm(output,{recursive:true,force:true});
 await mkdir(output, { recursive: true });
 const files = ['index.html','rb6.glb','ui/customisation.bundle.js','online.js','online-codec.js','online-sim.js','LICENSE','core/game-manifest.json','core/activity-host.js','core/shell.js',
-  'ui/tool-entry.js','ui/lap-replay.js','ui/lap-archive.js','sim/tracks/bakes.json'];
+  'ui/tool-entry.js','ui/lap-replay.js','ui/lap-archive.js','ui/official-ml.js','sim/tracks/bakes.json'];
 for(const entry of await readdir(path.join(root,'sim'))) if(entry.endsWith('.mjs')) files.push(`sim/${entry}`);
 for(const entry of await readdir(path.join(root,'ui'))) if(/\.(css|svg|txt)$/.test(entry) || ['app-icon.png','player-experience.js','platform.js','car-preview.bundle.js'].includes(entry)) files.push(`ui/${entry}`);
 for(const entry of await readdir(path.join(root,'ui/fonts'))) files.push(`ui/fonts/${entry}`);

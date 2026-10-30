@@ -3,9 +3,19 @@
   'use strict';
   const params = new URLSearchParams(location.search);
   const ml = params.get('tool') === 'ml';
+  const official = params.get('tool') === 'official-ml';
   const track = params.get('admin') === 'track';
   const debug = params.get('debug') === '1' || params.get('netDebug') === '1';
-  window.KartBlitzTools = Object.freeze({ ml, track, debug });
+  window.KartBlitzTools = Object.freeze({ ml, official, track, debug });
+
+  if (official) {
+    document.title = 'Official ML for AI · KartBlitz';
+    const css = document.createElement('link'); css.rel='stylesheet'; css.href='ui/official-ml.css'; document.head.appendChild(css);
+    document.addEventListener('DOMContentLoaded', () => {
+      const script=document.createElement('script'); script.type='module'; script.src='ui/official-ml.js'; document.body.appendChild(script);
+    }, {once:true});
+    return;
+  }
 
   if (!ml) return;
   document.title = 'KartBlitz ML Lab';

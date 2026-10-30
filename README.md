@@ -63,6 +63,8 @@ Open these tools directly from here. The player menus contain racing, garage, le
 
 ### ML Lab & training
 
+- **[Official ML for AI](https://leaferd6712.github.io/KartBlitz/index.html?tool=official-ml)** — password `KartBlitzPass`; actual-game local RL, live batch/game camera, saved attempt overlays, per-track difficulty packages. **[Start here](docs/official-ml.md)** · [five-project research](docs/official-ml-research.md). Run `npm run official:start` locally after setup.
+
 - **[Open ML Lab](https://leaferd6712.github.io/KartBlitz/index.html?tool=ml)** — lessons, reward experiments, training configuration, checkpoint replays, model import/export and model races. No menu opt-in is needed. Leaving a lab race returns to the lab; Back opens the normal game.
 - **Verified leaderboard examples** — in ML Lab → Build, choose a demonstration circuit and **Load verified laps**, then **Use for ML**. Record your own clean lap and export demonstrations from the same panel. Normal leaderboards retain **Race Ghost**.
 - **[Python trainer and setup](ml_training/README.md)** · [downloadable setup guide](ml_training/KartBlitz-ML-Setup.txt) — install/start commands, pairing, command-line training and model validation. The trainer ZIP is available inside ML Lab → Train.

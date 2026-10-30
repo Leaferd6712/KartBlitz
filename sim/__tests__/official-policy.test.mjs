@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {forward,validatePackage,PHYSICS_HASH,observe,actionToInput,OBSERVATION_NAMES} from '../official-policy.mjs';
+const policy={layers:[{kernel:Array.from({length:5},(_,r)=>Array.from({length:48},(_,c)=>r===c?1:0)),bias:[0,0,0,0,0]}]};
+const pack={format:'kartblitz-official-track-v1',trackId:0,trackFingerprint:'test',physicsHash:PHYSICS_HASH,observationVersion:1,observationCount:48,variants:{extreme:{policy}}};
+assert.equal(validatePackage(pack),true);assert.throws(()=>validatePackage({...pack,variants:{}}));assert.throws(()=>validatePackage({...pack,physicsHash:'stale'}));
+assert.deepEqual(forward(policy,[2,-2,.3,.4,.5,...Array(43).fill(0)]),[1,-1,.3,.4,.5]);
+const tr={spline:Array.from({length:100},(_,i)=>({x:i*10,y:0})),cum:Array.from({length:100},(_,i)=>i*10),totalLen:1000,trackWidth:200};
+const kart={id:1,x:500,y:0,angle:0,speed:100,grip:1,maxSpeed:500,accel:200,brakeForce:700,turnRate:3,tyreWear:0,tyreTemp:80,ersCharge:1};
+const state={},opponents=[{id:2,x:400,y:0,angle:0,speed:110}];
+const o=observe(kart,tr,state,{mode:'ai',opponents});assert.equal(o.length,OBSERVATION_NAMES.length);assert(o.every(Number.isFinite));
+actionToInput([0,1,-1,-1,-1],kart,tr,state,{mode:'ai',opponents});kart.y=40;
+actionToInput([0,1,-1,-1,-1],kart,tr,state,{mode:'ai',opponents});assert(state.defense.used);opponents[0].id=3;kart.y=-40;
+actionToInput([0,1,-1,-1,-1],kart,tr,state,{mode:'ai',opponents});assert(state.defense.used);assert(state.defensiveCorrections>0);
+for(let i=0;i<42;i++)actionToInput([0,1,-1,-1,-1],kart,tr,state,{mode:'ai',opponents:[]});assert.equal(state.defense,null);
+console.log('Official package, actor, observations and defensive encounter checks passed.');

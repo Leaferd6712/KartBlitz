@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#30253f">
 <link rel="icon" type="image/svg+xml" href="ui/app-icon.svg">
 <script src="ui/tool-entry.js"></script>
+<script>window.unlockOfficialML = value => value === 'KartBlitzPass';</script>
 <link rel="stylesheet" href="ui/lap-replay.css">
 <script type="module" src="ui/lap-replay.js"></script>
 <script type="module" src="ui/lap-archive.js"></script>
@@ -26,6 +27,9 @@ import * as KartBlitzProgramme from './sim/upgrade-programme.mjs';
 import * as KartBlitzMastery from './sim/track-mastery.mjs';
 import * as KartBlitzGhost from './sim/pb-ghost.mjs';
 import * as KartBlitzSpeedFeel from './sim/speed-feel.mjs';
+import * as KartBlitzOfficial from './sim/official-policy.mjs';
+window.KartBlitzOfficial = KartBlitzOfficial;
+window.KartBlitzOfficialReady = KartBlitzOfficial.loadPackages().catch(console.warn);
 window.KartBlitzRewards = KartBlitzRewards;
 window.KartBlitzRnD = KartBlitzRnD;
 window.KartBlitzSave = KartBlitzSave;
@@ -2026,6 +2030,8 @@ body::after{
   <button class="back-btn" onclick="document.getElementById('shootout-difficulty').style.display='none'">← BACK</button>
   <div class="section-title" style="margin-bottom:4px;"> ONE LAP SHOOTOUT</div>
   <div class="diff-label">SELECT AI DIFFICULTY</div>
+  <label>AI driver <select class="official-driver-choice" aria-label="Shootout AI driver"><option value="current">Current AI</option><option value="trained">Trained AI (installed track weights)</option></select></label>
+  <small class="official-driver-status"></small>
   <div class="diff-pills" id="shootout-diff-pills" role="group" aria-label="Shootout AI difficulty">
     <button type="button" class="diff-pill ultraeasy" onclick="selectShootoutDiff('ultraeasy')">ULTRA EASY</button>
     <button type="button" class="diff-pill easy" onclick="selectShootoutDiff('easy')">EASY</button>
@@ -2042,6 +2048,8 @@ body::after{
   <button class="back-btn" onclick="document.getElementById('ai-difficulty').style.display='none'">← BACK</button>
   <div class="section-title" style="margin-bottom:4px;"> AI RACE</div>
   <div class="diff-label">SELECT DIFFICULTY</div>
+  <label>AI driver <select class="official-driver-choice" aria-label="Race AI driver"><option value="current">Current AI</option><option value="trained">Trained AI (installed track weights)</option></select></label>
+  <small class="official-driver-status"></small>
   <div class="diff-pills" id="ai-diff-pills" role="group" aria-label="AI race difficulty">
     <button type="button" class="diff-pill ultraeasy" onclick="selectAIDiff('ultraeasy')">ULTRA EASY</button>
     <button type="button" class="diff-pill easy" onclick="selectAIDiff('easy')">EASY</button>
@@ -2921,6 +2929,7 @@ function showScreen(id) {
   if (_ftueEl && canvas.style.display !== 'block') _ftueEl.style.display = 'none';
   // Lab races share the engine; leaving a race returns to this tool session.
   if (id === 'menu' && window.KartBlitzTools?.ml && window.KartBlitzMLLab) window.KartBlitzMLLab.open();
+  if (id === 'menu' && window.KartBlitzTools?.official && document.getElementById('official-ml')) showScreen('official-ml');
 }
 // Bump this when shipping new patch-note content (patch-notes-editor updates it on save).
 const CURRENT_PATCH_VERSION = '2026-10-30';
@@ -3001,7 +3010,7 @@ function startOnboardingFlow() {
   const firstVisit = needsDevicePrompt() && !safeLocalGet('kartblitz_welcome_v1');
   const savedDevice = safeLocalGet('kartblitz_devicemode');
   setDeviceMode(savedDevice === 'touch' || (savedDevice !== 'keyboard' && (navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches)));
-  if (window.KartBlitzTools?.ml || window.KartBlitzTools?.track) { _onboardingStep = 'done'; return; }
+  if (window.KartBlitzTools?.ml || window.KartBlitzTools?.official || window.KartBlitzTools?.track) { _onboardingStep = 'done'; return; }
   if(firstVisit && window.KartBlitzExperience) { _onboardingStep = 'welcome'; window.KartBlitzExperience.welcome(); return; }
   _onboardingStep = 'done';
 }
@@ -4701,6 +4710,15 @@ class Kart {
   }
 
   update(dt, trackData, otherKarts) {
+    if(this._officialML && !this._officialStepping) {
+      this._officialAccumulator = (this._officialAccumulator || 0) + Math.min(.2, Math.max(0,dt));
+      this._officialStepping = true;
+      try { while(this._officialAccumulator >= 1/60-1e-9) {
+        this._officialAccumulator -= 1/60;
+        this.update(1/60, trackData, otherKarts);
+      } } finally { this._officialStepping = false; }
+      return;
+    }
     if(this.finished) return;
     if(this._pitTooFarTimer > 0) this._pitTooFarTimer -= dt;
 
@@ -4756,7 +4774,7 @@ class Kart {
       }
     }
 
-    let inp = this.getInput();
+    let inp = this.getInput(dt);
     // Pit routing overrides normal AI/player racing input so they stay on the pit path.
     // Exit steering only while actually exiting — _pitExitPos is also pre-armed on entry.
     if(!this.inPit && this.pitPhase === null && this._pitExiting && this._pitExitPos) {
@@ -4837,6 +4855,8 @@ class Kart {
         const dist = Math.hypot(dx, dy);
         if(dist < KART_R * 2 && dist > 0.1) {
           contactHits++;
+          if(this._officialML)this._officialContactCount=(this._officialContactCount||0)+1;
+          if(other._officialML)other._officialContactCount=(other._officialContactCount||0)+1;
           // Contact line rule: when cars touch, force AI cars onto opposite lane targets briefly.
           const localLat = -Math.sin(this.angle) * dx + Math.cos(this.angle) * dy;
           const sepSignThis = localLat >= 0 ? 1 : -1;
@@ -4876,8 +4896,8 @@ class Kart {
         }
       }
 
-      // Anti-pileup nudge for AI karts that stay in repeated low-speed contacts.
-      if(this.isAI) {
+      // Legacy anti-pileup assistance; learned drivers must recover through controls.
+      if(this.isAI && !this._officialML) {
         if(contactHits > 0 && Math.abs(this.speed) < 96) this._contactJamTimer += dt;
         else this._contactJamTimer = Math.max(0, this._contactJamTimer - dt * 2.2);
         if(this._contactJamTimer > 0.45 && trackData && trackData.spline) {
@@ -4891,7 +4911,7 @@ class Kart {
     }
 
     // ── ERS (Energy Recovery System) ───────────────────
-    const bp = this.id === 0 ? BINDINGS.p1 : BINDINGS.p2;
+    const bp = this._officialML ? {ersMode:'hold',drsMode:'hold'} : (this.id === 0 ? BINDINGS.p1 : BINDINGS.p2);
     if(bp.ersMode === 'toggle') {
       const ersEdge = inp.ers && !this._ersPrevKey;
       if(ersEdge) this._ersToggled = !this._ersToggled;
@@ -4971,7 +4991,7 @@ class Kart {
       else this.speed -= acc * 0.5 * dt;
       if(this.speed > 0) this.speed -= this.brakeForce * (brakeMul - 1) * brakeInput * dt;
       // AI: limit sudden speed dumps so they do not collapse mid-corner for no reason.
-      if(this.isAI && speedBeforeBrake > 0) {
+      if(this.isAI && !this._officialML && speedBeforeBrake > 0) {
         const maxDecel = 150 + Math.min(120, (brakeMul - 1) * 95); // units/sec
         const floorSpd = speedBeforeBrake - maxDecel * dt;
         if(this.speed < floorSpd) this.speed = floorSpd;
@@ -4990,7 +5010,7 @@ class Kart {
 
     // Soft ceiling: when above current limit (ERS fade / DRS exit), bleed momentum
     // instead of an instant hard cut back to normal engine power.
-    if(this.isAI) {
+    if(this.isAI && !this._officialML) {
       if(this.speed > spdLimit) {
         const over = this.speed - spdLimit;
         this.speed -= Math.min(over, Math.max(over * 2.4 * dt, 12 * dt));
@@ -5325,7 +5345,7 @@ class Kart {
     this.checkCheckpoints(trackData);
     updateEngine(this.id, this.speed, this.maxSpeed, throttleInput > 0.12, brakeInput > 0.10);
     // Always correct AI orientation — prevents wrong-facing angle from cascading
-    if (this.isAI) fixAIKartOrientation(this, trackData);
+    if (this.isAI && !this._officialML) fixAIKartOrientation(this, trackData);
   }
 
   // Follow the densified pit-lane centreline. Look-ahead is in world units along the path
@@ -7016,6 +7036,42 @@ function fixAIKartOrientation(k, td) {
   }
 }
 
+function makeRaceAIInput(track, difficulty, aiIndex, mode) {
+  const official=window.KartBlitzOfficial;
+  const pack=official?.packages.get(track.id);
+  const wanted=localStorage.getItem('kartblitz_official_driver')==='trained';
+  if(wanted && (mode==='ai'||mode==='shootout') && pack?.variants[difficulty] && pack.trackFingerprint===official.trackFingerprint(track)) {
+    const learned=official.makeController(track,pack,difficulty,{mode,getOpponents:()=>race?.karts||[]});
+    let kart=null,lastPitLap=0;
+    return {set(k){kart=k;learned.set(k);},fn(dt){
+      if(mode==='ai' && kart && !['qualifying','quali-turn'].includes(race?.phase)) {
+        const strategy=getAiPitStrategyId(aiIndex,difficulty,kart.totalLaps||3);
+        kart.aiPitPlan=strategy;
+        const call=getPitCallStatus(kart,kart.totalLaps||3,strategy,window._raceWeather||'dry');
+        const entry=track.pitLane?.entryPt;
+        if(call && call.level!=='window' && kart.lap>lastPitLap && entry && Math.hypot(kart.x-entry.x,kart.y-entry.y)<1100 && !kart.inPit && kart.pitPhase===null && !kart._pitExiting && (kart._pitCooldown||0)<=0) {
+          kart._pitIntentActive=true;kart._pitEntryConfirmed=false;lastPitLap=kart.lap;
+        }
+      }
+      return learned.fn(dt);
+    }};
+  }
+  const fallback=makeAIInput(track,difficulty,aiIndex,{mode});
+  if(wanted) { const set=fallback.set;fallback.set=k=>{set(k);k.mlFallbackReason='No installed weights for this track and difficulty; current AI used';}; }
+  return fallback;
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const choices=[...document.querySelectorAll('.official-driver-choice')];
+  const refresh=()=>{
+    const value=localStorage.getItem('kartblitz_official_driver')||'current';
+    for(const el of choices)el.value=value;
+    const count=window.KartBlitzOfficial?.packages.size||0;
+    for(const el of document.querySelectorAll('.official-driver-status'))el.textContent=`${count} track packages installed. Missing track/difficulty uses current AI.`;
+  };
+  for(const el of choices)el.addEventListener('change',()=>{localStorage.setItem('kartblitz_official_driver',el.value);refresh();});
+  refresh();window.KartBlitzOfficialReady?.then(refresh);window.addEventListener('official-model-installed',refresh);
+});
+
 function makeAIInput(track, difficulty, aiIndex, opts) {
   aiIndex = aiIndex || 0; // 0, 1, 2 for the three AI cars
   opts = opts || {};
@@ -8410,11 +8466,12 @@ class Race {
         const usePlayerML = useLabDriver && mlRace.modelType === 'player' && window.KartBlitzMLRuntime;
         const ctrl = usePlayerML
           ? window.KartBlitzMLRuntime.makeController(trackData, mlRace.model)
-          : makeAIInput(trackData, this.aiDifficulty, ai);
+          : mlRace ? makeAIInput(trackData, this.aiDifficulty, ai)
+          : makeRaceAIInput(trackData, this.aiDifficulty, ai, 'ai');
         const aiKart = new Kart(ai+1, sp.x - (ai+1)*30, sp.y + (ai+1)*18, ang,
           aiColors[ai % aiColors.length].body, aiColors[ai % aiColors.length].shadow, ctrl.fn);
         aiKart.isAI = true;
-        aiKart._mlDriver = !!usePlayerML;
+        aiKart._mlDriver = !!usePlayerML || !!aiKart._officialML;
         aiKart._mlLabDriver = !!useLabDriver;
         ctrl.set(aiKart);
         if(useLabDriver && !usePlayerML) aiKart.mlModelName = 'KartBlitz Pre-Tuned Driver';
@@ -8427,7 +8484,7 @@ class Race {
       this.karts[0].livery = p1Liv;
       applyUpgradesToKart(this.karts[0], 'p1');
 
-      const ctrl = makeAIInput(trackData, this.aiDifficulty, 0, { mode: 'shootout' });
+      const ctrl = makeRaceAIInput(trackData, this.aiDifficulty, 0, 'shootout');
       const aiKart = new Kart(1, sp.x-30, sp.y+24, ang, '#ff6b35', '#8f2f00', ctrl.fn);
       aiKart.isAI = true;
       ctrl.set(aiKart);
@@ -11587,7 +11644,7 @@ function getRaceCount() { try { return parseInt(localStorage.getItem('kartblitz_
 function incRaceCount() { try { localStorage.setItem('kartblitz_racecount', String(getRaceCount() + 1)); } catch(e) {} }
 
 function selectTrackStart(idx, context) {
-  return waitForSaveSyncReady().then(() => {
+  return Promise.all([waitForSaveSyncReady(), window.KartBlitzOfficialReady]).then(() => {
     if(context?.signal?.aborted) return;
     initAudio();
     clearTrackBaseCache();
@@ -11602,6 +11659,7 @@ function selectTrackStart(idx, context) {
     // Force a layout pass before the first painted countdown/HUD frame
     void canvas.offsetWidth;
     race = new Race(currentMode, t);
+    if(race.karts.some(k=>k.mlFallbackReason))window.showLbToast?.('TRAINED AI UNAVAILABLE FOR THIS TRACK / DIFFICULTY — USING CURRENT AI');
     window._quickRaceOptions = null;
     race.practice = !!window._kbPracticeRequested;
     if(window.KartBlitzActivities && window.KartBlitzActivities.active !== 'racing') window.KartBlitzActivities.start('racing', {attach:true});

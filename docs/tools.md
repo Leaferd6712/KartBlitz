@@ -4,6 +4,8 @@ The root [README directory](../README.md#tools--feature-directory) lists browser
 
 ## Public leaderboard replays
 
+For the separate actual-game RL trainer, use **[Official ML for AI](official-ml.md)**. It is password gated and supports live batch viewing, per-track difficulty weights and recorded training attempt overlays. The original educational ML Lab remains available.
+
 Public Time Trial lap recordings open by clicking a recorded lap time on the normal leaderboard. The viewer has the game follow camera, a full-track line map, play/pause, seeking, playback speed, telemetry, JSON download, and Race Ghost. Click the map's recorded line to seek to that moment; arrow keys on the map move one second. Playback does not run a race or award progression.
 
 New server-verified personal bests retain their recordings at every rank. Saving another player's faster lap no longer removes a recording outside the top ten. Each player's superseded best recording is cleaned up when its replacement is stored. Existing times are kept and labeled **Legacy**; complete existing ghosts remain watchable, and missing/incomplete recordings cannot be reconstructed from their lap times.
