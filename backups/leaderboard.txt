@@ -1,6 +1,6 @@
 KartBlitz Leaderboard Backup
-Generated (UTC): 2026-10-30T04:02:05.049Z
-Registered devices: 11
+Generated (UTC): 2026-10-30T12:00:15.260Z
+Registered devices: 12
 Saved scores: 465
 Saved online wins: 4
 
@@ -23,6 +23,7 @@ SAMTHEMAN       2026-08-27T00:33:42.441Z  2026-08-27T00:35:12.794Z
 AAAA            2026-09-05T10:19:40.808Z  2026-09-05T10:21:40.821Z
 TESTNAME        2026-09-06T10:41:43.826Z  2026-09-06T10:51:22.968Z
 LEAF            2026-09-15T02:16:08.302Z  2026-09-15T02:16:08.302Z
+DDR5RAM         2026-10-30T08:51:33.610Z  2026-10-30T08:51:33.610Z
 
 ------------------------------------------------------------------------------
 SCORES (best lap first within each mode/track)
@@ -508,8 +509,8 @@ MACHINE-READABLE JSON (for restore / import)
 ------------------------------------------------------------------------------
 {
   "version": 1,
-  "generatedAt": "2026-10-30T04:02:05.049Z",
-  "deviceCount": 11,
+  "generatedAt": "2026-10-30T12:00:15.260Z",
+  "deviceCount": 12,
   "scoreCount": 465,
   "onlineWinCount": 4,
   "devices": [
@@ -567,6 +568,11 @@ MACHINE-READABLE JSON (for restore / import)
       "username": "LEAF",
       "registeredAt": "2026-09-15T02:16:08.302Z",
       "lastSeenAt": "2026-09-15T02:16:08.302Z"
+    },
+    {
+      "username": "DDR5RAM",
+      "registeredAt": "2026-10-30T08:51:33.610Z",
+      "lastSeenAt": "2026-10-30T08:51:33.610Z"
     }
   ],
   "scores": [
