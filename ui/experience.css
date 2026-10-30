@@ -1,0 +1,160 @@
+/* Shared interaction surfaces: activities can reuse these without the race HUD. */
+[hidden] { display:none !important; }
+.text-action { appearance:none; background:none; border:0; border-bottom:1px solid currentColor; color:#aaf2e0; font:900 .8rem Nunito,sans-serif; cursor:pointer; padding:3px 0; }
+.text-action:hover { color:#ffe18c; }
+.experience-modal { position:fixed; inset:0; z-index:320; display:grid; place-items:center; padding:20px; background:#18142be8; backdrop-filter:blur(7px); }
+.experience-card { width:min(580px,100%); padding:32px; border:3px solid #a18ab5; border-radius:18px; background:var(--slate-face); box-shadow:var(--panel-shadow); text-align:center; max-height:calc(100dvh - 40px); overflow:auto; }
+.experience-eyebrow { color:#b4efd8; font-size:.65rem; font-weight:900; letter-spacing:.14em; }
+.experience-card h1,.experience-card h2 { color:#ffda69; font-size:clamp(23px,4vw,34px); line-height:1.1; margin:13px 0; text-shadow:0 3px #32233e; }
+.experience-card p { font-size:.9rem; line-height:1.6; margin:14px 0; color:#eee4f6; }
+.experience-card small { display:block; margin-top:20px; font-size:.75rem; color:#d4c5e0; }
+.experience-actions { display:flex; justify-content:center; gap:15px; flex-wrap:wrap; margin-top:22px; }
+.welcome-steps { display:flex; justify-content:center; gap:12px; margin:23px 0; }
+.welcome-steps span { flex:1; font-size:.75rem; color:#e6d9ef; }
+.welcome-steps b { display:grid; place-items:center; width:35px; height:35px; margin:0 auto 8px; background:#30253e; border:2px solid #9480a6; border-radius:10px; color:#ffdd75; }
+.welcome-controls { display:flex; gap:10px; justify-content:center; }
+.driving-guide { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:107; background:#31283fea; border:2px solid #b7a0c8; border-radius:12px; padding:13px 18px; width:min(490px,92vw); text-align:center; box-shadow:0 4px #171225; }
+.driving-guide strong { color:#ffe28c; font-size:.85rem; }
+.driving-guide p { font-size:.85rem; line-height:1.5; margin:7px 0; }
+.driving-guide small { display:block; color:#bbefde; font-size:.7rem; }
+.driving-guide .text-action { display:block; margin:7px auto 0; font-size:.7rem; }
+.menu-actions .btn { font-size:calc(13px * var(--ui-scale)); }
+.menu-actions > .btn:first-child { font-size:calc(17px * var(--ui-scale)); }
+.menu-actions .btn span { display:block; }
+.menu-actions .btn small { display:block; margin-top:3px; font-size:calc(10px * var(--ui-scale)); font-weight:800; letter-spacing:0; opacity:.85; }
+.menu-actions > .btn:nth-child(2) { --button-top:#746482; --button-bottom:#51445f; --button-rim:#a597b3; --button-foot:#30263e; --button-text:#f6eaff; color:var(--button-text); }
+.menu-utility-copy { font-size:calc(12px * var(--ui-scale)); }
+.menu-tools { font-size:.75rem; color:#d4c3e0; }
+.menu-tools summary { cursor:pointer; text-align:center; padding:7px; }
+.menu-tools .text-action { display:block; margin:10px auto; font-size:.75rem; }
+.menu-currency-chip.save-sync { display:none; }
+.menu-paint-strip,.portal-pill-row { display:none; }
+.menu-car-stage { height:clamp(190px,29vh,280px); background-image:url('./car-preview.svg'),radial-gradient(ellipse at 50% 70%,#8c73ad55,transparent 68%),linear-gradient(#272039,#342c49); background-position:center; background-size:contain; background-repeat:no-repeat; }
+.menu-car-stage[data-ready='true'] { background-image:radial-gradient(ellipse at 50% 70%,#8c73ad55,transparent 68%),linear-gradient(#272039,#342c49); }
+.preview-fallback canvas { opacity:0; }
+.menu-car-hint,.menu-car-status { font-size:.65rem; }
+.preview-fallback::before { content:'YOUR KART IS READY'; }
+.garage-welcome { width:min(780px,94vw); padding:15px 20px; text-align:center; background:#2d253e; border:2px solid #8b779c; border-radius:12px; margin:12px 0; }
+.garage-welcome strong { color:#ffe088; font-size:.8rem; letter-spacing:.1em; }
+.garage-welcome p { font-size:.8rem; margin-top:5px; color:#e2d4ed; line-height:1.5; }
+.garage-car-stage { background:#2d253e url('./car-preview.svg') center/contain no-repeat; }
+.garage-car-stage[data-ready='true'] { background:#2d253e; }
+.menu-currency-chip.save-sync[data-state='error'],.menu-currency-chip.save-sync[data-state='conflict'],.menu-currency-chip.save-sync[data-state='offline'] { display:flex; }
+.menu-currency-chip.save-sync[data-state='offline'] { color:#c6f4de; border-color:#8ca69d; }
+.setup-recommendation { width:min(860px,94vw); margin:20px auto 8px; padding:16px 20px; font-size:.85rem; text-align:center; line-height:1.65; background:#30263f; border:2px solid #86719a; border-radius:12px; color:#e5f5e8; }
+.setup-advanced { width:min(860px,94vw); margin:10px auto; border:2px solid #8c789e; background:#3c304d; border-radius:12px; }
+.setup-advanced > summary { cursor:pointer; padding:15px 18px; font-size:.85rem; color:#fff0c7; }
+.setup-advanced > summary span { float:right; color:#bce5d4; font-size:.7rem; }
+.setup-advanced .setup-slider-board { width:100%; padding:0 12px 12px; }
+.setup-section-label { font-size:calc(12px * var(--ui-scale)); margin-top:20px; }
+.wx-card { display:grid !important; place-items:center; gap:7px; min-height:78px; }
+.wx-card::before { content:'☀'; font-size:1.5rem; line-height:1; color:#ffe088; }
+.wx-card:nth-child(2)::before { content:'☂'; color:#9adce9; }
+.wx-card:nth-child(3)::before { content:'ϟ'; color:#d6b1f5; }
+.wx-card,.tyre-card,.pit-ui-choice { font-family:Nunito,sans-serif; }
+.recommend-badge { display:block; color:#bff7d0; font-size:calc(9px * var(--ui-scale)); margin-top:5px; letter-spacing:.04em; }
+.tyre-card b,.tyre-card > div,.pit-ui-choice-head,.pit-ui-choice-meta { font-size:calc(12px * var(--ui-scale)) !important; }
+.tyre-card > div,.pit-ui-choice-meta { font-size:calc(11px * var(--ui-scale)) !important; opacity:.9; }
+.pit-ui-choice[data-recommended='true'] { border-color:#b3dca8; }
+.pit-ui-sub { font-size:calc(12px * var(--ui-scale)); opacity:.9; }
+.track-name,.m-name { font-size:calc(15px * var(--ui-scale)); }
+.mode-card .m-desc,.track-diff,.track-target,.track-mastery { font-size:calc(12px * var(--ui-scale)); line-height:1.55; }
+.track-info { min-height:117px; }
+.track-card:has(.locked-overlay) .track-preview { opacity:.6; }
+.track-card .locked-overlay { inset:auto 0 0; min-height:160px; padding:14px; background:#2a233deb; gap:7px; }
+.locked-overlay > strong { font-size:.85rem; color:#ffe19b; }
+.locked-overlay > div:first-of-type { display:none; }
+.track-card:has(.locked-overlay) .track-info { visibility:hidden; }
+.gtab,.ctrl-tab,.lb-tab,.lap-opt,.key-btn,.diff-pill { font-size:calc(12px * var(--ui-scale)); }
+.ctrl-tab.active { color:#25454d; }
+.btn { font-size:calc(14px * var(--ui-scale)); }
+.btn-sm { font-size:calc(12px * var(--ui-scale)); }
+.section-sub { font-size:calc(12px * var(--ui-scale)); }
+.howto-section { padding:19px 22px; border-radius:15px; }
+.howto-section p,.ctrl-action-label,.info-v { font-size:calc(13px * var(--ui-scale)); opacity:1; color:#e0d3eb; }
+.howto-heading { font-size:calc(13px * var(--ui-scale)); }
+.howto-section input[type='range'],.pause-settings input[type='range'] { width:100%; height:16px; appearance:none; background:linear-gradient(#77d5c5,#3f9c9b); border:3px solid #9280a2; border-radius:6px; }
+.howto-section input[type='range']::-webkit-slider-thumb,.pause-settings input[type='range']::-webkit-slider-thumb { appearance:none; width:23px; height:28px; border:3px solid #d0b8de; border-radius:6px; background:#756084; box-shadow:0 3px #30243e; }
+.howto-section input[type='range']::-moz-range-thumb,.pause-settings input[type='range']::-moz-range-thumb { width:18px; height:23px; border:3px solid #d0b8de; border-radius:6px; background:#756084; }
+.advanced-tools { width:min(560px,94vw); margin:15px 0; font-size:.8rem; }
+.advanced-tools > summary { cursor:pointer; padding:13px; color:#d6c1e6; }
+.pause-settings { width:100%; font-size:.8rem; color:#e3d7ec; text-align:center; }
+.pause-settings summary { cursor:pointer; padding:9px 0; }
+.pause-settings p { font-size:.75rem; line-height:1.65; padding-top:10px; }
+.pause-settings label { display:block; margin-top:12px; line-height:2; }
+.session-highlight { text-align:center; width:min(720px,94vw); }
+.session-highlight strong { font-size:clamp(22px,3vw,34px); color:#baf7d5; text-shadow:0 3px #2b213c; }
+.session-highlight p { font-size:.9rem; color:#e2d7ed; margin:10px 0; line-height:1.6; }
+.results-card { max-width:900px; }
+.result-row { font-size:calc(15px * var(--ui-scale)); }
+#race-controls-hud.compact { flex-direction:row; gap:8px; }
+#race-controls-hud.compact .race-ctrl-btn { min-width:68px; padding:8px 10px; min-height:40px; font-size:10px; }
+#ftue-hint { white-space:normal !important; width:min(650px,90vw); }
+#ftue-hint-text { font-size:12px !important; }
+@media (max-width:980px) and (min-height:461px) {
+  .menu-shell { display:flex; flex-direction:column; gap:20px; }
+  .menu-action-panel { order:-1; }
+  .menu-hero-panel { display:flex; flex-direction:column; }
+  .title-wrap { order:-1; margin-top:5px; margin-bottom:15px; }
+  .title-logo { font-size:64px; line-height:.9; }
+  .title-logo br { display:none; }
+  .title-logo span:last-child { margin-left:8px; }
+  .title-sub,.title-decor,.menu-panel-sub,.menu-panel-kicker { display:none; }
+  .menu-panel-title { padding-top:2px; font-size:27px; }
+  .menu-hero-top { margin-bottom:5px; }
+  .menu-car-stage { height:180px; }
+  .menu-actions { gap:12px; }
+  .menu-actions .btn { min-height:49px; }
+  .menu-actions > .btn:first-child { min-height:70px; }
+  .menu-utility-card { display:block; }
+  .menu-tools summary { padding:12px 0 0; }
+}
+@media (max-width:600px) {
+  .experience-card { padding:25px 20px; }
+  .experience-actions { flex-direction:column; }
+  .experience-actions .btn { width:100%; }
+  .title-logo { font-size:clamp(30px,10vw,50px); }
+  .setup-recommendation { margin-top:16px; }
+  .setup-advanced { width:94vw; }
+  .track-grid { gap:14px; }
+  .track-mastery { font-size:calc(10px * var(--ui-scale)); }
+  .track-name { font-size:calc(12px * var(--ui-scale)); }
+  .howto-section { padding:17px; }
+  .howto-section .ml-settings-row { flex-wrap:wrap; }
+  #pause-overlay .pause-btns { min-width:0; max-height:65dvh; overflow:auto; }
+  .driving-guide { top:130px; bottom:auto; padding:10px; width:90vw; }
+}
+@media (max-height:460px) and (orientation:landscape) {
+  body.touch-mode #ftue-hint { bottom:210px !important; width:300px; padding:7px 10px !important; }
+  body.touch-mode #ftue-hint-text { font-size:10px !important; }
+  .experience-card { padding:18px 24px; }
+  .experience-card p { margin:8px 0; font-size:.8rem; }
+  .welcome-steps { margin:12px 0; }
+  .welcome-steps b { display:none; }
+  .experience-actions { margin-top:12px; }
+  .experience-card small { margin-top:12px; }
+  .menu-actions { grid-template-columns:1fr 1fr; gap:10px; }
+  .menu-actions .btn { font-size:calc(10px * var(--ui-scale)); min-height:43px; }
+  .menu-actions > .btn:first-child { font-size:calc(13px * var(--ui-scale)); grid-column:1/-1; }
+  .menu-actions > .btn:nth-child(2) { grid-column:auto; min-height:43px; font-size:calc(10px * var(--ui-scale)); }
+  .menu-actions .btn small { font-size:9px; }
+  .menu-tools { position:absolute; bottom:-23px; right:12px; }
+  .menu-tools summary { padding:3px; }
+  .menu-tools[open] { background:#30253f; z-index:10; padding:8px; border:2px solid #9780aa; border-radius:8px; }
+  .setup-recommendation { max-width:80vw; padding:10px; font-size:.75rem; }
+  .setup-advanced { max-width:80vw; }
+  .driving-guide { top:110px; bottom:auto; left:190px; transform:none; width:min(330px,42vw); padding:9px 12px; }
+  .driving-guide p { font-size:.75rem; }
+  .driving-guide small { display:none; }
+  #touch-overlay.touch-arcade-layout .touch-steer { top:auto; bottom:125px; width:68px; height:58px; border-radius:12px; }
+  #touch-overlay.touch-arcade-layout .touch-steer-left { left:12px; }
+  #touch-overlay.touch-arcade-layout .touch-steer-right { right:12px; }
+  #touch-overlay.touch-arcade-layout .touch-pedal { bottom:12px; width:68px; height:52px; }
+  #touch-overlay.touch-arcade-layout .touch-pedal-accel { right:12px; }
+  #touch-overlay.touch-arcade-layout .touch-pedal-brake { right:90px; }
+  #touch-overlay.touch-arcade-layout .touch-btn-ers { bottom:76px; right:122px; }
+  #touch-overlay.touch-arcade-layout .touch-btn-drs { bottom:76px; right:67px; }
+  #touch-overlay.touch-arcade-layout .touch-btn-pit { bottom:76px; right:12px; }
+  #pause-overlay .pause-btns { max-height:70dvh; overflow:auto; }
+  #pause-overlay > div:last-child { display:none; }
+}

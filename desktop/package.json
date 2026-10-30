@@ -1,0 +1,8 @@
+{
+  "name": "kartblitz-desktop",
+  "version": "1.0.0",
+  "description": "KartBLitz — small karts, big racing",
+  "author": "KartBLitz contributors",
+  "license": "AGPL-3.0-only",
+  "main": "main.cjs"
+}

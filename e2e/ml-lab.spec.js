@@ -1,6 +1,6 @@
 import { test, expect, gotoGame, dismissOnboarding, returningPlayerStorage, waitForMenu } from './fixtures/game.js';
 
-test('ML Lab is opt-in and launches a race with the selected model weights', async ({ page }) => {
+test('ML Lab is opt-in and launches a race with the selected reference driver', async ({ page }) => {
   await gotoGame(page, { storage: returningPlayerStorage({ kartblitz_ml_lab_enabled: '1' }) });
   await dismissOnboarding(page);
   await waitForMenu(page);
@@ -32,7 +32,7 @@ test('ML Lab is opt-in and launches a race with the selected model weights', asy
     };
   });
   expect(state.driver).toBe(true);
-  expect(state.model).toMatch(/KartBlitz Apex/);
+  expect(state.model).toBe('KartBlitz Pre-Tuned Driver');
   expect(state.consumed).toBe(true);
   expect(state.opponents).toBe(1);
 });
@@ -71,7 +71,7 @@ test('ML Lab teaches through prediction, reward experiments, and training stages
   await expect(page.locator('#ml-command-start')).toHaveText('powershell -ExecutionPolicy Bypass -File .\\ml_training\\start.ps1');
   await expect(page.getByRole('button', { name: 'COPY' })).toHaveCount(2);
   await page.getByRole('button', { name: /4 UPDATE/ }).click();
-  await expect(page.locator('#ml-phase-explanation')).toContainText('Update carefully with PPO');
+  await expect(page.locator('#ml-phase-explanation')).toContainText('Reinforcement learning with PPO (90%)');
   await expect(page.locator('#ml-run-explain')).toContainText('300,000');
   await expect(page.locator('#ml-run-explain')).toContainText('2,700,000');
   await expect(page.locator('#ml-run-explain')).toContainText('12,288 RL experiences');
@@ -85,6 +85,7 @@ test('ML Lab stays hidden when the setting is disabled', async ({ page }) => {
 
   await page.getByRole('button', { name: 'CONTROLS & SETTINGS' }).click();
   await page.getByRole('button', { name: 'SETTINGS' }).click();
+  await page.locator('.advanced-tools summary').click();
   const toggle = page.getByRole('button', { name: 'ML LAB: OFF' });
   await expect(toggle).toBeVisible();
   await toggle.click();

@@ -13,3 +13,6 @@ playwright/.cache/
 ml_training/runs/
 ml_training/__pycache__/
 ml_training/**/*.pyc
+
+public/
+desktop/game/

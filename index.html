@@ -5,8 +5,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<meta name="description" content="Small karts. Big racing. Play KartBLitz: quick races, personal best laps, split-screen and a kart to make your own.">
+<meta name="theme-color" content="#30253f">
+<link rel="icon" type="image/svg+xml" href="ui/app-icon.svg">
+<script src="ui/platform.js"></script>
+<script src="ui/player-experience.js" defer></script>
+<script type="module" src="core/shell.js"></script>
 <script src="online-codec.js"></script>
 <script src="online-sim.js"></script>
 <script src="online.js"></script>
@@ -25,14 +29,6 @@ window.KartBlitzProgramme = KartBlitzProgramme;
 window.KartBlitzMastery = KartBlitzMastery;
 window.KartBlitzGhost = KartBlitzGhost;
 window.KartBlitzSpeedFeel = KartBlitzSpeedFeel;
-</script>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-  }
-}
 </script>
 <style>
 :root{
@@ -1868,6 +1864,7 @@ body::after{
 #screen-te-editor .te-apply-row button{background:#1e3a36;border-color:#3dd6c6;color:#3dd6c6;font-weight:600;}
 
 </style>
+<link rel="stylesheet" href="ui/game-ui.css?v=20261030"><link rel="stylesheet" href="ui/experience.css?v=20261030">
 </head>
 <body> 
 
@@ -1879,7 +1876,7 @@ body::after{
   <div class="menu-shell">
     <div class="menu-hero-panel">
       <div class="menu-hero-top">
-        <div class="portal-tag">BROWSER ARCADE RACER</div>
+        <div class="portal-tag">THE PADDOCK</div>
         <div id="menu-coins" class="menu-coins">
           <div class="menu-currency-chip" id="menu-coins-chip">COINS 0</div>
           <div class="menu-currency-chip gems" id="menu-gems-chip">GEMS 0</div>
@@ -1887,8 +1884,8 @@ body::after{
         </div>
       </div>
       <div class="title-wrap">
-        <div class="title-logo">KART<br>BLITZ</div>
-        <div class="title-sub">PORTAL-READY CHAMPIONSHIP RACING</div>
+        <div class="title-logo"><span>KART</span><br><span>BLITZ</span></div>
+        <div class="title-sub">SMALL KARTS. BIG RACING.</div>
         <div class="title-decor"></div>
       </div>
       <div class="menu-car-stage" id="menu-car-stage">
@@ -1908,21 +1905,22 @@ body::after{
       </div>
     </div>
     <div class="menu-action-panel">
-      <div class="menu-panel-kicker">READY TO RACE</div>
-      <div class="menu-panel-title">Launch straight into the grid</div>
-      <div class="menu-panel-sub">Time Trial jumps straight to circuit select. Custom Race opens versus, AI, online, and shootout setup.</div>
+      <div class="menu-panel-kicker">BUCKLE UP. BOOST ON.</div>
+      <div class="menu-panel-title">LET’S RACE!</div>
+      <div class="menu-panel-sub">Chase a personal best or take on the grid.<br>Your next great race starts here.</div>
       <div class="menu-actions">
-        <button class="btn btn-cyan" onclick="startTimeTrial()"> TIME TRIAL</button>
-        <button class="btn btn-gold btn-sm" onclick="initAudio();playUIClick();showScreen('mode');"> CUSTOM RACE</button>
-        <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()"> GARAGE</button>
-        <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');"> LEADERBOARD</button>
-        <button class="btn btn-sm" style="color:#9ad4ff;" onclick="initAudio();playUIClick();showControlsScreen()"> CONTROLS &amp; SETTINGS</button>
-        <button type="button" class="btn btn-sm" id="btn-admin" style="color:#3dd6c6;" onclick="openAdminStation()"> ADMIN</button>
+        <button class="btn btn-cyan" id="quick-race-btn" onclick="startQuickRace()"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#flag"/></svg><span>QUICK RACE<small>Easy · one lap · straight to the grid</small></span></button>
+        <button class="btn btn-sm" onclick="startTimeTrial()"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#timer"/></svg> TIME TRIAL</button>
+        <button class="btn btn-gold btn-sm" onclick="initAudio();playUIClick();showScreen('mode');"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#flag"/></svg> CUSTOM RACE</button>
+        <button class="btn btn-orange btn-sm" onclick="initAudio();playUIClick();showGarage()"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#wrench"/></svg> GARAGE</button>
+        <button class="btn btn-pink btn-sm" onclick="initAudio();playUIClick();showScreen('leaderboard');"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#trophy"/></svg> LEADERBOARD</button>
+        <button class="btn btn-sm" onclick="initAudio();playUIClick();showControlsScreen()"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#gear"/></svg> CONTROLS &amp; SETTINGS</button>
       </div>
       <div class="menu-utility-card">
-        <div class="menu-utility-title">Desktop Layout</div>
-        <div class="menu-utility-copy">Keyboard: P1 WASD, P2 arrows. Touch: on-screen joysticks — versus uses face-to-face seating.</div>
+        <div class="menu-utility-title">ON THE GRID</div>
+        <div class="menu-utility-copy">New to the grid? <button class="text-action" onclick="startDrivingPractice()">Try the driving guide</button>. Keyboard: WASD to drive · X to boost. Touch controls are available in Settings.</div>
       </div>
+      <details id="menu-tools" class="menu-tools"><summary>More options</summary><button class="text-action" onclick="openPatchNotesManual()">What’s new</button><button class="text-action" id="btn-admin" onclick="openAdminStation()">Admin tools</button></details>
     </div>
   </div>
 </div>
@@ -1935,25 +1933,25 @@ body::after{
   <div class="section-sub">CHOOSE YOUR RACE TYPE</div>
   <div class="mode-grid">
     <button type="button" class="mode-card" onclick="selectMode('versus')" aria-label="Versus Race — 2 players split-screen">
-      <div class="m-icon"></div>
+      <div class="m-icon"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#racers"/></svg></div>
       <div class="m-name">VERSUS RACE</div>
       <div class="m-desc">Race a friend.<br>Split-screen, same track.</div>
       <div class="m-tag">2 PLAYERS</div>
     </button>
     <button type="button" class="mode-card" onclick="showOnlineLobby()" aria-label="Online Lobby — host or join up to 6 players">
-      <div class="m-icon"></div>
+      <div class="m-icon"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#globe"/></svg></div>
       <div class="m-name">ONLINE LOBBY</div>
       <div class="m-desc">Host or join a room.<br>Up to 6 players online.</div>
-      <div class="m-tag">FREE · PARTYKIT</div>
+      <div class="m-tag">UP TO 6 RACERS</div>
     </button>
     <button type="button" class="mode-card" onclick="showAIDifficultyUI()" aria-label="AI Race — solo versus AI">
-      <div class="m-icon"></div>
+      <div class="m-icon"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#flag"/></svg></div>
       <div class="m-name">AI RACE</div>
       <div class="m-desc">Race the field of AI cars.<br>Pick how hard they push.</div>
       <div class="m-tag">SOLO · VS AI</div>
     </button>
     <button type="button" class="mode-card" onclick="showShootoutDiffUI()" aria-label="One Lap Shootout — beat the AI time">
-      <div class="m-icon"></div>
+      <div class="m-icon"><svg class="ui-icon" aria-hidden="true"><use href="ui/icons.svg#bolt"/></svg></div>
       <div class="m-name">ONE LAP SHOOTOUT</div>
       <div class="m-desc">One flying lap each.<br>Beat the AI’s time.</div>
       <div class="m-tag">SOLO · 1 LAP</div>
@@ -2112,6 +2110,7 @@ body::after{
   <button class="back-btn" onclick="showScreen('menu')">← BACK</button>
   <div class="section-title">LEADERBOARD</div>
   <div class="section-sub">CLOUD RECORDS · VERIFIED TOP-10 LAPS INCLUDE PUBLIC GHOST DATA</div>
+  <button class="text-action" onclick="promptRegisterUsername()">Set a username for cloud records</button>
   <div class="lb-shell">
     <div class="lb-filters">
       <div class="lb-filter-row">
@@ -2148,6 +2147,7 @@ body::after{
       <span id="garage-gems-chip" style="color:#7dd3fc;">GEMS 0</span>
     </div>
   </div>
+  <div class="garage-welcome"><strong>MAKE IT YOURS</strong><p id="garage-first-goal">Paint is free. Race to earn your first upgrade.</p></div>
   <div style="text-align:center;margin-bottom:8px;">
     <button class="btn btn-sm btn-cyan" onclick="watchAdForCoins()" id="garage-ad-btn" title="Optional boost — racing pays more over time.">VIDEO · +18 COINS</button>
     <div id="garage-ad-hint" style="font-size:11px;opacity:.55;margin-top:6px;letter-spacing:.06em;">Optional boost · racing is the main way to progress</div>
@@ -2165,8 +2165,8 @@ body::after{
   <button class="back-btn" onclick="showScreen('track')">← BACK</button>
   <div class="section-title"> RACE SETUP</div>
   <div class="section-sub" id="setup-track-name"></div>
-  <div class="setup-section-label">CAR SETUP</div>
-  <div class="setup-grid" id="setup-grid"></div>
+  <div class="setup-recommendation" id="setup-recommendation">Ready to race with a balanced kart. You can leave every setting as it is.</div>
+  <details class="setup-advanced" id="setup-advanced"><summary>Advanced car tuning <span>Optional</span></summary><div class="setup-grid" id="setup-grid"></div></details>
   <div id="laps-section">
     <div class="setup-section-label">RACE LAPS</div>
     <div class="lap-row" id="lap-row"></div>
@@ -2247,11 +2247,11 @@ body::after{
 <div id="patch-notes-overlay" role="dialog" aria-labelledby="patch-notes-title">
   <div id="patch-notes-card">
     <h2 id="patch-notes-title">PATCH NOTES</h2>
-    <div class="patch-date">September 15</div>
+    <div class="patch-date">October 30, 2026</div>
     <ul>
-      <li>Online Mode is Currently Down</li>
-      <li>ML AI Driving will be added soon</li>
-      <li>Time Trial uses equal cars</li>
+      <li>Quick Race and a hands-on driving guide help you get started.</li>
+      <li>New touch layouts, clearer boost feedback, and a free paint workshop.</li>
+      <li>Time Trial keeps equal stock karts and saves your personal bests.</li>
     </ul>
     <button class="btn btn-gold" type="button" onclick="dismissPatchNotes()">GOT IT</button>
   </div>
@@ -2295,8 +2295,8 @@ body::after{
       </div>
     </div>
     <div class="touch-actions">
-      <button type="button" class="touch-btn" data-action="ers" data-player="p1" aria-label="ERS boost">ERS</button>
-      <button type="button" class="touch-btn" data-action="drs" data-player="p1" aria-label="DRS open">DRS</button>
+      <button type="button" class="touch-btn" data-action="ers" data-player="p1" aria-label="ERS boost">BOOST</button>
+      <button type="button" class="touch-btn" data-action="drs" data-player="p1" aria-label="DRS open">ZONE</button>
       <button type="button" class="touch-btn" data-action="pit" data-player="p1" aria-label="Request pit stop">PIT</button>
     </div>
   </div>
@@ -2314,8 +2314,8 @@ body::after{
       </div>
     </div>
     <div class="touch-actions">
-      <button type="button" class="touch-btn" data-action="ers" data-player="p2" aria-label="Player 2 ERS boost">ERS</button>
-      <button type="button" class="touch-btn" data-action="drs" data-player="p2" aria-label="Player 2 DRS open">DRS</button>
+      <button type="button" class="touch-btn" data-action="ers" data-player="p2" aria-label="Player 2 ERS boost">BOOST</button>
+      <button type="button" class="touch-btn" data-action="drs" data-player="p2" aria-label="Player 2 DRS open">ZONE</button>
       <button type="button" class="touch-btn" data-action="pit" data-player="p2" aria-label="Player 2 pit stop">PIT</button>
     </div>
   </div>
@@ -2342,7 +2342,7 @@ body::after{
 <!-- RACE PAUSE / EXIT (all modes) -->
 <div id="race-controls-hud">
   <button type="button" class="race-ctrl-btn" id="race-ctrl-pause" onclick="pauseGame()">PAUSE</button>
-  <button type="button" class="race-ctrl-btn race-ctrl-exit" id="race-ctrl-exit" onclick="pauseQuit()">EXIT</button>
+  <button type="button" class="race-ctrl-btn race-ctrl-exit" id="race-ctrl-exit" onclick="requestRaceExit()">EXIT</button>
 </div>
 
 <!-- PAUSE MENU -->
@@ -2350,12 +2350,20 @@ body::after{
   <div class="pause-title">PAUSED</div>
   <div class="pause-btns">
     <button class="btn btn-cyan" onclick="resumeGame()">RESUME</button>
-    <button class="btn btn-gold btn-sm" onclick="pauseRestartRace()">RESTART RACE</button>
+    <button class="btn btn-gold btn-sm" onclick="requestRaceRestart()">RESTART RACE</button>
     <button class="btn btn-sm" id="pause-ghost-toggle" onclick="togglePbGhostEnabled()" style="display:none;background:rgba(0,0,0,.35);border:2px solid rgba(0,245,255,.45);color:#9ef;">PB GHOST: ON</button>
-    <button class="btn btn-orange btn-sm" id="pause-quit-btn" onclick="pauseQuit()">QUIT TO MENU</button>
+    <button class="btn btn-orange btn-sm" id="pause-quit-btn" onclick="requestRaceExit()">QUIT TO MENU</button>
+    <details class="pause-settings"><summary>Sound &amp; driving help</summary><button class="key-btn" onclick="initAudio();toggleUserMute();this.textContent=isUserMuted()?'SOUND: OFF':'SOUND: ON'">TOGGLE SOUND</button><label>Sound effects<input type="range" min="0" max="100" value="100" aria-label="Paused sound effects volume" oninput="setA11yPref('sfxVolume',this.value/100)"></label><p>W / S accelerate &amp; brake · A / D steer<br>X boost · C speed zone · Esc resume<br>Touch: ◀ ▶ steer · GO / BRAKE</p></details>
   </div>
   <div style="margin-top:14px;font-size:12px;opacity:.7;letter-spacing:.2em;">ESC OR PAUSE TO RESUME</div>
 </div>
+
+<div class="experience-modal" id="welcome-dialog" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
+  <div class="experience-card"><div class="experience-eyebrow">YOUR FIRST LAP STARTS HERE</div><h1 id="welcome-title">Welcome to KartBLitz</h1><p>Small karts. Big racing. Pick a short race, chase your best lap, or race a friend.</p><div class="welcome-steps"><span><b>01</b> Accelerate</span><span><b>02</b> Steer &amp; brake</span><span><b>03</b> Find your boost</span></div><p id="welcome-input"></p><div class="welcome-controls"><button class="key-btn" id="welcome-keyboard">KEYBOARD</button><button class="key-btn" id="welcome-touch">TOUCH</button></div><div class="experience-actions"><button class="btn btn-cyan" id="welcome-play">LET’S GO</button><button class="btn btn-sm btn-orange" id="welcome-practice">TRY THE DRIVING GUIDE</button></div><small>No account needed for local racing.</small></div>
+</div>
+<div class="experience-modal" id="leave-dialog" role="dialog" aria-modal="true" aria-labelledby="leave-title" hidden><div class="experience-card"><div class="experience-eyebrow">TAKE A PIT STOP?</div><h2 id="leave-title">Leave this race?</h2><p>Your current race will end. Upgrades, paint, and previously completed sessions stay saved.</p><div class="experience-actions"><button class="btn btn-cyan" id="leave-stay">KEEP RACING</button><button class="btn btn-orange" id="leave-confirm">YES, CONTINUE</button></div></div></div>
+<aside class="driving-guide" id="driving-guide" aria-label="Driving guide" hidden><strong id="guide-step"></strong><p id="guide-copy"></p><small id="guide-keys"></small><button class="text-action" id="guide-dismiss">Got it · hide guide</button></aside>
+<div class="sr-only" id="game-announcement" aria-live="polite" aria-atomic="true"></div>
 
 <!-- SAVE CONFLICT (divergent local vs cloud progress) -->
 <div id="save-conflict-overlay" role="dialog" aria-labelledby="save-conflict-title" aria-hidden="true">
@@ -2588,7 +2596,7 @@ body::after{
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const MENU_PAGE_BG = '#7b6fca';
+const MENU_PAGE_BG = '#211c3b';
 const RACE_VIEW_MAX_EDGE = 1920;
 let W = 1280, H = 720;
 let _raceFillBg = null;
@@ -2688,6 +2696,7 @@ const CG = (() => {
   }
 
   async function init() {
+    await window.KartBlitzPlatform?.ready;
     try {
       if (window.CrazyGames && window.CrazyGames.SDK) {
         await window.CrazyGames.SDK.init();
@@ -2884,7 +2893,10 @@ function showScreen(id) {
     try { el.inert = false; } catch(e2) {}
   }
   if (id === 'leaderboard') buildLeaderboardScreen();
+  window.KartBlitzExperience?.onScreen(id);
+  document.getElementById('driving-guide').hidden = true;
   if (id === 'menu') {
+    if(window.KartBlitzActivities?.active) window.KartBlitzActivities.stop();
     CG.gameplayStop(); // signal CrazyGames: player left gameplay
     // Signal loading complete the very first time the menu appears
     if (!window._menuShownOnce) { window._menuShownOnce = true; CG.loadingStop(); }
@@ -2903,7 +2915,7 @@ function showScreen(id) {
   if (_ftueEl && canvas.style.display !== 'block') _ftueEl.style.display = 'none';
 }
 // Bump this when shipping new patch-note content (patch-notes-editor updates it on save).
-const CURRENT_PATCH_VERSION = '2026-09-15';
+const CURRENT_PATCH_VERSION = '2026-10-30';
 const PATCH_VERSION_LS_KEY = 'kartblitz_last_patch_version';
 
 let _onboardingStep = null; // null | 'patch' | 'device' | 'done'
@@ -2978,16 +2990,10 @@ function showPatchNotesOverlay() {
 
 /** Auto first-launch / version gate — only one onboarding modal at a time. */
 function startOnboardingFlow() {
-  if(needsPatchNotes()) {
-    _onboardingStep = 'patch';
-    showPatchNotesOverlay();
-    return;
-  }
-  if(needsDevicePrompt()) {
-    _onboardingStep = 'device';
-    showDevicePrompt();
-    return;
-  }
+  const firstVisit = needsDevicePrompt() && !safeLocalGet('kartblitz_welcome_v1');
+  const savedDevice = safeLocalGet('kartblitz_devicemode');
+  setDeviceMode(savedDevice === 'touch' || (savedDevice !== 'keyboard' && (navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches)));
+  if(firstVisit && window.KartBlitzExperience) { _onboardingStep = 'welcome'; window.KartBlitzExperience.welcome(); return; }
   _onboardingStep = 'done';
 }
 
@@ -3036,13 +3042,7 @@ window.addEventListener('load', () => {
   } catch(e4) {}
 });
 
-// Apply saved control mode only — never race the device prompt against patch notes.
-(function(){
-  const saved = safeLocalGet('kartblitz_devicemode');
-  if(saved === 'touch' || saved === 'keyboard') {
-    setDeviceMode(saved === 'touch');
-  }
-})();
+// Apply saved controls in startOnboardingFlow, after the input state is initialized.
 
 // ── ACCESSIBILITY PREFS ─────────────────────────────────
 const A11Y_DEFAULTS = {
@@ -3095,8 +3095,8 @@ document.addEventListener('keydown', e => {
       dismissPatchNotes();
       return;
     }
-    if(isDevicePromptOpen()) return;
-    startTimeTrial();
+    if(isDevicePromptOpen() || _onboardingStep === 'welcome' || e.target.closest('button,a,input,select,textarea,summary')) return;
+    startQuickRace();
   }
 });
 
@@ -3352,6 +3352,13 @@ function playCollision(vol) {
 }
 
 // ── UI CLICK SOUND ───────────────────────────────────────
+function playAbilityCue(state) {
+  if(state === 'active') { beep(440,.08,.12,'sine'); beep(880,.13,.10,'sine',.06); }
+  else if(state === 'ready') { beep(660,.06,.1,'sine'); beep(990,.1,.08,'sine',.08); }
+  else if(state === 'zone') beep(1100,.10,.08,'sine');
+  else beep(240,.12,.08,'triangle');
+}
+
 function playUIClick() {
   if (!AC) return;
   const out = getSfxOut(); if (!out) return;
@@ -5630,6 +5637,10 @@ class Kart {
     ctx.save();
     ctx.translate(sx, sy);
     ctx.rotate(vis.angle);
+    if(!this.isAI) {
+      ctx.save(); ctx.strokeStyle = this.ersActive ? '#ffdc72' : '#9cfff0'; ctx.lineWidth = this.ersActive ? 3 : 2;
+      ctx.beginPath(); ctx.ellipse(0, 0, 31, 19, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore();
+    }
 
     const flash = this.flashTimer > 0 && Math.floor(this.flashTimer*8)%2===0;
     const liv = this.livery || null;
@@ -5789,7 +5800,7 @@ function drawScenery(ctx, td, ofx, ofy) {
     for(const t of sc.trees) {
       const sx = t.x + ofx, sy = t.y + ofy;
       // Skip off-screen
-      if(sx < -80 || sx > 1360 || sy < -80 || sy > 800) continue;
+      if(sx < -80 || sx > ctx.canvas.width + 80 || sy < -80 || sy > ctx.canvas.height + 80) continue;
       // Shadow
       ctx.save();
       ctx.globalAlpha = 0.22;
@@ -5819,7 +5830,7 @@ function drawScenery(ctx, td, ofx, ofy) {
   if(sc.adboards) {
     sc.adboards.forEach((ab, ai) => {
       const sx = ab.x + ofx, sy = ab.y + ofy;
-      if(sx < -120 || sx > 1400 || sy < -80 || sy > 800) return;
+      if(sx < -120 || sx > ctx.canvas.width + 120 || sy < -80 || sy > ctx.canvas.height + 80) return;
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate(ab.angle);
@@ -6381,19 +6392,19 @@ function fmtTime(s) {
 // TERTIARY = FPS / debug (hidden unless debug overlay)
 const HUD = {
   pad: 12,
-  radius: 12,
+  radius: 9,
   font: 'Nunito,sans-serif',
-  panelFill: 'rgba(28,24,52,0.88)',
-  panelStroke: 'rgba(255,255,255,0.42)',
-  panelStrokeStrong: 'rgba(255,255,255,0.55)',
-  primary: '#ffffff',
-  accent: '#f5c518',
-  dim: 'rgba(255,255,255,0.78)',
-  muted: 'rgba(255,255,255,0.62)',
+  panelFill: 'rgba(49,40,65,0.94)',
+  panelStroke: '#9180a2',
+  panelStrokeStrong: '#b5a0c5',
+  primary: '#fff5e1',
+  accent: '#ffda69',
+  dim: '#e0d2ec',
+  muted: '#bbaacc',
   danger: '#ff5a5a',
   warn: '#ffb020',
   ok: '#4ade80',
-  info: '#7dd3fc'
+  info: '#8cf0e1'
 };
 
 function hudReducedMotion() {
@@ -6420,13 +6431,51 @@ function hudPulse(periodMs, amp) {
 
 function hudPanel(ctx, x, y, w, h, opts) {
   const o = opts || {};
+  const radius = o.radius != null ? o.radius : HUD.radius;
+  ctx.save();
+  // Solid lower lip and lit top edge match the menu's raised slate frames.
   ctx.beginPath();
-  ctx.roundRect(x, y, w, h, o.radius != null ? o.radius : HUD.radius);
+  ctx.roundRect(x, y + 3, w, h, radius);
+  ctx.fillStyle = '#1c152c';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, radius);
   ctx.fillStyle = o.fill || HUD.panelFill;
   ctx.fill();
   ctx.strokeStyle = o.stroke || HUD.panelStroke;
   ctx.lineWidth = o.lineWidth != null ? o.lineWidth : 2.5;
   ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y + 3);
+  ctx.lineTo(x + w - radius, y + 3);
+  ctx.strokeStyle = 'rgba(224,204,241,0.24)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// A shared glossy fill keeps speed, tyre life and boost meters consistent.
+function hudMeter(ctx, x, y, width, height, pct, color, segmented = false) {
+  const fillW = Math.max(0, width * Math.max(0, Math.min(1, pct)));
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 4);
+  ctx.fillStyle = '#211a31';
+  ctx.fill();
+  ctx.clip();
+  if(fillW > 0) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, fillW, height);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.fillRect(x, y + 1, fillW, Math.max(2, height * 0.25));
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(x, y + height - 3, fillW, 3);
+  }
+  if(segmented) {
+    ctx.fillStyle = '#211a31';
+    for(let sx = x + 10; sx < x + width; sx += 12) ctx.fillRect(sx, y, 2, height);
+  }
+  ctx.restore();
 }
 
 function hudFillText(ctx, text, x, y, style) {
@@ -6456,8 +6505,8 @@ function getHudPlayerRank(kart) {
 
 function getHudLayout(w, h, mode) {
   const pad = HUD.pad;
-  const narrow = w < 700;
   const short = h < 480;
+  const narrow = w < 700 || (touchMode && short);
   const showSession = !!(race && (race.phase === 'racing' || race.phase === 'finished'));
   const lapW = narrow ? 128 : (mode === 'versus' ? 150 : 188);
   const lapH = short ? (narrow ? 78 : 92) : (narrow ? 86 : 104);
@@ -6465,13 +6514,9 @@ function getHudLayout(w, h, mode) {
     ? Math.min(176, Math.max(150, w - lapW - pad * 3 - 8))
     : (mode === 'versus' ? 210 : 268);
   let timerH = narrow ? 96 : 112;
-  if(mode === 'trial') timerH = narrow ? 152 : 172;
-  else if(showSession) timerH += narrow ? 24 : 28;
-  // Keep primary chrome shorter on landscape-phone / short canvases.
-  if(short) {
-    if(mode === 'trial') timerH = Math.min(timerH, narrow ? 128 : 140);
-    else timerH = Math.min(timerH, narrow ? 88 : 100);
-  }
+  if(mode === 'trial') timerH = narrow ? 218 : 234;
+  else timerH += narrow ? 24 : 28;
+  if(short) timerH = 92;
   const barW = narrow ? Math.min(168, w - pad * 2) : 186;
   const primaryBottom = pad + Math.max(lapH, timerH);
   return {
@@ -6479,11 +6524,12 @@ function getHudLayout(w, h, mode) {
     timerX: w - timerW - pad,
     barW,
     primaryBottom,
-    secondaryBottom: h - pad - 8
+    secondaryBottom: h - pad - (touchMode && !short && mode !== 'versus' ? 180 : 8)
   };
 }
 
 function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
+  const uiScale = getA11yPrefs().uiScale || 1; w /= uiScale; h /= uiScale;
   const now = performance.now();
   const L = getHudLayout(w, h, mode);
   const { pad, narrow, showSession, lapW, lapH, timerW, timerH, timerX, barW } = L;
@@ -6492,7 +6538,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   const alertY = hudAlertBandY(h, narrow, L.primaryBottom);
 
   ctx.save();
-  ctx.translate(x, y);
+  ctx.translate(x, y); ctx.scale(uiScale, uiScale);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 
@@ -6501,13 +6547,13 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   // ═══════════════════════════════════════════════════════
   hudPanel(ctx, pad, pad, lapW, lapH, { stroke: HUD.panelStrokeStrong });
 
-  hudFillText(ctx, `P${player + 1}`, pad + 10, pad + 20, {
+  hudFillText(ctx, mode === 'versus' ? `PLAYER ${player + 1}` : 'YOU', pad + 10, pad + 20, {
     bold: true, size: narrow ? 12 : 13, color: playerColors[player]
   });
 
   const rankInfo = getHudPlayerRank(kart);
   if(rankInfo) {
-    hudFillText(ctx, `P${rankInfo.rank}`, pad + lapW - 10, pad + 22, {
+    hudFillText(ctx, `${rankInfo.rank}${rankInfo.rank === 1 ? 'st' : rankInfo.rank === 2 ? 'nd' : rankInfo.rank === 3 ? 'rd' : 'th'}`,  pad + lapW - 10, pad + 22, {
       bold: true, size: narrow ? 18 : 22, color: HUD.accent, align: 'right'
     });
     hudFillText(ctx, `OF ${rankInfo.of}`, pad + lapW - 10, pad + 38, {
@@ -6549,6 +6595,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     bold: true, size: narrow ? 18 : 24, color: HUD.primary, align: 'right'
   });
 
+  if(!L.short) {
   let rowY = pad + (narrow ? 58 : 68);
   hudFillText(ctx, 'BEST', timerX + timerW - 10, rowY, {
     bold: true, size: 10, color: 'rgba(245,197,24,0.92)', align: 'right'
@@ -6600,6 +6647,9 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
       bold: true, size: narrow ? 13 : 15, color: HUD.primary, align: 'right'
     });
   }
+  } else {
+    hudFillText(ctx, 'BEST ' + (kart.bestLap < Infinity ? fmtTime(kart.bestLap) : 'SET YOUR FIRST LAP'), timerX + timerW - 10, pad + 76, { bold: true, size: 10, color: HUD.dim, align: 'right' });
+  }
   ctx.textAlign = 'left';
 
   // Track name — secondary context, only when space remains
@@ -6609,7 +6659,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   const showHudFps = _showDebugOverlay && mode !== 'versus';
   const fpsBadgeW = showHudFps ? 70 : 0;
   const fpsBadgeGap = showHudFps ? 8 : 0;
-  if(ribbonAvail >= 110) {
+  if(ribbonAvail >= 110 && !(touchMode && L.short)) {
     const ribbonW = Math.min(280, ribbonAvail - fpsBadgeW - fpsBadgeGap);
     const clusterW = ribbonW + fpsBadgeW + fpsBadgeGap;
     const ribbonX = ribbonGapL + Math.max(0, (ribbonAvail - clusterW) / 2);
@@ -6652,16 +6702,18 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
 
   // Speed
   hudPanel(ctx, pad, spdBarY, barW, stackH, { radius: 8, lineWidth: 2 });
-  const grad = ctx.createLinearGradient(pad + 4, 0, pad + 4 + (barW - 8) * Math.min(spdPct, 1), 0);
-  grad.addColorStop(0, '#6ee7f7');
-  grad.addColorStop(0.6, '#f5c518');
-  grad.addColorStop(1, '#c37af0');
-  ctx.beginPath();
-  ctx.roundRect(pad + 4, spdBarY + 4, (barW - 8) * Math.min(spdPct, 1), 20, 6);
-  ctx.fillStyle = grad;
-  ctx.fill();
+  const grad = ctx.createLinearGradient(pad + 4, 0, pad + barW - 4, 0);
+  grad.addColorStop(0, '#4db9b0');
+  grad.addColorStop(0.6, '#80dfbb');
+  grad.addColorStop(1, '#ffd05c');
+  hudMeter(ctx, pad + 4, spdBarY + 4, barW - 8, 20, spdPct, grad);
   const spdLabel = `${Math.round(spd * 0.8)} KM/H`;
+  ctx.save();
+  ctx.shadowColor = '#211a31';
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetY = 1;
   hudFillText(ctx, spdLabel, pad + 8, spdBarY + 19, { bold: true, size: 12, color: HUD.primary });
+  ctx.restore();
   if(!kart.finished && !kart.inPit && track && track.pitLane) {
     const _pitRef = track.pitLane.entryPt;
     const pitDist = Math.hypot(kart.x - _pitRef.x, kart.y - _pitRef.y);
@@ -6689,10 +6741,7 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   const wearColor = wearPct > 0.75 ? '#ff4444' : wearPct > 0.45 ? '#ffd700' : '#4ade80';
   hudPanel(ctx, pad, tyreBarY, barW, stackH, { radius: 8, stroke: tempColor, lineWidth: 2.5 });
   const wearFillW = Math.max(48, barW - 78);
-  ctx.fillStyle = wearColor;
-  ctx.globalAlpha = 0.85;
-  ctx.fillRect(pad + 4, tyreBarY + 4, wearFillW * lifeRemain, 20);
-  ctx.globalAlpha = 1;
+  hudMeter(ctx, pad + 4, tyreBarY + 4, wearFillW, 20, lifeRemain, wearColor, true);
   const blockW = 4, blockH = 8, blockGap = 2;
   const blocksX = pad + 4 + wearFillW + 4;
   const blocksY = tyreBarY + 6;
@@ -6711,26 +6760,35 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
   ctx.textAlign = 'left';
 
   // ERS
+  if(player === 0 && race?.practice) window.KartBlitzExperience?.guideTick(kart, getP1Input());
   const ersCharge = kart.ersCharge !== undefined ? kart.ersCharge : 1;
   const ersActive = !!kart.ersActive || (kart._ersPower > 0.08);
-  const ersColor = ersCharge < 0.2 ? '#ff4444' : ersCharge < 0.5 ? '#f5c518' : '#6ee7f7';
+  const ersColor = ersCharge < 0.2 ? '#ef6b88' : ersCharge < 0.5 ? '#ffcf65' : '#c18be8';
   hudPanel(ctx, pad, ersBarY, barW, stackH, {
     radius: 8,
     stroke: ersActive ? 'rgba(110,231,247,0.9)' : HUD.panelStroke,
     lineWidth: ersActive ? 2.5 : 2
   });
   const ersFillW = Math.max(52, barW - 56);
-  ctx.fillStyle = ersColor;
-  ctx.globalAlpha = ersActive ? 0.95 : 0.8;
-  ctx.fillRect(pad + 4, ersBarY + 4, ersFillW * Math.min(ersCharge, 1), 20);
-  ctx.globalAlpha = 1;
-  hudFillText(ctx, ersActive ? 'BOOST' : 'ERS', pad + barW - 8, ersBarY + 13, {
-    bold: true, size: 11, color: ersActive ? '#6ee7f7' : HUD.dim, align: 'right'
+  hudMeter(ctx, pad + 4, ersBarY + 4, ersFillW, 20, ersCharge, ersColor, true);
+  hudFillText(ctx, ersActive ? 'BOOST ON' : ersCharge < .2 ? 'CHARGING' : 'BOOST', pad + barW - 8, ersBarY + 13, {
+    bold: true, size: 9, color: ersActive ? '#6ee7f7' : HUD.dim, align: 'right'
   });
   hudFillText(ctx, `${Math.round(ersCharge * 100)}%`, pad + barW - 8, ersBarY + 24, {
     bold: true, size: 10, color: ersActive ? '#6ee7f7' : HUD.dim, align: 'right'
   });
   ctx.textAlign = 'left';
+
+  if(player === 0) {
+    const ability = ersActive ? 'active' : ersCharge < .2 ? 'empty' : 'ready';
+    if(kart._uiAbility !== ability) {
+      if(kart._uiAbility) { playAbilityCue(ability); window.KartBlitzExperience?.announce(ability === 'active' ? 'Boost on' : ability === 'ready' ? 'Boost ready' : 'Boost recharging'); }
+      kart._uiAbility = ability;
+    }
+    const zoneReady = !!kart.drsInZone && !!kart.drsAvailable;
+    if(zoneReady && kart._uiZoneReady === false) playAbilityCue('zone');
+    kart._uiZoneReady = zoneReady;
+  }
 
   // Status badges (DRS / pit limit / off track / slipstream)
   const badgeGap = 6;
@@ -6753,12 +6811,12 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     drawBadge('OFF TRACK', 'rgba(255,50,50,0.92)', '#fff', 108);
   }
   if(kart.drsActive) {
-    drawBadge('DRS OPEN', 'rgba(0,88,220,0.95)', '#aaddff', 112);
+    drawBadge('ZONE ON', 'rgba(0,88,220,0.95)', '#aaddff', 112);
   } else if(kart.drsInZone && kart.drsAvailable) {
-    const drsKey = player === 0 ? '[C]' : '[,]';
-    drawBadge(`DRS ${drsKey}`, 'rgba(0,60,160,0.88)', 'rgba(160,210,255,0.95)', 112);
+    const drsKey = touchMode ? 'TAP' : `[${keyLabel(player === 0 ? BINDINGS.p1.drs : BINDINGS.p2.drs)}]`;
+    drawBadge(`ZONE ${drsKey}`, 'rgba(0,60,160,0.88)', 'rgba(160,210,255,0.95)', 112);
   } else if(kart.drsInZone && !kart.drsAvailable) {
-    drawBadge('DRS LOCK', 'rgba(50,50,100,0.82)', 'rgba(160,180,220,0.85)', 112);
+    drawBadge('ZONE LOCKED', 'rgba(50,50,100,0.82)', 'rgba(160,180,220,0.85)', 112);
   } else if(kart.slipstreamBoost) {
     drawBadge('SLIPSTREAM', 'rgba(0,210,255,0.95)', '#111', 122);
   }
@@ -6853,7 +6911,16 @@ function drawHUD(ctx, kart, track, x, y, w, h, player, mode) {
     const pl = track.pitLane;
     const entryDist = Math.hypot(kart.x - pl.entryPt.x, kart.y - pl.entryPt.y);
     const garageDist = pl.garagePos ? Math.hypot(kart.x - pl.garagePos.x, kart.y - pl.garagePos.y) : 9999;
-    if(entryDist < 420) {
+    if(kart._pitExiting) {
+      const banW = Math.min(340, w - pad * 2);
+      hudPanel(ctx, w / 2 - banW / 2, h - 58, banW, 28, {
+        radius: 8, fill: '#ffe08a', stroke: '#443750', lineWidth: 2
+      });
+      hudFillText(ctx, 'FOLLOW GOLD LANE TO EXIT · HOLD ACCELERATOR', w / 2, h - 39, {
+        bold: true, size: narrow ? 10 : 12, color: '#292036', align: 'center'
+      });
+      ctx.textAlign = 'left';
+    } else if(entryDist < 420) {
       ctx.globalAlpha = hudPulse(220, 0.22);
       const banW = Math.min(320, w - pad * 2);
       hudPanel(ctx, w / 2 - banW / 2, h - 58, banW, 28, {
@@ -7736,6 +7803,7 @@ function buildRaceRankings(karts, track) {
 // ── POSITION TRACKER (above minimap, or left of it on short screens) ──
 function drawPositionTracker(ctx, karts, W, H) {
   if(!race || !race.track) return;
+  if(touchMode && H < 480) return; // Position stays in the primary HUD; keep pedals clear.
   const track = race.track;
   const cum = track.cum, totalLen = track.totalLen;
   if(!cum || !totalLen) return;
@@ -7811,6 +7879,10 @@ function drawPositionTracker(ctx, karts, W, H) {
 
 // ── MINIMAP ─────────────────────────────────────────────
 function drawMinimap(ctx, track, karts, x, y, size) {
+  if(touchMode && race?.mode !== 'versus') {
+    if(H < 480) { size = 82; x = W/2 - size/2; y = 10; }
+    else { y = H - 190 - size; }
+  }
   const spl = track.spline;
   let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   spl.forEach(p=>{minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);});
@@ -7847,11 +7919,11 @@ function drawMinimap(ctx, track, karts, x, y, size) {
   const kartColors = ['#00f5ff','#ff6b35'];
   karts.forEach((k,i)=>{
     const vis = (typeof kartVisPose === 'function') ? kartVisPose(k) : { x: k.x, y: k.y };
-    ctx.fillStyle = kartColors[i];
-    ctx.beginPath();
-    ctx.arc(vis.x*sc+ofx, vis.y*sc+ofy, 4, 0, Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle = k.isAI ? '#ffb96a' : '#9cfff0';
+    ctx.save(); ctx.translate(vis.x*sc+ofx, vis.y*sc+ofy);
+    if(!k.isAI) { ctx.rotate(k.angle || 0); ctx.beginPath(); ctx.moveTo(7,0); ctx.lineTo(-5,-4); ctx.lineTo(-3,0); ctx.lineTo(-5,4); ctx.closePath(); }
+    else { ctx.beginPath(); ctx.arc(0,0,3,0,Math.PI*2); }
+    ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth=1; ctx.stroke(); ctx.restore();
   });
   // Pit garage / entry marker
   const _pitMarkerPos = track.pitLane ? track.pitLane.garagePos : track.pitPos;
@@ -8274,7 +8346,8 @@ class Race {
     this.shootoutDifficulty = window._shootoutDifficulty || 'medium';
     this._pitMenuPauseAt = 0; // performance.now() while human pit tyre UI freezes the race
 
-    const pd = getPlayerData();
+    const pd = { ...getPlayerData(), ...(window._quickRaceOptions || {}) };
+    this.beginnerLaunch = !!window._quickRaceOptions?.beginnerLaunch;
     // Time Trial is always dry / good conditions.
     this.weather = mode === 'trial' ? 'dry' : normalizeWeatherId(pd.weather || 'dry');
     this.tyres = getLegalTyreId(pd.tyres || 'med', this.weather);
@@ -9358,7 +9431,7 @@ class Race {
         return;
       }
       const rpm = Math.max(0, Math.min(1, this.launchRPM[i] || 0));
-      const launch = this._gradeLaunch(rpm);
+      const launch = this.beginnerLaunch && !k.isAI ? { speed: 78, label: 'LET’S GO!', detail: touchMode ? 'Hold GO and steer gently' : 'Hold W and steer with A / D', color: '#8cf0e1' } : this._gradeLaunch(rpm);
       k.speed = launch.speed;
       if(i === 0 || (this.mode === 'shootout' && i === shootoutActive)) {
         this.launchFeedback = {
@@ -9992,7 +10065,7 @@ class Race {
       ctx.fillStyle = '#ffd700';
       ctx.textAlign = 'center';
       ctx.font = 'bold 13px Nunito,sans-serif';
-      ctx.fillText('REV UP NOW — HIT GREEN BEFORE GO!', W/2, topY - 38);
+      ctx.fillText(touchMode ? 'HOLD GO — EASE OFF TO KEEP THE BAR GREEN' : `HOLD ${keyLabel(BINDINGS.p1.up)} — EASE OFF TO KEEP THE BAR GREEN`, W/2, topY - 38);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
     }
@@ -10109,7 +10182,7 @@ class Race {
       if(k.bestLap < Infinity) {
         const gold = (t.medalLaps && t.medalLaps.gold) || t.targetLap;
         const diff = k.bestLap - gold;
-        html += `<div class="result-row"><span class="result-label">BEST LAP</span><span class="result-val ${diff<0?'green':'red'}">${fmtTime(k.bestLap)}</span></div>`;
+        html += `<div class="result-row"><span class="result-label">BEST LAP</span><span class="result-val ${masteryPack.improved?'green':'gold'}">${fmtTime(k.bestLap)}</span></div>`;
         html += `<div class="result-row"><span class="result-label">GOLD</span><span class="result-val">${fmtTime(gold)}</span></div>`;
         if (masteryPack.medal) {
           html += `<div class="result-row"><span class="result-label">MEDAL</span><span class="result-val gold">${masteryPack.medalLabel}</span></div>`;
@@ -10133,7 +10206,10 @@ class Race {
         html = `<div class="winner-banner"> ${masteryPack.medalLabel} PACE!</div>` + html;
       }
 
-      resultsWrap.innerHTML = html;
+      const improvement = k.lapTimes.length > 1 ? k.lapTimes[0] - k.bestLap : 0;
+      const headline = masteryPack.improved ? 'NEW PERSONAL BEST' : 'SESSION COMPLETE';
+      const encouragement = improvement > .01 ? `${improvement.toFixed(2)} seconds faster than your opening lap.` : k.lapTimes.length ? 'A clean lap is a step forward. Your next target is below.' : 'No timed laps yet. Cross the chequered line after leaving the pits to start one.';
+      resultsWrap.innerHTML = `<div class="session-highlight"><strong>${headline}</strong><p>${encouragement}</p></div>` + html;
       window._lastResult = KartBlitzRewards.buildTrialResult({
         trackId: t.id, trackName: t.name, bestLap: k.bestLap, laps: k.lapTimes.length,
         pbImproved: masteryPack.improved,
@@ -10365,13 +10441,13 @@ function showCountdown(n) {
     if (n === 3 && getRaceCount() <= 3) {
       if (touchMode) {
         document.getElementById('ftue-hint-text').innerHTML =
-          `◀ ▶ on the sides to steer · GO / BRAKE pedals · ERS · DRS · PIT · PAUSE (top-right)`;
+          `Hold GO to accelerate · ◀ ▶ steer · BRAKE before corners · tap BOOST on straights`;
       } else {
         const ersKey = keyLabel(BINDINGS.p1.ers).toUpperCase();
         const drsKey = keyLabel(BINDINGS.p1.drs).toUpperCase();
         const pitKey = keyLabel(BINDINGS.p1.pit).toUpperCase();
         document.getElementById('ftue-hint-text').innerHTML =
-          `ERS [${ersKey}]: +25% boost · regen on brake/lift &nbsp;&nbsp;|&nbsp;&nbsp; DRS [${drsKey}]: +15% in blue zones &nbsp;&nbsp;|&nbsp;&nbsp; PIT [${pitKey}]: near garage`;
+          `${keyLabel(BINDINGS.p1.up)} accelerate · ${keyLabel(BINDINGS.p1.left)} / ${keyLabel(BINDINGS.p1.right)} steer · ${keyLabel(BINDINGS.p1.down)} brake · ${ersKey} boost · ${drsKey} speed zone`;
       }
       ftueEl.style.display = 'block';
     } else if (n < 0) {
@@ -10421,9 +10497,11 @@ function updateRaceControlsHud(visible) {
     else exitBtn.textContent = 'EXIT';
   }
   hud.style.display = 'flex';
-  const layout = getHudLayout(window.innerWidth, window.innerHeight, race.mode === 'versus' ? 'versus' : (race.mode === 'trial' ? 'trial' : 'ai'));
-  hud.style.top = (layout.pad + layout.timerH + 8) + 'px';
+  const layout = getHudLayout(W / (getA11yPrefs().uiScale || 1), H / (getA11yPrefs().uiScale || 1), race.mode === 'versus' ? 'versus' : (race.mode === 'trial' ? 'trial' : 'ai'));
+  const scale = window.innerHeight / H * (getA11yPrefs().uiScale || 1);
+  hud.style.top = ((layout.pad + layout.timerH + 12) * scale) + 'px';
   hud.style.right = '12px';
+  hud.classList.toggle('compact', layout.short);
 }
 function pauseGame() {
   if (!race || isPaused) return;
@@ -10794,6 +10872,15 @@ function renderThumbnail(trackIdx) {
 
   cx.fillStyle = t.bgColor; cx.fillRect(0,0,c.width,c.height);
   cx.fillStyle = t.grassColor; cx.fillRect(0,0,c.width,c.height);
+  for(const tree of t.scenery?.trees || []) {
+    const tx=tree.x*sc+ofx,ty=tree.y*sc+ofy;
+    cx.fillStyle=t.treeColor2 || '#527342'; cx.beginPath();cx.arc(tx,ty,Math.max(1.2,tree.r*sc),0,Math.PI*2);cx.fill();
+  }
+  for(const stand of t.scenery?.stands || []) {
+    cx.save();cx.translate(stand.x*sc+ofx,stand.y*sc+ofy);cx.rotate(stand.angle || 0);
+    cx.fillStyle=t.accentColor || '#d6b0ef';cx.fillRect(-5,-2,10,4);cx.restore();
+  }
+
 
   cx.beginPath();
   cx.moveTo(spl[0].x*sc+ofx, spl[0].y*sc+ofy);
@@ -10851,20 +10938,6 @@ function renderThumbnail(trackIdx) {
     });
   }
 
-  // Name ribbon overlay so the preview always carries the circuit name
-  cx.fillStyle = 'rgba(0,0,0,0.62)';
-  cx.fillRect(8, 8, c.width - 16, 18);
-  cx.strokeStyle = t.borderColor + '88';
-  cx.lineWidth = 1;
-  cx.strokeRect(8, 8, c.width - 16, 18);
-  cx.fillStyle = t.borderColor;
-  cx.font = 'bold 10px Nunito,sans-serif';
-  cx.textAlign = 'center';
-  cx.textBaseline = 'middle';
-  cx.fillText(t.name, c.width / 2, 17);
-  cx.textAlign = 'left';
-  cx.textBaseline = 'alphabetic';
-
   return c.toDataURL();
 }
 
@@ -10915,6 +10988,7 @@ function buildTrackGrid() {
         <div>${nextLine}</div>
       </div>`;
     }
+    el.dataset.track = String(t.id);
     el.innerHTML = `
       <img class="track-preview" src="${thumb}" alt="${t.name}">
       <div class="track-info">
@@ -10922,7 +10996,7 @@ function buildTrackGrid() {
         <div class="track-diff ${t.diffClass}">● ${t.difficulty} &nbsp; ${mult} COINS</div>
         ${masteryHtml || `<div class="track-target">GOLD: ${fmtTime((t.medalLaps && t.medalLaps.gold) || t.targetLap)} / LAP</div>`}
       </div>
-      ${isLocked ? `<div class="locked-overlay">
+      ${isLocked ? `<div class="locked-overlay"><strong>${t.name}</strong>
         <div style="font-size:22px;font-family:Nunito,sans-serif;font-weight:900;letter-spacing:.12em;">LOCKED</div>
         <div style="font-family:Nunito,sans-serif;font-size:10px;letter-spacing:.1em;color:#ffd700;">REQUIRES COINS ${t.unlockCost}</div>
         <div style="font-size:9px;margin-top:3px;color:${pd.coins>=t.unlockCost?'#4ade80':'#f87171'};">${pd.coins>=t.unlockCost?'YOU CAN UNLOCK THIS!':'NEED '+(t.unlockCost-pd.coins)+' MORE COINS'}</div>
@@ -11490,8 +11564,9 @@ function selectTrack(idx) {
 function getRaceCount() { try { return parseInt(localStorage.getItem('kartblitz_racecount') || '0', 10); } catch(e) { return 0; } }
 function incRaceCount() { try { localStorage.setItem('kartblitz_racecount', String(getRaceCount() + 1)); } catch(e) {} }
 
-function selectTrackStart(idx) {
-  waitForSaveSyncReady().then(() => {
+function selectTrackStart(idx, context) {
+  return waitForSaveSyncReady().then(() => {
+    if(context?.signal?.aborted) return;
     initAudio();
     clearTrackBaseCache();
     // Instant TT restarts preserve setup/tyres and must not inflate FTUE race count / rewards.
@@ -11505,6 +11580,10 @@ function selectTrackStart(idx) {
     // Force a layout pass before the first painted countdown/HUD frame
     void canvas.offsetWidth;
     race = new Race(currentMode, t);
+    window._quickRaceOptions = null;
+    race.practice = !!window._kbPracticeRequested;
+    if(window.KartBlitzActivities && window.KartBlitzActivities.active !== 'racing') window.KartBlitzActivities.start('racing', {attach:true});
+    document.body.dataset.screen = 'race';
     showTouchOverlay(true);
     updateRaceControlsHud(true);
     _pPool.forEach(p => { p.active = false; }); // reset particle pool
@@ -11524,8 +11603,30 @@ function selectTrackStart(idx) {
   });
 }
 
+function startQuickRace(context) {
+  if(window.KartBlitzActivities && window.KartBlitzActivities.active !== 'racing') return window.KartBlitzActivities.start('racing');
+  initAudio(); playUIClick(); currentMode = 'ai';
+  window._aiDifficulty = 'easy'; window._aiCount = 3; window._skipNextQuali = true;
+  window._quickRaceOptions = { selectedLaps: 1, weather: 'dry', tyres: 'med', collisionMode: 'collision', beginnerLaunch: true };
+  window._kbPracticeRequested = false; return selectTrackStart(0, context);
+}
+function startDrivingPractice(context) {
+  if(window.KartBlitzActivities && window.KartBlitzActivities.active !== 'racing') return window.KartBlitzActivities.start('racing', {practice:true});
+  initAudio(); playUIClick(); currentMode = 'trial'; window._kbPracticeRequested = true;
+  window.KartBlitzExperience?.beginGuide(); return selectTrackStart(0, context);
+}
+function requestRaceExit() {
+  if (!race) return;
+  if (race.mode === 'trial') { pauseQuit(); return; }
+  pauseGame(); window.KartBlitzExperience.confirmExit(() => pauseQuit());
+}
+function requestRaceRestart() {
+  pauseGame(); window.KartBlitzExperience.confirmExit(() => pauseRestartRace(), 'Restart this race?');
+}
+
 /** Title-screen shortcut into Time Trial track select. */
 function startTimeTrial() {
+  window._kbPracticeRequested = false;
   initAudio();
   playUIClick();
   selectMode('trial');
@@ -11686,6 +11787,7 @@ function resetTouchDrive(player) {
 
 function setDeviceMode(isMobile) {
   touchMode = !!isMobile;
+  document.body.classList.toggle('touch-mode',touchMode);
   const prompt = document.getElementById('device-prompt');
   if(prompt) prompt.style.display = 'none';
   try { localStorage.setItem('kartblitz_devicemode', isMobile ? 'touch' : 'keyboard'); } catch(e){}
@@ -12006,10 +12108,9 @@ function syncPitSelectionOverlay() {
       b.type = 'button';
       b.className = 'pit-ui-choice' + (ti === kart.pitNavIdx ? ' sel' : '');
       const lapLife = race && race.track ? getTyreLapLifespan(race.track.id, t.id) : '?';
-      const meta = isVersusSplit
-        ? `~${lapLife} lap${lapLife===1?'':'s'}`
-        : `${t.desc} · ~${lapLife} lap${lapLife===1?'':'s'}`;
-      b.innerHTML = `<div class="pit-ui-choice-head"><span class="pit-ui-choice-dot" style="background:${t.color};"></span>${t.label}${t.id === kart.tyreId ? ' · ON' : ''}</div><div class="pit-ui-choice-meta">${meta}</div>`;
+      const meta = race.mode === 'trial' ? 'No tyre wear in Time Trial' : `About ${lapLife} laps on this track`;
+      b.dataset.recommended = t.id === (isWetWeather(weather) ? (weather === 'storm' ? 'wet' : 'ints') : 'med') ? 'true' : 'false';
+      b.innerHTML = `<div class="pit-ui-choice-head"><span class="pit-ui-choice-dot" style="background:${t.color};"></span>${t.label}${b.dataset.recommended === 'true' ? ' · RECOMMENDED' : ''}${t.id === kart.tyreId ? ' · ON' : ''}</div><div class="pit-ui-choice-meta">${meta}</div>`;
       b.onclick = () => {
         kart.pitNavIdx = ti;
         kart.pitTyreChoice = t.id;
@@ -12368,7 +12469,7 @@ function promptRegisterUsername() {
 async function ensureRegisteredForAutoSave() {
   const current = await fetchDeviceIdentity(true);
   if(current.registered) return current;
-  return promptRegisterUsername();
+  return current; // Guest racing never opens a registration gate.
 }
 async function submitCloudScore(payload) {
   const data = await leaderboardFetchJson('/api/scores', {
@@ -13706,10 +13807,9 @@ function buildSettingsPane(){
   const engPct = Math.round((a11y.engineVolume != null ? a11y.engineVolume : 1) * 100);
   const scale = a11y.uiScale || 1;
   pane.innerHTML = `
-    ${window.KartBlitzMLLab ? window.KartBlitzMLLab.settingsMarkup() : ''}
     <div class="howto-section" style="width:min(560px,94vw);">
       <div class="howto-heading"> CONTROL MODE</div>
-      <p>Keyboard uses remappable bindings. Touch enables on-screen joysticks (face-to-face layout in 2-player).</p>
+      <p>Keyboard uses remappable bindings. Touch adds on-screen driving controls, with a face-to-face layout for two players.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;">
         <button type="button" class="key-btn${!touchMode?' key-btn-active':''}" onclick="setDeviceMode(false);playUIClick();buildSettingsPane();">KEYBOARD</button>
         <button type="button" class="key-btn${touchMode?' key-btn-active':''}" onclick="setDeviceMode(true);playUIClick();buildSettingsPane();">TOUCH</button>
@@ -13718,7 +13818,7 @@ function buildSettingsPane(){
     </div>
     <div class="howto-section" style="width:min(560px,94vw);">
       <div class="howto-heading"> AUDIO</div>
-      <p>Master mute stops all sound. SFX and engine volumes are separate. CrazyGames platform mute always overrides the in-game toggle.</p>
+      <p>Master mute stops all sound. Adjust sound effects and engine volume separately.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;">
         <button type="button" class="btn btn-sm ${muted ? 'btn-orange' : 'btn-cyan'}"
           onclick="initAudio();toggleUserMute();playUIClick();buildSettingsPane();"
@@ -13781,6 +13881,7 @@ function buildSettingsPane(){
         <button class="btn btn-sm btn-gold" type="button" onclick="initAudio();playUIClick();openPatchNotesManual();">PATCH NOTES</button>
       </div>
     </div>
+  <details class="advanced-tools"><summary>Advanced tools</summary>${window.KartBlitzMLLab ? window.KartBlitzMLLab.settingsMarkup() : ''}</details>
   `;
 }
 function startRebind(player, action){
@@ -14163,9 +14264,10 @@ function savePlayerData(d) {
 function updateSaveSyncUi(evt) {
   const chip = document.getElementById('save-sync-chip');
   const st = (evt && evt.state) || (window.KartBlitzPlayerSave && window.KartBlitzPlayerSave.getState && window.KartBlitzPlayerSave.getState().state) || 'loading';
-  const detail = (evt && evt.detail) || '';
+  const detail = (evt && evt.detail) || window.KartBlitzPlayerSave?.getState()?.detail || '';
+  const cloudOffline = st === 'error' && String(detail).startsWith('cloud_write_failed:');
   if (chip) {
-    chip.dataset.state = st;
+    chip.dataset.state = cloudOffline ? 'offline' : st;
     const labels = {
       loading: 'SAVE · LOADING',
       local: 'SAVE · LOCAL',
@@ -14175,8 +14277,9 @@ function updateSaveSyncUi(evt) {
       recovered: 'SAVE · RECOVERED',
       error: 'SAVE · ERROR'
     };
-    chip.textContent = labels[st] || ('SAVE · ' + String(st).toUpperCase());
-    chip.title = detail || st;
+    chip.textContent = cloudOffline ? 'SAVED HERE' : (labels[st] || ('SAVE · ' + String(st).toUpperCase()));
+    chip.title = cloudOffline ? 'Saved on this device. Cloud sync is unavailable. Tap to retry.' : (detail || st);
+    chip.setAttribute('aria-label',chip.title);
     chip.style.cursor = (st === 'error' || st === 'conflict') ? 'pointer' : 'default';
   }
   if (st === 'conflict') openSaveConflictModal();
@@ -14327,6 +14430,7 @@ function refreshGarageAdButton() {
   const btn = document.getElementById('garage-ad-btn');
   const hint = document.getElementById('garage-ad-hint');
   if (!btn) return;
+  btn.parentElement.hidden = !window.KartBlitzPlatform?.portal;
   const remain = Math.max(0, _rewardedAdCooldownUntil - Date.now());
   if (remain > 0) {
     const secs = Math.ceil(remain / 1000);
@@ -14374,7 +14478,7 @@ function watchAdForCoins() {
 function showGarage() {
   waitForSaveSyncReady().then(() => {
     initAudio();
-    garageTab = 'upgrades';
+    garageTab = 'paint';
     buildGarageScreen();
     showScreen('garage');
   });
@@ -14396,6 +14500,7 @@ function buildGarageScreen() {
 }
 
 function buildGarageContent() {
+  document.querySelectorAll('#garage-tabs .gtab').forEach(b => b.classList.toggle('active', b.textContent.trim() === (garageTab === 'paint' ? 'PAINTS' : 'UPGRADES')));
   const pd = getPlayerData();
   updateCurrencyDisplays(pd);
   const content = document.getElementById('garage-content');
@@ -14919,6 +15024,10 @@ function showSetupScreen(trackIdx) {
     });
   }
 
+  document.getElementById('setup-advanced').hidden = isTrial;
+  document.getElementById('setup-advanced').open = false;
+  document.getElementById('setup-recommendation').textContent = isTrial ? 'Equal stock karts · dry track · no tyre wear. Follow the pit exit, then cross the chequered line to start your timed lap.' : 'Ready with your saved kart. Pick a race length, or leave the defaults and go. Advanced tuning is optional.';
+  document.getElementById('trial-pit-section').hidden = true;
   showScreen('setup');
 }
 
@@ -14943,8 +15052,10 @@ function buildTyreRow() {
     div.style.cursor = dim ? 'not-allowed' : 'pointer';
     const warnBadge = wrongWeather && !blocked ? `<div style="font-size:9px;color:#f87171;margin-top:2px;"> VERY SLOW</div>` : '';
     const lapLife = currentTrack ? getTyreLapLifespan(currentTrack.id, tr.id) : '?';
-    const descText = currentTrack ? `~${lapLife} lap${lapLife===1?'':'s'} on this track` : tr.desc;
-    div.innerHTML = `<div style="width:12px;height:12px;border-radius:50%;background:${tr.color};display:inline-block;margin-right:4px;" aria-hidden="true"></div><b style="font-family:Nunito,sans-serif;font-size:11px;">${tr.label}</b><div style="font-size:10px;opacity:.65;margin-top:3px;">${descText}</div>${warnBadge}`;
+    const recommended = tr.id === (isWet ? (pd.weather === 'storm' ? 'wet' : 'ints') : 'med');
+    const descText = currentTrack ? `About ${lapLife} laps on this track` : tr.desc;
+    div.dataset.recommended = recommended ? 'true' : 'false';
+    div.innerHTML = `<div style="width:12px;height:12px;border-radius:50%;background:${tr.color};display:inline-block;margin-right:4px;" aria-hidden="true"></div><b style="font-family:Nunito,sans-serif;font-size:11px;">${tr.label}</b><div style="font-size:10px;opacity:.65;margin-top:3px;">${descText}</div>${recommended ? '<span class="recommend-badge">RECOMMENDED</span>' : ''}${warnBadge}`;
     if(!dim) div.onclick = () => {
       const p = getPlayerData(); p.tyres = tr.id; savePlayerData(p);
       tyreRow.querySelectorAll('.tyre-card').forEach(c=>{ c.classList.remove('sel'); c.setAttribute('aria-pressed','false'); });
@@ -15246,1019 +15357,7 @@ console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [
 })();
 </script>
 
-<script type="module">
-import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-const CAR_MODEL_URL = './rb6.glb';
-const gltfLoader = new GLTFLoader();
-let cachedGltfScene = null;
-
-function hexToThree(hex) {
-  return new THREE.Color(hex);
-}
-
-function emptyPartMats() {
-  return {
-    chassis: [], frontWing: [], frontWingShadow: [],
-    rearWing: [], rearWingShadow: [], nose: [], accents: [], wheels: [],
-  };
-}
-
-function paintMat(hex, opts = {}) {
-  return new THREE.MeshStandardMaterial({
-    color: hex,
-    metalness: opts.metalness ?? 0.62,
-    roughness: opts.roughness ?? 0.28,
-    emissive: opts.emissive ?? 0x000000,
-    emissiveIntensity: opts.emissiveIntensity ?? 1,
-  });
-}
-
-function stashStockMaterial(mat) {
-  if (!mat || mat.userData.stockCaptured) return;
-  mat.userData.stockCaptured = true;
-  mat.userData.stockMap = mat.map || null;
-  mat.userData.stockColor = mat.color ? mat.color.clone() : new THREE.Color(0xffffff);
-  mat.userData.stockEmissive = mat.emissive ? mat.emissive.clone() : null;
-}
-
-function glbMatName(mat) {
-  return ((mat && mat.name) || '').toLowerCase();
-}
-
-// RB6 GLB: +Y is nose/front, -Y is tail, -Z is up, +X is right. Body21 is one
-// livery shader covering chassis + wings + nose — split by triangle centroid.
-function classifyBodyPaintPoint(x, y, z, box) {
-  const ySpan = Math.max(box.max.y - box.min.y, 1e-6);
-  const zSpan = Math.max(box.max.z - box.min.z, 1e-6);
-  const yN = (y - box.min.y) / ySpan;
-  const zN = (z - box.min.z) / zSpan;
-  const ax = Math.abs(x);
-  if (yN > 0.78 && zN > 0.48) return 'frontWing';
-  if (yN > 0.72 && ax < 1.85 && zN < 0.75) return 'nose';
-  if (yN < 0.22 && zN < 0.38) return 'rearWing';
-  return 'chassis';
-}
-
-function cloneLiveryMaterial(srcMat) {
-  const mat = srcMat.clone();
-  mat.userData = {};
-  stashStockMaterial(mat);
-  return mat;
-}
-
-function splitBodyPaintMesh(mesh, mats) {
-  const src = mesh.geometry;
-  if (!src || !src.getAttribute('position')) {
-    mats.chassis.push(mesh.material);
-    return;
-  }
-  src.computeBoundingBox();
-  const box = src.boundingBox;
-  const pos = src.getAttribute('position');
-  const idx = src.index;
-  const buckets = { chassis: [], frontWing: [], nose: [], rearWing: [] };
-  const pushTri = (a, b, c) => {
-    const cx = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3;
-    const cy = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3;
-    const cz = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3;
-    buckets[classifyBodyPaintPoint(cx, cy, cz, box)].push(a, b, c);
-  };
-  if (idx) {
-    for (let i = 0; i < idx.count; i += 3) {
-      pushTri(idx.getX(i), idx.getX(i + 1), idx.getX(i + 2));
-    }
-  } else {
-    for (let i = 0; i < pos.count; i += 3) {
-      pushTri(i, i + 1, i + 2);
-    }
-  }
-
-  const parent = mesh.parent;
-  if (!parent) {
-    mats.chassis.push(mesh.material);
-    return;
-  }
-  const group = new THREE.Group();
-  group.name = (mesh.name || 'body') + '_paintParts';
-  group.position.copy(mesh.position);
-  group.quaternion.copy(mesh.quaternion);
-  group.scale.copy(mesh.scale);
-
-  ['chassis', 'frontWing', 'nose', 'rearWing'].forEach((part) => {
-    const indices = buckets[part];
-    if (!indices.length) return;
-    const geo = new THREE.BufferGeometry();
-    // Clone attributes so part geos do not share GPU buffers with each other / source.
-    for (const name of Object.keys(src.attributes)) {
-      geo.setAttribute(name, src.getAttribute(name).clone());
-    }
-    if (src.morphAttributes) {
-      geo.morphAttributes = {};
-      for (const name of Object.keys(src.morphAttributes)) {
-        geo.morphAttributes[name] = src.morphAttributes[name].map((attr) => attr.clone());
-      }
-    }
-    geo.setIndex(indices);
-    geo.computeBoundingSphere();
-    const partMesh = new THREE.Mesh(geo, cloneLiveryMaterial(mesh.material));
-    partMesh.castShadow = true;
-    partMesh.receiveShadow = true;
-    partMesh.name = part;
-    group.add(partMesh);
-    mats[part].push(partMesh.material);
-  });
-
-  parent.add(group);
-  parent.remove(mesh);
-  // Original body mesh is replaced — free its geometry (materials may still be referenced).
-  if (mesh.geometry) {
-    try { mesh.geometry.dispose(); } catch (e) { /* ok */ }
-  }
-}
-
-// Footprints from Kart.draw (2D race car). Mapping: 2D x→+Z, 2D y→+X, height→+Y.
-const CAR2D_SCALE = 1 / 12;
-const CAR2D = {
-  rearWing: [[-21, -9], [-16, -9], [-16, 9], [-21, 9]],
-  rearWingBarMain: [[-21, -9], [-19, -9], [-19, 9], [-21, 9]],
-  rearWingBarTipA: [[-17, -9], [-15, -9], [-15, -4], [-17, -4]],
-  rearWingBarTipB: [[-17, 4], [-15, 4], [-15, 9], [-17, 9]],
-  diffuser: [[-14, -5], [-20, -7], [-20, 7], [-14, 5]],
-  sidepodL: [[-11, -8], [4, -8], [6, -5], [-11, -5]],
-  sidepodR: [[-11, 8], [4, 8], [6, 5], [-11, 5]],
-  monocoque: [[-12, -4], [8, -3], [13, -1.5], [13, 1.5], [8, 3], [-12, 4]],
-  nose: [[12, -1.8], [19, -0.6], [19, 0.6], [12, 1.8]],
-  frontWing: [[16, -12], [21, -12], [21, 12], [16, 12]],
-  frontWingTipA: [[16, -12], [21, -12], [21, -8], [16, -8]],
-  frontWingTipB: [[16, 8], [21, 8], [21, 12], [16, 12]],
-  cockpit: { cx: 1, cy: 0, rx: 4, ry: 2.5 },
-  halo: { p0: [-2, -2.5], p1: [2, -6.5], p2: [6, -2.5] },
-  tcam: [[0, -6], [2, -6], [2, -3], [0, -3]],
-  wheels: [[10, -10], [10, 10], [-8, -10], [-8, 10]],
-  wheelR: 4.5,
-  rimR: 2.6,
-};
-
-function shapeFromPoints(pts2d) {
-  const shape = new THREE.Shape();
-  pts2d.forEach(([x, y], i) => {
-    // Shape XY → after Rx(-90): world (y*S, h, x*S). Use (y, -x) so +Z = nose.
-    const sx = y * CAR2D_SCALE;
-    const sy = -x * CAR2D_SCALE;
-    if (i === 0) shape.moveTo(sx, sy);
-    else shape.lineTo(sx, sy);
-  });
-  shape.closePath();
-  return shape;
-}
-
-/** Shrink a 2D footprint toward its centroid (units = Kart.draw coords). */
-function insetPoints(pts2d, amount) {
-  let cx = 0, cy = 0;
-  pts2d.forEach(([x, y]) => { cx += x; cy += y; });
-  cx /= pts2d.length;
-  cy /= pts2d.length;
-  return pts2d.map(([x, y]) => {
-    const dx = x - cx;
-    const dy = y - cy;
-    const len = Math.hypot(dx, dy) || 1;
-    const t = Math.max(0, 1 - amount / len);
-    return [cx + dx * t, cy + dy * t];
-  });
-}
-
-/** Round polygon corners with quadratic arcs (Kart.draw units). */
-function filletPolygon(pts2d, radius, segments = 5) {
-  if (!pts2d || pts2d.length < 3 || radius <= 0) return pts2d;
-  const n = pts2d.length;
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const prev = pts2d[(i - 1 + n) % n];
-    const curr = pts2d[i];
-    const next = pts2d[(i + 1) % n];
-    const v1x = prev[0] - curr[0];
-    const v1y = prev[1] - curr[1];
-    const v2x = next[0] - curr[0];
-    const v2y = next[1] - curr[1];
-    const len1 = Math.hypot(v1x, v1y) || 1;
-    const len2 = Math.hypot(v2x, v2y) || 1;
-    const r = Math.min(radius, len1 * 0.42, len2 * 0.42);
-    if (r < 0.08) {
-      out.push(curr);
-      continue;
-    }
-    const p1 = [curr[0] + (v1x / len1) * r, curr[1] + (v1y / len1) * r];
-    const p2 = [curr[0] + (v2x / len2) * r, curr[1] + (v2y / len2) * r];
-    for (let s = 0; s <= segments; s++) {
-      const t = s / segments;
-      const mt = 1 - t;
-      out.push([
-        mt * mt * p1[0] + 2 * mt * t * curr[0] + t * t * p2[0],
-        mt * mt * p1[1] + 2 * mt * t * curr[1] + t * t * p2[1],
-      ]);
-    }
-  }
-  return out;
-}
-
-function extrudePart(pts2d, height, mat, yBottom, bevel = true, bevelAmt = null, cornerR = 1.6) {
-  const soft = bevelAmt != null ? bevelAmt : (bevel ? Math.min(0.075, height * 0.45) : 0);
-  const rounded = (bevel && cornerR > 0) ? filletPolygon(pts2d, cornerR, 8) : pts2d;
-  const geo = new THREE.ExtrudeGeometry(shapeFromPoints(rounded), {
-    depth: height,
-    bevelEnabled: bevel && soft > 0,
-    bevelThickness: soft,
-    bevelSize: soft * 0.95,
-    bevelSegments: bevel ? 6 : 0,
-    curveSegments: 16,
-  });
-  geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = yBottom;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
-/** Lower wide slab + inset rounded cap for body volume. */
-function stackBody(pts2d, mat, y0, hBase, hCap, inset = 0.55, cornerR = 1.8) {
-  const base = extrudePart(pts2d, hBase, mat, y0, true, Math.min(0.07, hBase * 0.5), cornerR);
-  const mid = extrudePart(insetPoints(pts2d, inset * 0.55), hCap * 0.55, mat, y0 + hBase * 0.55, true, 0.06, cornerR * 0.9);
-  const cap = extrudePart(insetPoints(pts2d, inset), hCap * 0.65, mat, y0 + hBase * 0.85, true, 0.07, cornerR * 0.75);
-  return [base, mid, cap];
-}
-
-function ellipsePoints(cx, cy, rx, ry, segments = 32) {
-  const pts = [];
-  for (let i = 0; i < segments; i++) {
-    const a = (i / segments) * Math.PI * 2;
-    pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
-  }
-  return pts;
-}
-
-function sampleQuadBezier(p0, p1, p2, n = 24) {
-  const pts = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const mt = 1 - t;
-    const x = mt * mt * p0[0] + 2 * mt * t * p1[0] + t * t * p2[0];
-    const y = mt * mt * p0[1] + 2 * mt * t * p1[1] + t * t * p2[1];
-    pts.push([x, y, t]);
-  }
-  return pts;
-}
-
-function makeNumberTexture(text) {
-  const c = document.createElement('canvas');
-  c.width = 128;
-  c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0, 0, 128, 128);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 90px Orbitron, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(String(text), 64, 70);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  // Stage-owned: safe to dispose when the car stage tears down.
-  tex.userData.ownedByStage = true;
-  return tex;
-}
-
-/** Dispose GPU resources for a scene graph without touching shared GLTF cache textures. */
-function createDisposeTracker() {
-  return { geometries: new Set(), materials: new Set(), textures: new Set() };
-}
-
-function disposeTextureSafe(tex, tracker) {
-  if (!tex || !tex.isTexture) return;
-  if (tracker.textures.has(tex.uuid)) return;
-  // Only dispose textures this stage created (e.g. canvas number, PMREM env).
-  // Cloned GLB materials share map refs with cachedGltfScene — never free those.
-  if (!tex.userData || !tex.userData.ownedByStage) return;
-  tracker.textures.add(tex.uuid);
-  try { tex.dispose(); } catch (e) { /* already gone */ }
-}
-
-function disposeMaterialSafe(mat, tracker) {
-  if (!mat) return;
-  if (tracker.materials.has(mat.uuid)) return;
-  tracker.materials.add(mat.uuid);
-  const mapKeys = [
-    'map', 'lightMap', 'bumpMap', 'normalMap', 'specularMap', 'envMap',
-    'alphaMap', 'aoMap', 'displacementMap', 'emissiveMap', 'metalnessMap',
-    'roughnessMap', 'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap',
-  ];
-  for (let i = 0; i < mapKeys.length; i++) {
-    disposeTextureSafe(mat[mapKeys[i]], tracker);
-  }
-  try { mat.dispose(); } catch (e) { /* already gone */ }
-}
-
-function disposeGeometrySafe(geo, tracker) {
-  if (!geo) return;
-  if (tracker.geometries.has(geo.uuid)) return;
-  tracker.geometries.add(geo.uuid);
-  try { geo.dispose(); } catch (e) { /* already gone */ }
-}
-
-function disposeObjectTree(root, tracker) {
-  if (!root) return tracker || createDisposeTracker();
-  const t = tracker || createDisposeTracker();
-  root.traverse((obj) => {
-    if (obj.geometry) disposeGeometrySafe(obj.geometry, t);
-    if (obj.material) {
-      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      for (let i = 0; i < mats.length; i++) disposeMaterialSafe(mats[i], t);
-    }
-  });
-  return t;
-}
-
-function clearGroupChildren(group, tracker) {
-  if (!group) return;
-  const t = tracker || createDisposeTracker();
-  while (group.children.length) {
-    const child = group.children[0];
-    group.remove(child);
-    disposeObjectTree(child, t);
-  }
-  return t;
-}
-
-/** Sculpted extrusion of Kart.draw footprints for the cover/garage car. */
-function buildProceduralCar() {
-  const group = new THREE.Group();
-  const partMats = {
-    chassis: [],
-    frontWing: [],
-    frontWingShadow: [],
-    rearWing: [],
-    rearWingShadow: [],
-    nose: [],
-    accents: [],
-    wheels: [],
-  };
-
-  const matChassis = paintMat(0x00ccff, { metalness: 0.58, roughness: 0.28, clearcoat: 0.75 });
-  const matFront = paintMat(0xe8e8e8, { metalness: 0.45, roughness: 0.34, clearcoat: 0.55 });
-  const matFrontShadow = paintMat(0x606060, { metalness: 0.4, roughness: 0.4, clearcoat: 0.35 });
-  const matRear = paintMat(0x00ccff, { metalness: 0.58, roughness: 0.28, clearcoat: 0.7 });
-  const matRearShadow = paintMat(0x005f8f, { metalness: 0.45, roughness: 0.36, clearcoat: 0.4 });
-  const matNose = paintMat(0x00ccff, { metalness: 0.6, roughness: 0.26, clearcoat: 0.8 });
-  const matAccent = paintMat(0xffd700, { metalness: 0.72, roughness: 0.22, emissive: 0x442200, physical: false });
-  const matWheel = paintMat(0x141414, { metalness: 0.05, roughness: 0.94, physical: false });
-  const matRim = paintMat(0x3c3c3c, { metalness: 0.7, roughness: 0.35, clearcoat: 0.4 });
-  const matSpoke = paintMat(0x555555, { metalness: 0.55, roughness: 0.42, physical: false });
-  const matCockpit = paintMat(0x0c1b2a, { metalness: 0.12, roughness: 0.9, physical: false });
-  const matTcam = paintMat(0xffd700, { metalness: 0.78, roughness: 0.2, physical: false });
-
-  partMats.chassis.push(matChassis);
-  partMats.frontWing.push(matFront);
-  partMats.frontWingShadow.push(matFrontShadow);
-  partMats.rearWing.push(matRear);
-  partMats.rearWingShadow.push(matRearShadow);
-  partMats.nose.push(matNose);
-  partMats.accents.push(matAccent, matTcam);
-  partMats.wheels.push(matWheel, matRim, matSpoke);
-
-  const add = (mesh) => {
-    group.add(mesh);
-    return mesh;
-  };
-  const addAll = (meshes) => meshes.forEach(add);
-
-  // Rear wing — thin aero plate + taller endplates
-  add(extrudePart(CAR2D.rearWing, 0.055, matRear, 0.42, true, 0.02, 0.7));
-  add(extrudePart(CAR2D.rearWingBarMain, 0.38, matRearShadow, 0.18, true, 0.028, 0.55));
-  add(extrudePart(CAR2D.rearWingBarTipA, 0.34, matRearShadow, 0.20, true, 0.022, 0.45));
-  add(extrudePart(CAR2D.rearWingBarTipB, 0.34, matRearShadow, 0.20, true, 0.022, 0.45));
-
-  // Diffuser — low beveled wedge
-  add(extrudePart(CAR2D.diffuser, 0.055, matAccent, 0.015, true, 0.032, 0.85));
-
-  // Sidepods + monocoque — stacked rounded volumes
-  addAll(stackBody(CAR2D.sidepodL, matChassis, 0.05, 0.11, 0.10, 0.5, 1.15));
-  addAll(stackBody(CAR2D.sidepodR, matChassis, 0.05, 0.11, 0.10, 0.5, 1.15));
-  addAll(stackBody(CAR2D.monocoque, matChassis, 0.07, 0.15, 0.14, 0.55, 1.25));
-  // Extra top spine for softer crown
-  add(extrudePart(insetPoints(CAR2D.monocoque, 1.0), 0.07, matChassis, 0.28, true, 0.045, 1.0));
-
-  // Nose — base + raised tip cap
-  add(extrudePart(CAR2D.nose, 0.10, matNose, 0.055, true, 0.04, 0.7));
-  add(extrudePart(insetPoints(CAR2D.nose, 0.4), 0.09, matNose, 0.125, true, 0.048, 0.6));
-
-  const cockpitY = 0.32;
-  add(extrudePart(
-    ellipsePoints(CAR2D.cockpit.cx, CAR2D.cockpit.cy, CAR2D.cockpit.rx, CAR2D.cockpit.ry, 36),
-    0.045, matCockpit, cockpitY, true, 0.025, 0
-  ));
-
-  // Halo tube — smoother, slightly thicker
-  const haloSamples = sampleQuadBezier(CAR2D.halo.p0, CAR2D.halo.p1, CAR2D.halo.p2, 28);
-  const haloPts = haloSamples.map(([x, y, t]) => new THREE.Vector3(
-    y * CAR2D_SCALE,
-    0.38 + Math.sin(t * Math.PI) * 0.18,
-    x * CAR2D_SCALE
-  ));
-  const haloCurve = new THREE.CatmullRomCurve3(haloPts);
-  const haloMesh = new THREE.Mesh(
-    new THREE.TubeGeometry(haloCurve, 48, 0.042, 12, false),
-    matAccent
-  );
-  haloMesh.castShadow = true;
-  haloMesh.receiveShadow = true;
-  add(haloMesh);
-
-  // T-cam — rounded nub on halo apex
-  const apex = haloPts[Math.floor(haloPts.length / 2)];
-  const tcam = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), matTcam);
-  tcam.position.copy(apex);
-  tcam.position.y += 0.04;
-  tcam.castShadow = true;
-  add(tcam);
-  const tcamStem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.018, 0.022, 0.06, 10),
-    matTcam
-  );
-  tcamStem.position.set(apex.x, apex.y - 0.01, apex.z);
-  tcamStem.castShadow = true;
-  add(tcamStem);
-
-  // Front wing — thin plate raised off ground + endplates
-  add(extrudePart(CAR2D.frontWing, 0.038, matFront, 0.055, true, 0.016, 0.65));
-  add(extrudePart(CAR2D.frontWingTipA, 0.12, matFrontShadow, 0.02, true, 0.02, 0.5));
-  add(extrudePart(CAR2D.frontWingTipB, 0.12, matFrontShadow, 0.02, true, 0.02, 0.5));
-
-  // Wheels — rounded tyre + inset rim + thin spokes
-  const tyreR = CAR2D.wheelR * CAR2D_SCALE;
-  const rimR = CAR2D.rimR * CAR2D_SCALE;
-  const tyreW = 0.13;
-  const tyreGeo = new THREE.TorusGeometry(tyreR * 0.72, tyreR * 0.28, 14, 36);
-  const rimGeo = new THREE.CylinderGeometry(rimR, rimR, tyreW * 0.5, 28);
-  const hubGeo = new THREE.CylinderGeometry(rimR * 0.28, rimR * 0.28, tyreW * 0.58, 16);
-  CAR2D.wheels.forEach(([wx, wy]) => {
-    const x = wy * CAR2D_SCALE;
-    const z = wx * CAR2D_SCALE;
-    const y = tyreR;
-    const tyre = new THREE.Mesh(tyreGeo, matWheel);
-    tyre.rotation.y = Math.PI / 2;
-    tyre.position.set(x, y, z);
-    tyre.castShadow = true;
-    tyre.receiveShadow = true;
-    add(tyre);
-    const rim = new THREE.Mesh(rimGeo, matRim);
-    rim.rotation.z = Math.PI / 2;
-    rim.position.set(x, y, z);
-    rim.castShadow = true;
-    add(rim);
-    const hub = new THREE.Mesh(hubGeo, matSpoke);
-    hub.rotation.z = Math.PI / 2;
-    hub.position.set(x, y, z);
-    add(hub);
-    const spokeRoot = new THREE.Group();
-    spokeRoot.position.set(x, y, z);
-    for (let s = 0; s < 5; s++) {
-      const spoke = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.008, 0.01, rimR * 1.75, 6),
-        matSpoke
-      );
-      const pivot = new THREE.Group();
-      pivot.rotation.x = (s * Math.PI * 2) / 5;
-      spoke.position.y = rimR * 0.42;
-      pivot.add(spoke);
-      spokeRoot.add(pivot);
-    }
-    add(spokeRoot);
-  });
-
-  // Cockpit number (P1 preview)
-  const numTex = makeNumberTexture('1');
-  const numMat = new THREE.MeshBasicMaterial({
-    map: numTex,
-    transparent: true,
-    depthWrite: false,
-  });
-  const num = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.26), numMat);
-  num.rotation.x = -Math.PI / 2;
-  num.position.set(
-    CAR2D.cockpit.cy * CAR2D_SCALE,
-    cockpitY + 0.05,
-    CAR2D.cockpit.cx * CAR2D_SCALE
-  );
-  add(num);
-
-  return { group, partMats };
-}
-
-function createCarStage(canvas, opts = {}) {
-  const statusEl = opts.statusEl || null;
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance',
-  });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-  const scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  // Keep the RenderTarget so we can dispose the env map without touching shared assets.
-  const envTarget = pmrem.fromScene(new RoomEnvironment(), 0.04);
-  if (envTarget && envTarget.texture) {
-    envTarget.texture.userData.ownedByStage = true;
-    scene.environment = envTarget.texture;
-  }
-  pmrem.dispose();
-
-  const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 200);
-  camera.position.set(2.85, 1.15, 3.85);
-
-  const hemi = new THREE.HemisphereLight(0xb8e6ff, 0x1a1520, 1.15);
-  scene.add(hemi);
-  const key = new THREE.DirectionalLight(0xffffff, 1.85);
-  key.position.set(4.2, 7.5, 3.2);
-  key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
-  key.shadow.camera.near = 0.5;
-  key.shadow.camera.far = 24;
-  key.shadow.camera.left = -4;
-  key.shadow.camera.right = 4;
-  key.shadow.camera.top = 4;
-  key.shadow.camera.bottom = -4;
-  key.shadow.bias = -0.0008;
-  key.shadow.radius = 2.5;
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0x88c8ff, 0.48);
-  fill.position.set(-3.2, 2.8, -2.2);
-  scene.add(fill);
-  const rimLight = new THREE.DirectionalLight(0xffe0b0, 0.35);
-  rimLight.position.set(-1.5, 2.5, 4);
-  scene.add(rimLight);
-
-  const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(2.4, 48),
-    new THREE.MeshStandardMaterial({ color:0x0b1524, metalness:0.25, roughness:0.78, transparent:true, opacity:0.94 })
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.02;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(1.55, 1.72, 48),
-    new THREE.MeshBasicMaterial({ color:0x00f5ff, transparent:true, opacity:0.28, side:THREE.DoubleSide })
-  );
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.01;
-  scene.add(ring);
-
-  const root = new THREE.Group();
-  scene.add(root);
-
-  let car = null;
-  let partMats = {
-    chassis: [], frontWing: [], frontWingShadow: [],
-    rearWing: [], rearWingShadow: [], nose: [], accents: [], wheels: [],
-  };
-  let animId = 0;
-  let running = false;
-  let disposed = false;
-  let yaw = 0.55;
-  let autoSpin = true;
-  let drag = false;
-  let lastX = 0;
-  let bounceT = 0;
-  let autoSpinTimer = 0;
-
-  function setStatus(msg) {
-    if(statusEl) statusEl.textContent = msg;
-  }
-
-  function resize() {
-    if (disposed) return;
-    const parent = canvas.parentElement || canvas;
-    const w = Math.max(1, parent.clientWidth || canvas.clientWidth);
-    const h = Math.max(1, parent.clientHeight || canvas.clientHeight);
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  }
-
-  function fitCarOnPad(obj) {
-    const box = new THREE.Box3().setFromObject(obj);
-    const size = box.getSize(new THREE.Vector3());
-    const scale = 2.55 / Math.max(size.x, size.y, size.z, 0.001);
-    obj.scale.setScalar(scale);
-    const box2 = new THREE.Box3().setFromObject(obj);
-    const center2 = box2.getCenter(new THREE.Vector3());
-    const minY = box2.min.y;
-    obj.position.x -= center2.x;
-    obj.position.z -= center2.z;
-    obj.position.y -= minY;
-  }
-
-  function mapGlbMaterials(rootObj) {
-    const mats = emptyPartMats();
-    const bodyMeshes = [];
-    rootObj.traverse((o) => {
-      if (!o.isMesh) return;
-      o.castShadow = true;
-      o.receiveShadow = true;
-      const list = Array.isArray(o.material) ? o.material : [o.material];
-      list.forEach((mat) => {
-        if (!mat) return;
-        stashStockMaterial(mat);
-        const name = glbMatName(mat);
-        if (name.startsWith('window')) return;
-        if (name.startsWith('meshpart')) {
-          mats.wheels.push(mat);
-          return;
-        }
-        if (name.startsWith('chassis1')) {
-          mats.accents.push(mat);
-          return;
-        }
-        if (name.startsWith('body21')) {
-          if (!bodyMeshes.includes(o)) bodyMeshes.push(o);
-          return;
-        }
-        mats.chassis.push(mat);
-      });
-    });
-    bodyMeshes.forEach((mesh) => splitBodyPaintMesh(mesh, mats));
-    return mats;
-  }
-
-  function applyMatPaint(mat, paintId, part) {
-    if (!mat) return;
-    const isStock = paintId === 'stock';
-    const pc = (typeof window.getPaintColor === 'function')
-      ? window.getPaintColor(paintId)
-      : { body: '#00ccff', shadow: '#005f8f' };
-    const hasStock = !!(mat.userData && mat.userData.stockCaptured);
-
-    if (hasStock && isStock) {
-      mat.map = mat.userData.stockMap || null;
-      if (mat.userData.stockColor) mat.color.copy(mat.userData.stockColor);
-      else mat.color.set(0xffffff);
-      if (mat.emissive && mat.userData.stockEmissive) {
-        mat.emissive.copy(mat.userData.stockEmissive);
-      } else if (mat.emissive) {
-        mat.emissive.set(0x000000);
-      }
-    } else if (hasStock && !isStock) {
-      mat.map = null;
-      mat.color.copy(hexToThree(pc.body));
-      if (part === 'accents' && mat.emissive) {
-        mat.emissive.copy(hexToThree(pc.body)).multiplyScalar(0.18);
-      } else if (mat.emissive) {
-        mat.emissive.set(0x000000);
-      }
-    } else {
-      mat.color.copy(hexToThree(pc.body));
-      if (part === 'accents' && mat.emissive) {
-        mat.emissive.copy(hexToThree(pc.body)).multiplyScalar(0.18);
-      } else if (mat.emissive) {
-        mat.emissive.set(0x000000);
-      }
-    }
-    mat.needsUpdate = true;
-  }
-
-  function applyLivery(livery) {
-    if (!livery) return;
-    (partMats.chassis || []).forEach((mat) => applyMatPaint(mat, livery.chassis, 'chassis'));
-    (partMats.accents || []).forEach((mat) => applyMatPaint(mat, livery.accents, 'accents'));
-    ['frontWing', 'rearWing', 'nose'].forEach((part) => {
-      const id = livery[part];
-      (partMats[part] || []).forEach((mat) => applyMatPaint(mat, id, part));
-      const pc = (typeof window.getPaintColor === 'function')
-        ? window.getPaintColor(id)
-        : { body: '#00ccff', shadow: '#005f8f' };
-      (partMats[part + 'Shadow'] || []).forEach((mat) => {
-        if (!mat) return;
-        mat.color.copy(hexToThree(pc.shadow || pc.body));
-        mat.needsUpdate = true;
-      });
-    });
-  }
-
-  function placeCar(builtGroup, builtMats, extraRotY = Math.PI * 0.12) {
-    clearGroupChildren(root);
-    car = builtGroup;
-    partMats = builtMats;
-    fitCarOnPad(car);
-    car.rotation.y += extraRotY;
-    root.add(car);
-  }
-
-  async function prepareCar() {
-    try {
-      if (!cachedGltfScene) {
-        const gltf = await gltfLoader.loadAsync(CAR_MODEL_URL);
-        if (disposed) return 'aborted';
-        cachedGltfScene = gltf.scene;
-      }
-      if (disposed) return 'aborted';
-      // Deep-clone materials AND geometries so dispose never frees the shared GLTF cache.
-      // (Object3D.clone shares BufferGeometry by default.)
-      const model = cachedGltfScene.clone(true);
-      model.traverse((o) => {
-        if (!o.isMesh) return;
-        if (o.geometry) o.geometry = o.geometry.clone();
-        if (Array.isArray(o.material)) o.material = o.material.map((m) => m.clone());
-        else if (o.material) o.material = o.material.clone();
-      });
-      if (disposed) {
-        disposeObjectTree(model);
-        return 'aborted';
-      }
-      model.rotation.set(0, Math.PI * 0.15, 0);
-      const mats = mapGlbMaterials(model);
-      if (disposed) {
-        disposeObjectTree(model);
-        return 'aborted';
-      }
-      placeCar(model, mats, 0);
-      return 'glb';
-    } catch (err) {
-      if (disposed) return 'aborted';
-      console.warn('RB6 GLB load failed, using procedural car', err);
-      const built = buildProceduralCar();
-      if (disposed) {
-        disposeObjectTree(built.group);
-        return 'aborted';
-      }
-      placeCar(built.group, built.partMats, Math.PI * 0.12);
-      return 'procedural';
-    }
-  }
-
-  let lastFrameAt = 0;
-  function frame(now) {
-    if(!running || disposed) return;
-    animId = requestAnimationFrame(frame);
-    const minDelta = drag ? 33 : 50;
-    if(now - lastFrameAt < minDelta) return;
-    lastFrameAt = now;
-    bounceT = now * 0.001;
-    if(autoSpin && !drag) yaw += 0.007;
-    root.rotation.y = yaw;
-    root.position.y = Math.sin(bounceT * 1.6) * 0.035;
-    ring.rotation.z = -yaw * 0.35;
-    camera.lookAt(0, 0.32, 0);
-    renderer.render(scene, camera);
-  }
-
-  function onPointerDown(e) {
-    if (disposed) return;
-    drag = true;
-    autoSpin = false;
-    if (autoSpinTimer) { clearTimeout(autoSpinTimer); autoSpinTimer = 0; }
-    lastX = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-  }
-  function onPointerMove(e) {
-    if(!drag || disposed) return;
-    const x = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : lastX);
-    yaw += (x - lastX) * 0.008;
-    lastX = x;
-  }
-  function onPointerUp() {
-    if (disposed) return;
-    drag = false;
-    if (autoSpinTimer) clearTimeout(autoSpinTimer);
-    autoSpinTimer = setTimeout(() => {
-      autoSpinTimer = 0;
-      if (!disposed) autoSpin = true;
-    }, 1200);
-  }
-  function onTouchStart(e) {
-    onPointerDown(e);
-    e.preventDefault();
-  }
-  function onTouchMove(e) {
-    onPointerMove(e);
-    e.preventDefault();
-  }
-
-  canvas.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', onPointerUp);
-  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-  canvas.addEventListener('touchend', onPointerUp);
-  window.addEventListener('resize', resize);
-
-  const api = {
-    async mount(livery) {
-      if (disposed) return;
-      setStatus('LOADING CAR…');
-      resize();
-      try {
-        const mode = await prepareCar();
-        if (disposed || mode === 'aborted') return;
-        applyLivery(livery || (typeof window.getPlayerLivery === 'function' ? window.getPlayerLivery('p1') : null));
-        setStatus(mode === 'glb' ? '' : 'PROCEDURAL FALLBACK');
-        this.resume();
-      } catch (err) {
-        console.error(err);
-        if (!disposed) setStatus('CAR LOAD FAILED');
-      }
-    },
-    setLivery(livery) { if (!disposed) applyLivery(livery); },
-    resume() {
-      if(disposed || running) return;
-      running = true;
-      resize();
-      animId = requestAnimationFrame(frame);
-    },
-    pause() {
-      running = false;
-      if(animId) cancelAnimationFrame(animId);
-      animId = 0;
-    },
-    /** Lightweight counts for leak diagnostics (listeners + tracked GPU ids). */
-    getDiagnostics() {
-      return {
-        disposed,
-        running,
-        animId: !!animId,
-        hasCar: !!car,
-        envMap: !!(scene && scene.environment),
-      };
-    },
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      this.pause();
-      if (autoSpinTimer) { clearTimeout(autoSpinTimer); autoSpinTimer = 0; }
-
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove', onTouchMove);
-      canvas.removeEventListener('touchend', onPointerUp);
-      window.removeEventListener('resize', resize);
-
-      const tracker = createDisposeTracker();
-      clearGroupChildren(root, tracker);
-      car = null;
-      partMats = emptyPartMats();
-
-      // Scene props (ground/ring/lights) + any remaining children
-      disposeObjectTree(scene, tracker);
-
-      scene.environment = null;
-      if (envTarget) {
-        try { envTarget.dispose(); } catch (e) { /* ok */ }
-      }
-
-      if (key.shadow && key.shadow.map) {
-        try { key.shadow.map.dispose(); } catch (e) { /* ok */ }
-        key.shadow.map = null;
-      }
-
-      try { renderer.dispose(); } catch (e) { /* ok */ }
-      try {
-        if (typeof renderer.forceContextLoss === 'function') renderer.forceContextLoss();
-      } catch (e2) { /* ok */ }
-
-      api._lastDisposeStats = {
-        geometries: tracker.geometries.size,
-        materials: tracker.materials.size,
-        textures: tracker.textures.size,
-      };
-    },
-    resize,
-  };
-
-  return api;
-}
-
-let menuStage = null;
-let garageStage = null;
-window._menuPaintPart = window._menuPaintPart || 'chassis';
-window._garagePaintPreview = window._garagePaintPreview || 'p1';
-
-/** Listener + loop diagnostics for Garage/menu car stages (manual leak checks). */
-window.getCarStageDiagnostics = function getCarStageDiagnostics() {
-  return {
-    menu: menuStage ? menuStage.getDiagnostics() : null,
-    garage: garageStage ? garageStage.getDiagnostics() : null,
-    menuAlive: !!menuStage,
-    garageAlive: !!garageStage,
-    gltfCached: !!cachedGltfScene,
-  };
-};
-
-// Test hooks for dispose helpers (no Three.js dependency beyond duck-typed objects).
-window.__kbCarStageDispose = {
-  createDisposeTracker,
-  disposeTextureSafe,
-  disposeMaterialSafe,
-  disposeGeometrySafe,
-  disposeObjectTree,
-  clearGroupChildren,
-};
-
-window.buildMenuPaintStrip = function buildMenuPaintStrip() {
-  const partsEl = document.getElementById('menu-paint-parts');
-  const swEl = document.getElementById('menu-paint-swatches');
-  if(!partsEl || !swEl || !window.PAINT_PARTS) return;
-  const liv = window.getPlayerLivery('p1');
-  const active = window._menuPaintPart || 'chassis';
-  partsEl.innerHTML = '';
-  swEl.innerHTML = '';
-  window.PAINT_PARTS.forEach((part) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'menu-paint-part' + (active === part.id ? ' sel' : '');
-    b.textContent = part.label;
-    b.onclick = () => {
-      window._menuPaintPart = part.id;
-      window.buildMenuPaintStrip();
-    };
-    partsEl.appendChild(b);
-  });
-  window.PAINT_COLORS.forEach((pc) => {
-    const sw = document.createElement('button');
-    sw.type = 'button';
-    sw.className = 'paint-sw' + (liv[active] === pc.id ? ' sel' : '');
-    sw.style.background = pc.body;
-    sw.title = pc.label;
-    sw.setAttribute('aria-label', `Paint ${pc.label}`);
-    sw.setAttribute('aria-pressed', liv[active] === pc.id ? 'true' : 'false');
-    sw.onclick = () => {
-      window.setPlayerLiveryPart('p1', active, pc.id);
-      window.buildMenuPaintStrip();
-    };
-    swEl.appendChild(sw);
-  });
-};
-
-window.mountMenuCarStage = async function mountMenuCarStage() {
-  const canvas = document.getElementById('menu-car-canvas');
-  if(!canvas) return;
-  if(!menuStage) {
-    menuStage = createCarStage(canvas, { statusEl: document.getElementById('menu-car-status') });
-    await menuStage.mount(window.getPlayerLivery('p1'));
-  } else {
-    menuStage.setLivery(window.getPlayerLivery('p1'));
-    menuStage.resume();
-  }
-  window.buildMenuPaintStrip();
-};
-
-window.pauseMenuCarStage = function pauseMenuCarStage() {
-  if(menuStage) menuStage.pause();
-};
-
-window.mountGarageCarStage = async function mountGarageCarStage() {
-  const canvas = document.getElementById('garage-car-canvas');
-  if(!canvas) return;
-  if(garageStage) {
-    garageStage.dispose();
-    garageStage = null;
-  }
-  garageStage = createCarStage(canvas);
-  const preview = window._garagePaintPreview === 'p2' ? 'p2' : 'p1';
-  await garageStage.mount(window.getPlayerLivery(preview));
-};
-
-window.disposeGarageCarStage = function disposeGarageCarStage() {
-  if(garageStage) {
-    garageStage.dispose();
-    garageStage = null;
-  }
-};
-
-window.refreshCarStages = function refreshCarStages() {
-  if(menuStage) menuStage.setLivery(window.getPlayerLivery('p1'));
-  if(garageStage) {
-    const preview = window._garagePaintPreview === 'p2' ? 'p2' : 'p1';
-    garageStage.setLivery(window.getPlayerLivery(preview));
-  }
-  if(typeof window.buildMenuPaintStrip === 'function') window.buildMenuPaintStrip();
-};
-
-// Auto-mount if menu is already visible
-if(document.getElementById('screen-menu') && !document.getElementById('screen-menu').classList.contains('hidden')) {
-  window.mountMenuCarStage();
-}
-</script>
+<script src="ui/car-preview.bundle.js" defer></script>
 
 
 <script>

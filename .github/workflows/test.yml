@@ -32,6 +32,12 @@ jobs:
       - name: Build browser simulator
         run: npm run sim:browser
 
+      - name: Build local client assets
+        run: npm run assets:build
+
+      - name: Activity lifecycle and desktop asset boundaries
+        run: npm run test:activities
+
       - name: Unit tests
         run: npm run test:unit
 

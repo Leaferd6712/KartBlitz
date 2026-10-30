@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="240" viewBox="0 0 920 240" role="img" aria-labelledby="title desc">
+  <title id="title">KartBLitz</title><desc id="desc">A gold and mint racing wordmark on purple slate.</desc>
+  <defs><linearGradient id="slate" x2=".9" y2="1"><stop stop-color="#5b4778"/><stop offset="1" stop-color="#25233e"/></linearGradient><linearGradient id="gold" x2="0" y2="1"><stop stop-color="#ffec9c"/><stop offset="1" stop-color="#ffb64b"/></linearGradient><pattern id="checks" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M0 0h16v16H0zm16 16h16v16H16z" fill="#b29ac6" opacity=".1"/></pattern></defs>
+  <rect x="4" y="4" width="912" height="232" rx="30" fill="url(#slate)" stroke="#9c88b1" stroke-width="6"/>
+  <rect x="8" y="8" width="904" height="224" rx="26" fill="url(#checks)"/>
+  <path d="M54 165 91 76h31l-23 56h53l-39 33z" fill="#a7f1df"/>
+  <path d="m122 75 35 0-31 40h-29z" fill="#ffdc7d"/>
+  <text x="184" y="150" font-family="Trebuchet MS,Arial,sans-serif" font-size="112" font-weight="900" font-style="italic" letter-spacing="-5" fill="#221a32" stroke="#221a32" stroke-width="9" paint-order="stroke">KART<tspan fill="#221a32">BLITZ</tspan></text>
+  <text x="180" y="140" font-family="Trebuchet MS,Arial,sans-serif" font-size="112" font-weight="900" font-style="italic" letter-spacing="-5" fill="#fff2c6">KART<tspan fill="url(#gold)">BLITZ</tspan></text>
+  <path d="M183 175h609" stroke="#a7f1df" stroke-width="4" opacity=".45"/>
+  <text x="184" y="207" fill="#ede1f4" font-family="Trebuchet MS,Arial,sans-serif" font-size="16" letter-spacing="5">FIND YOUR LINE. MAKE IT YOURS.</text>
+</svg>
