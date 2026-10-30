@@ -1,7 +1,6 @@
 (function () {
   'use strict';
 
-  const ENABLE_KEY = 'kartblitz_ml_lab_enabled';
   const PLAYER_MODEL_KEY = 'kartblitz_ml_player_model';
   const TRAINER_URL_KEY = 'kartblitz_ml_trainer_url';
   const TRAINER_CODE_KEY = 'kartblitz_ml_pairing_code';
@@ -23,7 +22,6 @@
 
   const storedModel = parseStoredModel();
   const state = {
-    enabled: read(ENABLE_KEY) === '1',
     selectedModel: 'ours',
     selectedTrack: 0,
     ourModel: Runtime.DEFAULT_MODEL,
@@ -115,7 +113,7 @@
 
         <section class="ml-panel" data-panel="build">
           <div class="ml-grid">
-            <article class="ml-card"><span class="ml-badge">DO NOW / OPTIONAL IMITATION</span><h3>Give PPO a short head start</h3><div class="ml-status"><div class="ml-stat"><span>INPUTS</span><strong>24</strong></div><div class="ml-stat"><span>OUTPUTS</span><strong>3</strong></div><div class="ml-stat"><span>IMITATION</span><strong>10%</strong></div><div class="ml-stat"><span>PPO RL</span><strong>90%</strong></div></div><p>Recording is optional. Your clean laps and server-verified top-10 leaderboard ghosts replace part of the built-in teacher’s 10% example allowance; they never reduce the 90% PPO budget.</p><div class="ml-note">Choose USE FOR ML beside a verified top-10 Time Trial lap on the leaderboard. Off-track frames are excluded, and the server—not the player’s browser—must verify every imported replay.</div><label class="ml-field"><span>Demonstration circuit</span><select class="ml-select" id="ml-demo-track">${getTracks().map(track => `<option value="${Number(track.id)}">${esc(track.name)}</option>`).join('')}</select><small>Choose a circuit, press Record, and complete one clean lap. Skip this if you want leaderboard and built-in examples only.</small></label><div class="ml-actions"><button class="ml-btn primary" onclick="KartBlitzMLLab.recordHumanLap()">DO NOW: RECORD A LAP</button><button class="ml-btn" onclick="KartBlitzMLLab.exportDemonstrations()">EXPORT DEMOS</button></div><div class="ml-demo-status" id="ml-demo-status">No demonstration samples imported or recorded in this session.</div></article>
+            <article class="ml-card"><span class="ml-badge">DO NOW / OPTIONAL IMITATION</span><h3>Give PPO a short head start</h3><div class="ml-status"><div class="ml-stat"><span>INPUTS</span><strong>24</strong></div><div class="ml-stat"><span>OUTPUTS</span><strong>3</strong></div><div class="ml-stat"><span>IMITATION</span><strong>10%</strong></div><div class="ml-stat"><span>PPO RL</span><strong>90%</strong></div></div><p>Recording is optional. Your clean laps and server-verified top-10 leaderboard ghosts replace part of the built-in teacher’s 10% example allowance; they never reduce the 90% PPO budget.</p><div class="ml-note">Load verified top-10 Time Trial laps below, then choose USE FOR ML. Off-track frames are excluded, and the server—not the player’s browser—must verify every imported replay.</div><label class="ml-field"><span>Demonstration circuit</span><select class="ml-select" id="ml-demo-track" onchange="KartBlitzMLLab.loadLeaderboardExamples()">${getTracks().map(track => `<option value="${Number(track.id)}">${esc(track.name)}</option>`).join('')}</select><small>Choose a circuit, press Record, and complete one clean lap. Skip this if you want leaderboard and built-in examples only.</small></label><div class="ml-actions"><button class="ml-btn" onclick="KartBlitzMLLab.loadLeaderboardExamples()">LOAD VERIFIED LAPS</button></div><p id="ml-leaderboard-status" role="status">Select a demonstration circuit, then load its top-10 ghosts.</p><div id="ml-leaderboard-examples" class="ml-actions"></div><div class="ml-actions ml-spaced"><button class="ml-btn primary" onclick="KartBlitzMLLab.recordHumanLap()">DO NOW: RECORD A LAP</button><button class="ml-btn" onclick="KartBlitzMLLab.exportDemonstrations()">EXPORT DEMOS</button></div><div class="ml-demo-status" id="ml-demo-status">No demonstration samples imported or recorded in this session.</div></article>
             <article class="ml-card"><span class="ml-badge player">REWARD DESIGN</span><h3>What should success mean?</h3><p>Reward is the score used during training, not the race score. Every slider changes the relative pressure on the policy.</p><div id="ml-reward-fields"></div></article>
           </div>
           <article class="ml-card ml-spaced"><span class="ml-badge player">REWARD LAB / CHANGE ONE THING</span><h3>See exactly where one frame's reward comes from</h3><p>Change the driving situation below. The coloured contributions use your reward weights above, so you can see when signals cooperate or fight each other.</p><div class="ml-reward-lab"><div class="ml-reward-scenarios"><label class="ml-param"><span>Forward movement</span><input id="ml-demo-progress" type="range" min="-1" max="3" step=".25" value="1" oninput="KartBlitzMLLab.renderRewardLab()"><small>Negative means the kart moved backwards.</small></label><label class="ml-param"><span>Speed</span><input id="ml-demo-speed" type="range" min="0" max="1" step=".05" value=".7" oninput="KartBlitzMLLab.renderRewardLab()"><small>Normalized from stopped to top speed.</small></label><label class="ml-param"><span>Track alignment</span><input id="ml-demo-alignment" type="range" min="0" max="1" step=".05" value=".9" oninput="KartBlitzMLLab.renderRewardLab()"><small>1 points along the road; 0 points sideways.</small></label><label class="ml-param"><span>Edge margin</span><input id="ml-demo-edge" type="range" min="-1" max="1" step=".05" value=".72" oninput="KartBlitzMLLab.renderRewardLab()"><small>1 is safely centred; negative is beyond an edge.</small></label><label class="ml-param"><span>Control change</span><input id="ml-demo-smooth" type="range" min="0" max="2" step=".1" value=".2" oninput="KartBlitzMLLab.renderRewardLab()"><small>Higher means a more sudden input change.</small></label><label class="ml-check"><input id="ml-demo-offtrack" type="checkbox" onchange="KartBlitzMLLab.renderRewardLab()"><span>Off track</span></label><label class="ml-check"><input id="ml-demo-stuck" type="checkbox" onchange="KartBlitzMLLab.renderRewardLab()"><span>Stuck for over 0.75 seconds</span></label><label class="ml-check"><input id="ml-demo-lap" type="checkbox" onchange="KartBlitzMLLab.renderRewardLab()"><span>Lap completed this frame</span></label></div><div><div id="ml-reward-total" class="ml-reward-total"></div><div id="ml-reward-breakdown" class="ml-reward-breakdown"></div><div class="ml-coach" id="ml-reward-coach"></div></div></div></article>
@@ -144,20 +142,13 @@
   }
 
   function installScreen() {
-    if (!document.getElementById('ml-lab-menu-btn')) {
-      const actions = document.querySelector('#screen-menu .menu-actions');
-      const button = document.createElement('button');
-      button.type = 'button'; button.id = 'ml-lab-menu-btn'; button.className = 'btn btn-sm'; button.style.color = '#67e8f9'; button.textContent = ' ML LAB';
-      button.onclick = () => { if (typeof initAudio === 'function') initAudio(); if (typeof playUIClick === 'function') playUIClick(); open(); };
-      if (actions) actions.insertBefore(button, actions.lastElementChild);
-    }
     if (document.getElementById('screen-ml-lab')) return;
     const screen = document.createElement('div');
     screen.id = 'screen-ml-lab'; screen.className = 'screen hidden'; screen.innerHTML = screenMarkup(); document.body.appendChild(screen);
     document.getElementById('ml-import-file').addEventListener('change', importModel);
     document.getElementById('ml-trainer-url').value = state.trainerUrl;
     document.getElementById('ml-pairing-code').value = state.pairingCode;
-    renderRewards(); renderParameters(); renderDecisionLesson(); renderRewardLab(); explainPhase('prepare'); updateTrainingExplanation(); renderRace(); renderEvaluation(); updateDemoStatus(); updateVisibility(); loadTracks();
+    renderRewards(); renderParameters(); renderDecisionLesson(); renderRewardLab(); explainPhase('prepare'); updateTrainingExplanation(); renderRace(); renderEvaluation(); updateDemoStatus(); loadTracks();
   }
 
   function renderRewards() {
@@ -255,19 +246,8 @@
     updateTrainingExplanation();
   }
 
-  function settingsMarkup() {
-    return `<div class="howto-section" style="width:min(560px,94vw);"><div class="howto-heading"> ML LAB</div><div class="ml-settings-row"><p>Show the optional machine-learning course, trainer and model-racing tools on the main menu.</p><button type="button" class="key-btn ml-toggle${state.enabled ? ' key-btn-active' : ''}" onclick="KartBlitzMLLab.setEnabled(${!state.enabled});playUIClick();buildSettingsPane();" aria-pressed="${state.enabled}">ML LAB: ${state.enabled ? 'ON' : 'OFF'}</button></div></div>`;
-  }
-  function hookSettings() {
-    if (window.__kartblitzMLSettingsHooked || typeof window.buildSettingsPane !== 'function') return;
-    window.__kartblitzMLSettingsHooked = true;
-    const original = window.buildSettingsPane;
-    window.buildSettingsPane = function () { const result = original.apply(this, arguments); const pane = document.getElementById('ctrl-pane-settings'); if (pane && !pane.querySelector('.ml-settings-row')) pane.insertAdjacentHTML('beforeend', settingsMarkup()); return result; };
-  }
-  function setEnabled(value) { state.enabled = !!value; write(ENABLE_KEY, state.enabled ? '1' : '0'); updateVisibility(); }
-  function updateVisibility() { const button = document.getElementById('ml-lab-menu-btn'); if (button) button.hidden = !state.enabled; }
-  function open() { if (state.enabled && typeof showScreen === 'function') { showScreen('ml-lab'); tab('learn'); } }
-  function close() { stopReplay(); if (typeof showScreen === 'function') showScreen('menu'); }
+  function open() { if (typeof showScreen === 'function') { showScreen('ml-lab'); tab('learn'); } }
+  function close() { stopReplay(); window.location.href = 'index.html'; }
   function tab(name) {
     document.querySelectorAll('#screen-ml-lab .ml-tab').forEach(item => item.classList.toggle('active', item.dataset.tab === name));
     document.querySelectorAll('#screen-ml-lab .ml-panel').forEach(item => item.classList.toggle('active', item.dataset.panel === name));
@@ -384,6 +364,45 @@
     element.textContent = count ? `${state.demonstrations.length} demonstration run(s), ${count.toLocaleString()} samples${leaderboardCount ? `, including ${leaderboardCount} verified top-10 ghost${leaderboardCount === 1 ? '' : 's'}` : ''}. They will be included in the next job.` : 'No demonstration samples imported or recorded in this session.';
   }
 
+  let exampleEntries = [];
+  let examplesRequest = 0;
+  async function loadLeaderboardExamples() {
+    const host = document.getElementById('ml-leaderboard-examples');
+    const status = document.getElementById('ml-leaderboard-status');
+    const trackId = Number(document.getElementById('ml-demo-track').value) || 0;
+    const request = ++examplesRequest;
+    exampleEntries = [];
+    host.replaceChildren();
+    status.textContent = 'Loading verified top-10 laps...';
+    try {
+      const data = await leaderboardFetchJson(`/api/leaderboard?mode=trial&trackId=${encodeURIComponent(trackId)}&t=${Date.now()}`);
+      if (request !== examplesRequest) return;
+      exampleEntries = ((data && data.scores) || []).slice().sort((a, b) => a.bestLap - b.bestLap).slice(0, 10).filter(entry => entry.hasGhost && entry.verifiedRunId);
+      status.textContent = exampleEntries.length ? 'Choose a lap to import its clean driving samples.' : 'No verified top-10 ghosts are available for this circuit.';
+      exampleEntries.forEach((entry, index) => {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'ml-btn';
+        button.textContent = `USE FOR ML: ${entry.username} / ${fmtTime(entry.bestLap)}`;
+        button.onclick = () => importExample(index, button);
+        host.appendChild(button);
+      });
+    } catch (error) {
+      if (request === examplesRequest) status.textContent = `Could not load laps: ${error.message || 'leaderboard unavailable'}`;
+    }
+  }
+  async function importExample(index, button) {
+    const entry = exampleEntries[index]; if (!entry) return;
+    const status = document.getElementById('ml-leaderboard-status');
+    if (button) button.disabled = true;
+    status.textContent = 'Checking and importing the verified replay...';
+    try {
+      await importLeaderboardGhost(await fetchLeaderboardGhost(entry.verifiedRunId, true));
+      status.textContent = 'Replay imported. Its samples will be included in the next training job.';
+    } catch (error) {
+      status.textContent = `Could not import replay: ${error.message || 'replay unavailable'}`;
+    } finally { if (button) button.disabled = false; }
+  }
+
   async function importLeaderboardGhost(payload) {
     const ghostApi = window.KartBlitzGhost;
     const unpacked = payload && (payload.unpacked || (ghostApi && ghostApi.unpackLeaderboardGhost(payload.ghost)));
@@ -406,7 +425,7 @@
     }
     if (samples.length < 30) throw new Error('The verified ghost does not contain enough clean samples.');
     state.demonstrations.push({ format: 'kartblitz-demonstration-v1', observationVersion: 2, source: 'verified-top-10', sourceId, username: String(payload.username || 'TOP 10'), rank, trackId: unpacked.trackId, lapTime: unpacked.lapTime, completedLap: true, sampleRateHz: 15, samples });
-    setEnabled(true); open(); tab('build'); updateDemoStatus();
+    open(); tab('build'); updateDemoStatus();
     const status = document.getElementById('ml-demo-status'); if (status) status.classList.add('success');
   }
 
@@ -506,7 +525,7 @@
     label.textContent = `TRACK ${state.selectedTrack + 1} / MEASURED CHECKPOINTS`; state.frame++; state.raf = requestAnimationFrame(drawReplay);
   }
 
-  function boot() { installScreen(); hookSettings(); loadOurModel(); }
-  window.KartBlitzMLLab = { open, close, tab, setEnabled, settingsMarkup, connect, startTraining, applyPreset, renderDecisionLesson, chooseLesson, checkDecision, renderRewardLab, explainPhase, updateTrainingExplanation, copyCommand, exportConfig, exportDemonstrations, exportModel, downloadTrainerPack, importLeaderboardGhost, selectModel, selectTrack, launchRace, replayTrack, recordHumanLap, captureRaceFrame, scoreDecision, calculateRewardFrame };
+  function boot() { installScreen(); loadOurModel(); open(); }
+  window.KartBlitzMLLab = { open, close, tab, connect, startTraining, applyPreset, renderDecisionLesson, chooseLesson, checkDecision, renderRewardLab, explainPhase, updateTrainingExplanation, copyCommand, exportConfig, exportDemonstrations, exportModel, downloadTrainerPack, importLeaderboardGhost, loadLeaderboardExamples, importExample, selectModel, selectTrack, launchRace, replayTrack, recordHumanLap, captureRaceFrame, scoreDecision, calculateRewardFrame };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 })();

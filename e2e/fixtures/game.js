@@ -104,7 +104,7 @@ export function playerSaveJson(overrides = {}) {
 
 export async function gotoGame(page, opts = {}) {
   if (opts.storage) await seedStorage(page, opts.storage);
-  await page.goto('/');
+  await page.goto(opts.path || '/');
   await page.waitForFunction(() =>
     window.KartBlitzProgramme
     && window.KartBlitzRewards

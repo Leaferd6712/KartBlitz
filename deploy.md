@@ -74,7 +74,7 @@ Edit leaderboard data and open the track and patch-notes editors from one passwo
 
 Local `wrangler dev` uses a password from `.dev.vars` (copy from `.dev.vars.example`). Production uses only `wrangler secret` — do **not** put the admin password in `wrangler.jsonc` `vars` or deploy will overwrite your remote secret.
 
-The game menu's **More options → Admin** action opens this station. Anyone with the password can use its editor tools and edit leaderboard rows, including real players.
+The root [README tools directory](README.md#tools--feature-directory) links directly to this station and its editors; player menus do not expose them. Anyone with the password can use its editor tools and edit leaderboard rows, including real players.
 
 Cloud scores are also snapshotted to [`backups/leaderboard.txt`](backups/leaderboard.txt) automatically every 6 hours (GitHub Action). Download a live dump from `/api/leaderboard-backup.txt`, or run `npm run backup:leaderboard` locally. For a full D1 restore file (includes device tokens, keep private): `npx wrangler d1 export kartblitz-leaderboard --remote --output backups/leaderboard-full.sql`.
 

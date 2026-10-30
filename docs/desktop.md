@@ -44,7 +44,7 @@ An installer is deferred. It would add shortcuts, registration and uninstall sup
 
 ## Runtime boundaries
 
-`scripts/prepare-game.mjs` copies an explicit player-runtime allowlist. Source tools, credentials, `node_modules`, tests and admin HTML are excluded. The `kbapp://game/` protocol serves only manifest-listed files. The renderer has Node integration disabled, context isolation and sandboxing enabled, and no preload bridge. External navigation is limited to the project's GitHub and Pages hosts in the system browser. The game never runs Python or native commands through the renderer. These choices follow [Electron's security guidance](https://www.electronjs.org/docs/latest/tutorial/security).
+`scripts/prepare-game.mjs` copies an explicit player-runtime allowlist. ML Lab assets, Python trainer downloads, standalone admin HTML, credentials, `node_modules` and tests are excluded from desktop builds; the website hosts the README-linked tools. The embedded track editor still shares engine code for browser playtests but has no player-menu entry. The `kbapp://game/` protocol serves only manifest-listed files. The renderer has Node integration disabled, context isolation and sandboxing enabled, and no preload bridge. External navigation is limited to the project's GitHub and Pages hosts in the system browser. The game never runs Python or native commands through the renderer. These choices follow [Electron's security guidance](https://www.electronjs.org/docs/latest/tutorial/security).
 
 Keep Electron on a supported stable line and update its pinned version and lockfile together; review [Electron's support policy](https://www.electronjs.org/docs/latest/tutorial/electron-timelines) before releases. No auto-updater is included.
 

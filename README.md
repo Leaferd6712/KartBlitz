@@ -57,6 +57,33 @@ Screenshots above are captures from this branch's running game. The hosted versi
 
 </details>
 
+## Tools & feature directory
+
+Open these tools directly from here. The player menus contain racing, garage, leaderboards, controls and news. Browser launch links use the hosted website; they pick up these changes after deployment. For a local checkout, serve this folder and use the same paths under `http://localhost:8000/`.
+
+### ML Lab & training
+
+- **[Open ML Lab](https://leaferd6712.github.io/KartBlitz/index.html?tool=ml)** — lessons, reward experiments, training configuration, checkpoint replays, model import/export and model races. No menu opt-in is needed. Leaving a lab race returns to the lab; Back opens the normal game.
+- **Verified leaderboard examples** — in ML Lab → Build, choose a demonstration circuit and **Load verified laps**, then **Use for ML**. Record your own clean lap and export demonstrations from the same panel. Normal leaderboards retain **Race Ghost**.
+- **[Python trainer and setup](ml_training/README.md)** · [downloadable setup guide](ml_training/KartBlitz-ML-Setup.txt) — install/start commands, pairing, command-line training and model validation. The trainer ZIP is available inside ML Lab → Train.
+- **[Legacy Node AI experiment](docs/tools.md#legacy-node-ai-trainer)** — the older headless reinforcement-learning script and saved policy, separate from the current Python trainer.
+
+### Admin & editors
+
+- **[Open Admin Station](https://leaferd6712.github.io/KartBlitz/leaderboard-admin.html)** — password-protected editing of Time Trial/Versus lap times, online wins and player entries; deletion and random test entries.
+- **[Open Track Editor](https://leaferd6712.github.io/KartBlitz/index.html?admin=track)** — password-protected track creation, layouts, AI lines, checkpoints, pits, speed zones, target lap times and import/export. Also available from Admin Station.
+- **[Open Patch Notes Editor](https://leaferd6712.github.io/KartBlitz/patch-notes-editor.html)** — edit, preview and export patch notes after admin login. Players can still read **What's new** in the game.
+- **[Legacy standalone Track Editor](https://leaferd6712.github.io/KartBlitz/Old%20Track%20Editor/track-editor.html)** · [legacy editor guide](Old%20Track%20Editor/TRACK-EDITOR.md) — retained for older projects; exports must be applied manually.
+
+### Records, diagnostics & technical guides
+
+- **[Leaderboard backups and exports](docs/tools.md#leaderboard-backups)** · [saved snapshot](backups/leaderboard.txt) · [automatic backup workflow](.github/workflows/backup-leaderboard.yml).
+- **[Leaderboard seed tools](leaderboard/README.md)** — fallback online-win data and instructions for adding test entries.
+- **[Legacy local leaderboard server](server/README.md)** — the older Python/SQLite server and Windows launcher.
+- **[Open performance diagnostics](https://leaferd6712.github.io/KartBlitz/index.html?debug=1)** · **[Open online network diagnostics](https://leaferd6712.github.io/KartBlitz/index.html?netDebug=1)** · [diagnostic controls and local servers](docs/tools.md#developer-diagnostics).
+- **[View online architecture](https://leaferd6712.github.io/KartBlitz/docs/online-mode.html)** · [position troubleshooting](docs/online-mode-fixes.md) · [reconnection design](docs/online-reconnect.md).
+- **[Development and checks](docs/development.md)** · [Windows builds and releases](docs/desktop.md) · [hosting and deployment](deploy.md) · [future activity framework](docs/activities.md). The framework currently ships racing only.
+
 ## Development & contributions
 
 To play a local checkout, serve the repository and open [localhost:8000](http://localhost:8000/):

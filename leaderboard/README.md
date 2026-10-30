@@ -18,7 +18,7 @@ The admin station can edit **Online Wins**, **Time Trial** lap times, and **Vers
 
 Local dev: copy `.dev.vars.example` to `.dev.vars` and set `LEADERBOARD_ADMIN_PASSWORD`. Do not commit `.dev.vars`.
 
-The game menu links to the station through its **Admin** button. Access still requires the server-verified admin password.
+Open the station from the root [README tools directory](../README.md#tools--feature-directory) or its direct URL. Player menus do not link to admin tools. Access still requires the server-verified admin password.
 
 ## `online-wins.txt` (legacy / fallback)
 

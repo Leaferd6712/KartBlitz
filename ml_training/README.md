@@ -1,5 +1,7 @@
 # KartBlitz ML trainer
 
+Launch the course and model tools from the root [README tools directory](../README.md#tools--feature-directory), or open `http://localhost:8000/index.html?tool=ml` while serving a local checkout. ML Lab has no player-menu button or Settings toggle. Verified leaderboard imports are in **ML Lab → Build → Load verified laps**.
+
 ML Lab trains outside the browser because Python, PyTorch and CUDA cannot run directly in the hosted game. The companion server listens only on `127.0.0.1` and prints a fresh pairing code when it starts.
 
 ## What is actually trained

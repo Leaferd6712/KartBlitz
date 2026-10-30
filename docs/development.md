@@ -53,7 +53,7 @@ Boost is the underlying ERS system. Zone is the underlying DRS system and can on
 
 ## Optional ML Lab
 
-Open Controls & Settings → Settings → Advanced tools to enable ML Lab. Training runs in the loopback-only Python companion:
+Open ML Lab directly from the [README tools directory](../README.md#tools--feature-directory), or use `http://localhost:8000/index.html?tool=ml` in a local checkout. It is no longer enabled through player settings. Training runs in the loopback-only Python companion:
 
 ```powershell
 .\ml_training\install.ps1
@@ -61,3 +61,5 @@ Open Controls & Settings → Settings → Advanced tools to enable ML Lab. Train
 ```
 
 Follow [the trainer guide](../ml_training/README.md) for pairing and model validation. The bundled reference driver is hand tuned; it is not presented as a trained policy.
+
+See [tools and diagnostics](tools.md) for admin editors, legacy tools, backups and debug URLs.

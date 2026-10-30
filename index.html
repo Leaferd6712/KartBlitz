@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="stylesheet" href="ml/lab.css?v=20260915e">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KART BLITZ</title>
 <meta name="description" content="Small karts. Big racing. Play KartBlitz: quick races, personal best laps, split-screen and a kart to make your own.">
 <meta name="theme-color" content="#30253f">
 <link rel="icon" type="image/svg+xml" href="ui/app-icon.svg">
+<script src="ui/tool-entry.js"></script>
 <script src="ui/customisation.bundle.js"></script>
 <script src="ui/platform.js"></script>
 <script src="ui/player-experience.js" defer></script>
@@ -1921,7 +1921,7 @@ body::after{
         <div class="menu-utility-title">ON THE GRID</div>
         <div class="menu-utility-copy">New to the grid? <button class="text-action" onclick="startDrivingPractice()">Try the driving guide</button>. Keyboard: WASD to drive · X to boost. Touch controls are available in Settings.</div>
       </div>
-      <details id="menu-tools" class="menu-tools"><summary>More options</summary><button class="text-action" onclick="openPatchNotesManual()">What’s new</button><button class="text-action" id="btn-admin" onclick="openAdminStation()">Admin tools</button></details>
+      <details id="menu-tools" class="menu-tools"><summary>More options</summary><button class="text-action" onclick="openPatchNotesManual()">What’s new</button></details>
     </div>
   </div>
 </div>
@@ -2102,7 +2102,7 @@ body::after{
   <div class="section-sub" id="save-name-status" style="min-height:18px;color:rgba(255,255,255,0.75)">3-12 LETTERS OR NUMBERS</div>
   <div style="height:20px"></div>
   <button class="btn btn-gold" onclick="confirmSave()">SAVE TO LEADERBOARD</button>
-  <div class="section-sub" style="max-width:560px;margin-top:14px;line-height:1.5;">VERIFIED TOP-10 TIME TRIAL REPLAYS BECOME PUBLIC GHOSTS. OTHER PLAYERS MAY RACE THEM OR USE THEIR DRIVING CONTROLS AS ML LAB IMITATION EXAMPLES.</div>
+  <div class="section-sub" style="max-width:560px;margin-top:14px;line-height:1.5;">VERIFIED TOP-10 TIME TRIAL REPLAYS BECOME PUBLIC GHOSTS. OTHER PLAYERS MAY RACE THEM, AND THEIR DRIVING CONTROLS MAY BE USED AS TRAINING EXAMPLES.</div>
 </div>
 
 <!-- LEADERBOARD -->
@@ -2914,6 +2914,8 @@ function showScreen(id) {
   // Hide FTUE hint whenever navigating away from the canvas
   const _ftueEl = document.getElementById('ftue-hint');
   if (_ftueEl && canvas.style.display !== 'block') _ftueEl.style.display = 'none';
+  // Lab races share the engine; leaving a race returns to this tool session.
+  if (id === 'menu' && window.KartBlitzTools?.ml && window.KartBlitzMLLab) window.KartBlitzMLLab.open();
 }
 // Bump this when shipping new patch-note content (patch-notes-editor updates it on save).
 const CURRENT_PATCH_VERSION = '2026-10-30';
@@ -2994,6 +2996,7 @@ function startOnboardingFlow() {
   const firstVisit = needsDevicePrompt() && !safeLocalGet('kartblitz_welcome_v1');
   const savedDevice = safeLocalGet('kartblitz_devicemode');
   setDeviceMode(savedDevice === 'touch' || (savedDevice !== 'keyboard' && (navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches)));
+  if (window.KartBlitzTools?.ml || window.KartBlitzTools?.track) { _onboardingStep = 'done'; return; }
   if(firstVisit && window.KartBlitzExperience) { _onboardingStep = 'welcome'; window.KartBlitzExperience.welcome(); return; }
   _onboardingStep = 'done';
 }
@@ -8252,7 +8255,7 @@ window.getSpeedFeelDiagnostics = function getSpeedFeelDiagnostics() {
 function saveRuntimePrefs() {
   try {
     localStorage.setItem('kartblitz_quality', _qualityLevel);
-    localStorage.setItem('kartblitz_debugoverlay', _showDebugOverlay ? '1' : '0');
+    if (window.KartBlitzTools?.debug) localStorage.setItem('kartblitz_debugoverlay', _showDebugOverlay ? '1' : '0');
   } catch(e) {}
 }
 
@@ -8306,7 +8309,7 @@ function applyDeviceQualityDefaults(systemInfo) {
       _qualityLevel = savedQuality;
       _qualityDefaultsApplied = true;
     }
-    _showDebugOverlay = localStorage.getItem('kartblitz_debugoverlay') === '1';
+    _showDebugOverlay = !!window.KartBlitzTools?.debug && localStorage.getItem('kartblitz_debugoverlay') !== '0';
   } catch(e) {}
 })();
 
@@ -12263,11 +12266,11 @@ document.addEventListener('keydown', e => {
     if(lowerKey === 'f8') {
       cycleQualityLevel();
       try { beep(620, 0.05, 0.16, 'square'); } catch(err) {}
-    } else if(lowerKey === 'f9') {
+    } else if(lowerKey === 'f9' && window.KartBlitzTools?.debug) {
       _showDebugOverlay = !_showDebugOverlay;
       saveRuntimePrefs();
       try { beep(_showDebugOverlay ? 720 : 320, 0.05, 0.16, 'square'); } catch(err) {}
-    } else if(lowerKey === 'v' && e.altKey && race.karts && race.karts[0] && !race.karts[0].finished) {
+    } else if(lowerKey === 'v' && e.altKey && window.KartBlitzTools?.debug && race.karts && race.karts[0] && !race.karts[0].finished) {
       race.karts[0]._pitIntentActive = !race.karts[0]._pitIntentActive;
       try { beep(race.karts[0]._pitIntentActive ? 540 : 260, 0.05, 0.18, 'square'); } catch(err) {}
       e.preventDefault();
@@ -12764,10 +12767,10 @@ function mergeOnlineWinsEntries(cloudEntries, seedEntries) {
 
 const _leaderboardGhostCache = new Map();
 
-async function fetchLeaderboardGhost(runId) {
+async function fetchLeaderboardGhost(runId, fresh = false) {
   const safeId = String(runId || '');
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(safeId)) throw new Error('invalid_ghost');
-  if (_leaderboardGhostCache.has(safeId)) return _leaderboardGhostCache.get(safeId);
+  if (!fresh && _leaderboardGhostCache.has(safeId)) return _leaderboardGhostCache.get(safeId);
   const data = await leaderboardFetchJson(`/api/ghost?runId=${encodeURIComponent(safeId)}&t=${Date.now()}`);
   const unpacked = window.KartBlitzGhost && window.KartBlitzGhost.unpackLeaderboardGhost(data && data.ghost);
   if (!data || !data.ok || !unpacked || Number(data.trackId) !== Number(unpacked.trackId)) throw new Error('invalid_ghost');
@@ -12790,16 +12793,6 @@ async function raceLeaderboardGhost(runId) {
     showSetupScreen(idx);
   } catch (e) {
     showLbToast(('GHOST UNAVAILABLE: ' + formatLbError(e)).toUpperCase(), true);
-  }
-}
-
-async function learnFromLeaderboardGhost(runId) {
-  try {
-    const result = await fetchLeaderboardGhost(runId);
-    if (!window.KartBlitzMLLab || typeof window.KartBlitzMLLab.importLeaderboardGhost !== 'function') throw new Error('ml_lab_unavailable');
-    await window.KartBlitzMLLab.importLeaderboardGhost(result);
-  } catch (e) {
-    showLbToast(('ML IMPORT FAILED: ' + formatLbError(e)).toUpperCase(), true);
   }
 }
 
@@ -12930,7 +12923,7 @@ async function buildLeaderboardScreen() {
       ? 'Server-verified Time Trial run'
       : (trust === 'unverified' ? 'Client-reported (not server-verified)' : 'Legacy record (pre-verification)');
     const ghostActions = !isOnlineWins && lbMode === 'trial' && i < 10 && e.hasGhost && e.verifiedRunId
-      ? `<div class="lb-ghost-actions"><button class="lb-ghost-btn" onclick="raceLeaderboardGhost('${e.verifiedRunId}')">RACE GHOST</button><button class="lb-ghost-btn ml" onclick="learnFromLeaderboardGhost('${e.verifiedRunId}')">USE FOR ML</button></div>`
+      ? `<div class="lb-ghost-actions"><button class="lb-ghost-btn" onclick="raceLeaderboardGhost('${e.verifiedRunId}')">RACE GHOST</button></div>`
       : '';
     return `
       <div class="lb-row${i === 0 ? ' lb-top' : ''}">
@@ -13820,7 +13813,6 @@ function buildSettingsPane(){
         <button class="btn btn-sm btn-gold" type="button" onclick="initAudio();playUIClick();openPatchNotesManual();">PATCH NOTES</button>
       </div>
     </div>
-  <details class="advanced-tools"><summary>Advanced tools</summary>${window.KartBlitzMLLab ? window.KartBlitzMLLab.settingsMarkup() : ''}</details>
   `;
 }
 function startRebind(player, action){
@@ -15237,26 +15229,6 @@ function unlockTrack(trackId) {
   const el = document.getElementById('portal-track-count');
   if(el) el.textContent = TRACKS.length + 'TRACKS';
 })();
-function openAdminStation() {
-  try { if (typeof initAudio === 'function') initAudio(); } catch (e) {}
-  try { if (typeof playUIClick === 'function') playUIClick(); } catch (e) {}
-  window.location.href = 'leaderboard-admin.html';
-}
-
-function openTrackEditorPassFallback() {
-  const modal = document.getElementById('te-pass-modal');
-  const inp = document.getElementById('te-pass-input');
-  const err = document.getElementById('te-pass-err');
-  if (!modal) {
-    alert('Track editor UI missing — reload the page.');
-    return;
-  }
-  if (err) err.textContent = '';
-  if (inp) inp.value = '';
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-  setTimeout(() => { if (inp) inp.focus(); }, 30);
-}
 console.log('%cKART BLITZ  LOADED', 'color:#00f5ff;font-family:Orbitron;font-size:20px;font-weight:bold;');
 console.log('P1: WASD + V(PIT ASSIST) | P2: ARROW KEYS');
 console.log('Tracks:', TRACKS.map(t => t.id + ':' + t.name + (t.aiFriendly ? ' [AI]' : '')).join(' | '));
@@ -17335,7 +17307,5 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
 })();
 
 </script>
-<script src="ml/runtime.js?v=20260915e"></script>
-<script src="ml/lab.js?v=20260915e"></script>
 </body>
 </html>
