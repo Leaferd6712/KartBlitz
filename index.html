@@ -10,6 +10,7 @@
 <script src="ui/tool-entry.js"></script>
 <link rel="stylesheet" href="ui/lap-replay.css">
 <script type="module" src="ui/lap-replay.js"></script>
+<script type="module" src="ui/lap-archive.js"></script>
 <script src="ui/customisation.bundle.js"></script>
 <script src="ui/platform.js"></script>
 <script src="ui/player-experience.js" defer></script>
@@ -2112,8 +2113,9 @@ body::after{
   <div class="scanlines"></div>
   <button class="back-btn" onclick="showScreen('menu')">← BACK</button>
   <div class="section-title">LEADERBOARD</div>
-  <div class="section-sub">CLOUD RECORDS · VERIFIED TOP-10 LAPS INCLUDE PUBLIC GHOST DATA</div>
+  <div class="section-sub">CLOUD RECORDS · WATCH RECORDED BEST LAPS</div>
   <button class="text-action" onclick="promptRegisterUsername()">Set a username for cloud records</button>
+  <button type="button" class="text-action" onclick="KartBlitzLapReplay.openFile()">OPEN REPLAY FILE</button>
   <div class="lb-shell">
     <div class="lb-filters">
       <div class="lb-filter-row">
@@ -5555,6 +5557,8 @@ class Kart {
             const lapTime = (performance.now() - this.lapStart) / 1000;
             const lapValid = !this._ghostLapInvalid && (this._ghostOffTrackAcc || 0) < 1.5;
             this.lapTimes.push(lapTime);
+            // Capture the completed human lap before pit/stage transitions reset its state.
+            if(!this.isAI && typeof race !== 'undefined' && race) window.KartBlitzLapArchive?.capture(race);
             if(lapValid && lapTime < this.bestLap) {
               this.bestLap = lapTime; this.flashTimer = 1.5; this.rankFlash = 'BEST LAP!'; playLap(); spawnSpark(this.x,this.y);
             }
@@ -8625,6 +8629,15 @@ class Race {
     }
     this._trialStartTyrePick = false;
     this._compensatePitMenuPause();
+    // Count the first complete trip out of the pits as a timed lap.
+    k.lapStart = performance.now();
+    k._lapKind = 'outlap';
+    k.checkpointsBit = 1;
+    k.nextCp = 1;
+    k._ghostRecord = [];
+    k._ghostSampleTimer = 0;
+    k._ghostLapInvalid = false;
+    k._ghostOffTrackAcc = 0;
   }
 
   updateCamera(idx, dt) {
@@ -10807,12 +10820,14 @@ function advanceRace(now, opts) {
     }
     if(sess && sess.netDebug) drawOnlineNetDebug(sess);
   } else {
+    window.KartBlitzLapArchive?.capture(race);
     if(race.mode === 'trial') recordTrialRunInputs(elapsed);
     race.update(elapsed);
     if(window.KartBlitzMLLab && typeof window.KartBlitzMLLab.captureRaceFrame === 'function') {
       window.KartBlitzMLLab.captureRaceFrame(race, elapsed, typeof getP1Input === 'function' ? getP1Input() : null);
     }
   }
+  window.KartBlitzLapArchive?.capture(race);
   if(doRender) {
     race.render();
     syncPitSelectionOverlay();
@@ -12589,6 +12604,7 @@ async function beginTrialRunSession(trackId, trackName, opts) {
 function recordTrialRunInputs(dt) {
   if (!_trialRun || race && race.phase !== 'racing' && race.phase !== 'launch') return;
   if (!_trialRun.samples) return;
+  if (race && (race._trialStartTyrePick || race._isHumanPitMenuOpen?.())) return;
   const fixed = (window.OnlineSim && window.OnlineSim.FIXED_DT) || (1 / 60);
   _trialRun.acc = (_trialRun.acc || 0) + Math.max(0, dt || 0);
   let guard = 0;

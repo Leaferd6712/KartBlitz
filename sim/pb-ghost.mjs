@@ -169,9 +169,10 @@ export function putPbGhost(store, packed) {
 /** Validate and unpack a public server-generated leaderboard ghost. */
 export function unpackLeaderboardGhost(raw) {
   if (!raw || Number(raw.v) !== 1 || !Array.isArray(raw.frames)) return null;
-  if (raw.frames.length < PB_GHOST_MIN_FRAMES || raw.frames.length > LEADERBOARD_GHOST_MAX_FRAMES) return null;
+  const archive = Number(raw.recordingVersion) >= 3;
+  if (raw.frames.length < (archive ? 2 : PB_GHOST_MIN_FRAMES) || raw.frames.length > (archive ? 12002 : LEADERBOARD_GHOST_MAX_FRAMES)) return null;
   const trackId = Number(raw.trackId), lapTime = Number(raw.lapTime);
-  if (!Number.isInteger(trackId) || trackId < 0 || !Number.isFinite(lapTime) || lapTime <= 0 || lapTime > 720) return null;
+  if (!Number.isInteger(trackId) || trackId < 0 || !Number.isFinite(lapTime) || lapTime <= 0 || lapTime > (archive ? 3600 : 720)) return null;
   let previousT = -1;
   const frames = [];
   const samples = [];
@@ -193,6 +194,7 @@ export function unpackLeaderboardGhost(raw) {
       ersCharge: Number(packed[7]) / 1000,
       drsInZone: !!Number(packed[8]),
       grip: Number(packed[9]) / 1000,
+      ...(packed.length >= 13 && packed.slice(10, 13).every(Number.isFinite) ? { steer: packed[10], throttle: packed[11], brake: packed[12] } : {}),
     });
   }
   return { frames, samples, lapTime, trackId, packed: raw };

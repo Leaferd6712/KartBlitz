@@ -121,6 +121,16 @@ async function open(runId) {
   try {
     const result = await window.fetchLeaderboardGhost(runId, true);
     if (token !== request || !dialog.open) return;
+    display(result);
+  } catch (error) {
+    if (token !== request || !dialog.open) return;
+    data = null; track = null;
+    el('title').textContent = 'Replay unavailable';
+    el('status').textContent = String(error.message || 'Could not load this replay. Please try again.').replace(/_/g, ' ');
+  }
+}
+
+function display(result) {
     const samples = result.unpacked.samples;
     // Old truncated recordings cannot honestly play the missing part of a lap.
     if (samples[0].t > .15 || samples.at(-1).t < result.bestLap - .15) throw new Error('This older recording is incomplete. A newly recorded best lap is needed.');
@@ -128,18 +138,41 @@ async function open(runId) {
     if (!track) throw new Error('The track for this recording is unavailable.');
     data = result; bounds = replayBounds(track, samples); time = 0;
     el('title').textContent = `${result.username} · ${clock(result.bestLap)}`;
-    el('detail').textContent = `${track.name} · leaderboard position ${result.rank} · server-verified Time Trial`;
+    const archive = !!result.source;
+    el('detail').textContent = archive
+      ? `${track.name} · ${result.mode} · ${result.lapKind} · ${result.source === 'server-online' ? 'recorded by game server' : 'player recording (not server-verified)'}`
+      : `${track.name} · leaderboard position ${result.rank} · server-verified Time Trial`;
+    el('race').hidden = archive;
     el('seek').max = String(result.bestLap);
     const record = result.ghost.recording;
-    el('source').textContent = `Server-reconstructed lap · timestamped positions and digital controls (nominal ${Number(result.ghost.sampleRateHz) || 15} Hz). ${record ? `Verified ${record.physicsHz} Hz input stream and recorded track layout included in download.` : 'Legacy recording: full input stream and archived track layout unavailable.'} Speed uses the game’s KM/H scale.`;
+    el('source').textContent = archive
+      ? `Archived lap · actual recorded poses, analogue control events, state checkpoints and traffic. Playback reproduces the captured path; it does not rerun current physics. Speed uses the game’s KM/H scale.`
+      : `Server-reconstructed lap · timestamped positions and digital controls (nominal ${Number(result.ghost.sampleRateHz) || 15} Hz). ${record ? `Verified ${record.physicsHz} Hz input stream and recorded track layout included in download.` : 'Legacy recording: full input stream and archived track layout unavailable.'} Speed uses the game’s KM/H scale.`;
     el('status').textContent = ''; el('content').hidden = false;
     render();
-  } catch (error) {
-    if (token !== request || !dialog.open) return;
-    data = null; track = null;
-    el('title').textContent = 'Replay unavailable';
-    el('status').textContent = String(error.message || 'Could not load this replay. Please try again.').replace(/_/g, ' ');
-  }
+}
+
+function openFile() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.addEventListener('change', async () => {
+    const file = input.files[0]; if (!file) return;
+    pause(); ++request;
+    if (!dialog.open) { returnFocus = document.activeElement; dialog.showModal(); }
+    el('content').hidden = true; el('status').textContent = 'Opening archived lap…'; el('close').focus();
+    const token = request;
+    try {
+      if (file.size > 4_000_000) throw new Error('Recording exceeds the supported file size');
+      const payload = JSON.parse(await file.text());
+      if (token !== request || !dialog.open) return;
+      const unpacked = window.KartBlitzGhost.unpackLeaderboardGhost(payload.ghost);
+      if (payload.format !== 'kartblitz-lap-replay-v1' || !unpacked || Number(payload.trackId) !== unpacked.trackId) throw new Error('Invalid lap recording');
+      display({ ...payload, source: payload.source || 'imported-recording', bestLap: unpacked.lapTime, unpacked });
+    } catch (error) {
+      if (token !== request || !dialog.open) return;
+      data = null; el('title').textContent = 'Replay unavailable'; el('status').textContent = error.message;
+    }
+  });
+  input.click();
 }
 
 function cleanup() {
@@ -180,4 +213,4 @@ el('download').addEventListener('click', () => {
 el('race').addEventListener('click', () => { if (data) { const id = data.runId; close(); window.raceLeaderboardGhost(id); } });
 window.addEventListener('resize', render);
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-window.KartBlitzLapReplay = { open, close, isOpen: () => dialog.open };
+window.KartBlitzLapReplay = { open, openFile, close, isOpen: () => dialog.open };

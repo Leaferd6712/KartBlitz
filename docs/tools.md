@@ -10,6 +10,24 @@ New server-verified personal bests retain their recordings at every rank. Saving
 
 New recordings include `recordingVersion: 2`, sampled timestamped poses/telemetry (normally 15 Hz, adaptively reduced for very long laps), the verified 60 Hz **digital** input stream including the flying-lap lead-in, lap step boundaries, stock setup, rules/bake versions, and a track-layout snapshot. The JSON download can reproduce the server simulation with a matching physics version. Inputs remain the existing quantized verification controls, not original analogue joystick values. Public playback availability and eligibility as a top-ten ML example are separate. Deploy the updated game and leaderboard Worker together; no database reset or destructive migration is needed.
 
+## Owner lap archive and local folders
+
+Every completed **player** lap is archived, including slower laps, out-laps, qualifying laps and both Versus players. AI opponents are excluded. Offline Time Trial, AI Race, One Lap Shootout and Versus capture actual game poses, analogue control-change events, one-second kart state checkpoints, setup and track geometry, plus nearby cars sampled at 10 Hz. Online laps are captured from the authoritative server simulation at its fixed step. The archive does not overwrite or delete slower laps when a new personal best is set.
+
+Browser recordings are queued in IndexedDB and retried after upload failures or a reload. Online recordings use a durable, chunked outbox and alarm retries. A guest's recordings use a stable guest label; registered players use their username snapshot. The public leaderboard continues to show one fastest matching entry per player, with its public recording. Private client recordings are not silently promoted to server-verified leaderboard results or ML demonstrations.
+
+Time Trial now times the initial out-lap from tyre confirmation. It is eligible for verification after all required checkpoints are completed in order. Shared replay rules are version 2; deploy browser and Worker together. This does not turn an incomplete pit-exit segment into a completed lap, remove existing times, or bypass server verification.
+
+The archive is stored privately in D1 (`lap_archive` plus chunked payloads). Cloudflare cannot write directly into a folder on your laptop. Run this from the project to download new recordings into organized folders (the existing leaderboard admin password is requested without echoing it):
+
+```powershell
+npm run recordings:export -- --watch
+```
+
+It downloads immediately and checks for new laps every minute while running. Files are organized as `recordings/track-0/driver-RACER/player-0/<session-id>/lap-<index>-<id>.replay.json`. The folder is ignored by Git. Omit `--watch` for a single export; add `--track 0`, `--player RACER`, `--out <folder>`, or `--all` to rescan the archive. `KARTBLITZ_ADMIN_PASSWORD` may be supplied through the environment instead of the interactive prompt; never commit it.
+
+Use **Leaderboard → Open replay file** to watch any exported lap. This reproduces the recorded path using the game camera, including older/slower laps. It does not claim arbitrary recordings can be deterministically resimulated by newer physics. Owner listing/download endpoints are `/api/admin/lap-recordings` and `/api/admin/lap-recordings/<id>`, protected by the existing server admin password. Browser uploads use `/api/lap-recordings`; they cannot assert the trusted online source. Existing historical laps that were never captured cannot be recovered retroactively.
+
 ## ML Lab
 
 Open `http://localhost:8000/index.html?tool=ml` directly. The lab loads its course, model runtime and trainer tools only for this URL. The former `kartblitz_ml_lab_enabled` preference no longer adds a menu button or Settings toggle.

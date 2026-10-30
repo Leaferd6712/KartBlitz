@@ -77,3 +77,27 @@ CREATE TABLE IF NOT EXISTS ghost_replays (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ghost_replays_track ON ghost_replays(track_id, lap_time);
+
+-- Owner-only archive: every completed player lap, including slower laps and out-laps.
+CREATE TABLE IF NOT EXISTS lap_archive (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  lap_index INTEGER NOT NULL,
+  player_slot INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  track_id INTEGER NOT NULL,
+  lap_time REAL NOT NULL,
+  lap_kind TEXT NOT NULL,
+  source TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  byte_length INTEGER NOT NULL,
+  UNIQUE(session_id, player_slot, lap_index)
+);
+CREATE INDEX IF NOT EXISTS idx_lap_archive_track_player ON lap_archive(track_id, username, created_at);
+CREATE TABLE IF NOT EXISTS lap_archive_chunks (
+  recording_id TEXT NOT NULL,
+  chunk_index INTEGER NOT NULL,
+  payload TEXT NOT NULL,
+  PRIMARY KEY(recording_id, chunk_index)
+);

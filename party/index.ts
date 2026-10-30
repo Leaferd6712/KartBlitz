@@ -11,6 +11,7 @@ import {
 } from "./leaderboard-admin";
 import { exportLeaderboardBackup, getDeviceStatus, getLeaderboard, getLeaderboardGhost, registerDevice, submitScore } from "./leaderboard";
 import { completeTrialRun, startTrialRun } from "./trial-runs";
+import { saveArchivedLap, listArchivedLaps, readArchivedLap, MAX_LAP_ARCHIVE_BYTES } from './lap-archive';
 import { ONLINE_PROTOCOL, TRACK_BAKE_VERSION } from "../sim/constants";
 import { LEADERBOARD_RULES_VERSION } from "../sim/trial-run";
 import { listTrackIds } from "../sim/tracks";
@@ -41,6 +42,28 @@ export default {
     }
 
     const url = new URL(request.url);
+    if (url.pathname === '/api/lap-recordings') {
+      if (!env.LEADERBOARD_DB) return withCors(Response.json({ error: 'leaderboard_unconfigured' }, { status: 503 }));
+      if (request.method !== 'POST') return withCors(Response.json({ error: 'method_not_allowed' }, { status: 405 }));
+      if (Number(request.headers.get('Content-Length')) > MAX_LAP_ARCHIVE_BYTES) return withCors(Response.json({ error: 'recording_too_large' }, { status: 413 }));
+      try {
+        const body = await request.text();
+        if (new TextEncoder().encode(body).byteLength > MAX_LAP_ARCHIVE_BYTES) return withCors(Response.json({ error: 'recording_too_large' }, { status: 413 }));
+        const result = await saveArchivedLap(env.LEADERBOARD_DB, JSON.parse(body));
+        return withCors(Response.json(result, { status: result.ok ? 200 : result.status }));
+      } catch { return withCors(Response.json({ error: 'recording_save_failed' }, { status: 400 })); }
+    }
+    if (url.pathname === '/api/admin/lap-recordings' || url.pathname.startsWith('/api/admin/lap-recordings/')) {
+      if (!env.LEADERBOARD_DB) return withCors(Response.json({ error: 'leaderboard_unconfigured' }, { status: 503 }));
+      if (!checkAdminPassword(env.LEADERBOARD_ADMIN_PASSWORD, adminPasswordFromRequest(request))) return adminUnauthorized();
+      if (request.method !== 'GET') return withCors(Response.json({ error: 'method_not_allowed' }, { status: 405 }));
+      if (url.pathname === '/api/admin/lap-recordings') return withCors(Response.json(await listArchivedLaps(env.LEADERBOARD_DB, url), { headers: { 'Cache-Control': 'no-store' } }));
+      const id = url.pathname.split('/').at(-1) || '';
+      const payload = await readArchivedLap(env.LEADERBOARD_DB, id);
+      return withCors(new Response(payload || JSON.stringify({ error: 'recording_not_found' }), {
+        status: payload ? 200 : 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      }));
+    }
     if (url.pathname === "/api/device-status") {
       if (!env.LEADERBOARD_DB) {
         return withCors(

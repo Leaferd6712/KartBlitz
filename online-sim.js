@@ -1203,7 +1203,7 @@ function loadTrackBake(trackId) {
 }
 
 // ---- trial-run.ts ----
-const LEADERBOARD_RULES_VERSION = 1;
+const LEADERBOARD_RULES_VERSION = 2;
 const TRIAL_RUN_MAX_STEPS = 60 * 60 * 12;
 const TRIAL_RUN_TTL_MS = 30 * 60 * 1000;
 const TRIAL_MAX_MEAN_SPEED = 640;
@@ -1335,7 +1335,8 @@ function verifyTrialReplay(track, packedInputs, opts) {
     });
     const floor = minPlausibleLapSec(track);
     let nowMs = 0;
-    let activeGhost = [];
+    kart.lapStart = 0;
+    let activeGhost = [ghostFrame(kart, 0, 0)];
     let bestGhost = null;
     let bestGhostLap = Infinity;
     let lapStartStep = 0;

@@ -13,7 +13,7 @@ import {
 import { competitiveStandardUpgrades } from "./upgrades";
 
 /** Bump when TT competitive rules / stock config / validation contract changes. */
-export const LEADERBOARD_RULES_VERSION = 1;
+export const LEADERBOARD_RULES_VERSION = 2;
 
 /** Max physics steps accepted in one run (~12 minutes at 60 Hz). */
 export const TRIAL_RUN_MAX_STEPS = 60 * 60 * 12;
@@ -210,7 +210,9 @@ export function verifyTrialReplay(
 
   const floor = minPlausibleLapSec(track);
   let nowMs = 0;
-  let activeGhost: TrialGhostFrame[] = [];
+  // Out-laps count too: a complete ordered circuit from release is a timed lap.
+  kart.lapStart = 0;
+  let activeGhost: TrialGhostFrame[] = [ghostFrame(kart, 0, 0)];
   let bestGhost: TrialGhostReplay | null = null;
   let bestGhostLap = Infinity;
   let lapStartStep = 0;

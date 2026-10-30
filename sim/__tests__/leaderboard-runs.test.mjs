@@ -128,7 +128,8 @@ async function main() {
     assert.equal(ghost.recordingVersion, 2);
     assert.equal(ghost.recording.physicsHz, 60);
     assert.equal(ghost.recording.lapEndStep, inputs.length);
-    assert.ok(ghost.recording.lapStartStep > 0, 'Keep the flying-lap lead-in');
+    assert.equal(ghost.recording.lapStartStep, 0, 'The first full out-lap is eligible from release');
+    assert.equal(result.lapTimes.length, 1, 'The out-lap must not be discarded');
     assert.equal(ghost.frames[0][0], 0);
     assert.ok(Math.abs(ghost.frames.at(-1)[0] / 1000 - result.bestLap) < .001);
     assert.ok(ghost.frames.length <= 2400);

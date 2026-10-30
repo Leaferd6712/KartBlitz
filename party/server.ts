@@ -1,6 +1,8 @@
 import { Server, type Connection, type ConnectionContext } from "partyserver";
 import type { Env } from "./env";
 import { getDeviceByToken, recordOnlineWin } from "./leaderboard";
+import { PlayerLapRecorder } from '../sim/lap-recorder.mjs';
+import { stageOnlineLap, flushOnlineLaps } from './lap-archive';
 import { decodeInput, MSG_INPUT, NET_MAGIC, NET_VERSION } from "./netcodec";
 import {
   createSeat,
@@ -102,6 +104,54 @@ export class KartBlitzRoom extends Server<Env> {
   private _raceEndTimer = 0;
   /** Prevent duplicate online-win DB writes for one race. */
   private _winRecorded = false;
+  private _archiveSim: OnlineRaceSim | null = null;
+  private _archiveSession = '';
+  private _lapRecorders = new Map<number, PlayerLapRecorder>();
+  private _archiveFlushing = false;
+  private _archiveRetryAt = 0;
+
+  private async flushLapOutbox() {
+    const db = doEnv(this).LEADERBOARD_DB;
+    if (!db || this._archiveFlushing) return;
+    this._archiveFlushing = true;
+    this._archiveRetryAt = Date.now() + 15000;
+    let pending = true;
+    try { pending = await flushOnlineLaps(doCtx(this).storage, db); }
+    catch (error) { console.error('Online lap archive queued for retry', error); }
+    finally {
+      this._archiveFlushing = false;
+      if (pending && (this.phase !== 'racing' || !this.raceSim)) await this.scheduleAlarm(Date.now() + 15000);
+    }
+  }
+
+  /** Record online players on the server, including players temporarily disconnected. */
+  private captureOnlineLaps() {
+    const sim = this.raceSim, db = doEnv(this).LEADERBOARD_DB;
+    if (!sim || !db) return;
+    if (this._archiveSim !== sim) {
+      this._archiveSim = sim; this._archiveSession = crypto.randomUUID(); this._lapRecorders.clear();
+    }
+    for (const kart of sim.karts) {
+      let recorder = this._lapRecorders.get(kart.id);
+      if (!recorder) { recorder = new PlayerLapRecorder(); this._lapRecorders.set(kart.id, recorder); }
+      const lap = recorder.observe({ kart, input: sim.inputs.get(kart.onlineConnId), time: sim.simTimeMs,
+        opponents: sim.karts.filter(other => other !== kart) });
+      if (!lap) continue;
+      const { lapIndex, lapKind, lapTime, frames, sampleRateHz, ...recording } = lap;
+      const payload = { id: crypto.randomUUID(), sessionId: this._archiveSession, lapIndex,
+        playerSlot: kart.id, username: this.seats.get(kart.onlineConnId)?.name || kart.onlineName || 'GUEST',
+        mode: 'online', trackId: sim.track.id, lapKind,
+        ghost: { v: 1, trackId: sim.track.id, lapTime, frames, sampleRateHz,
+          maxSpeed: kart.baseMaxSpeed, trackBakeVersion: TRACK_BAKE_VERSION, trackSnapshot: sim.track,
+          recording: { ...recording, source: 'server-online', timing: 'server-simulation-clock',
+            weather: sim.weather, tyres: kart.tyreId, controlsAreSampled: false } } };
+      doCtx(this).waitUntil(stageOnlineLap(doCtx(this).storage, payload).then(async () => {
+        this._archiveRetryAt = 0;
+        await this.flushLapOutbox();
+        if (!this.raceSim) await this.scheduleAlarm(Date.now() + 15000);
+      }));
+    }
+  }
 
   onConnect(conn: Connection, _ctx: ConnectionContext) {
     if (this.phase === "racing") {
@@ -422,7 +472,8 @@ export class KartBlitzRoom extends Server<Env> {
 
   async onAlarm() {
     this._alarmScheduled = false;
-    if (this.phase !== "racing" || !this.raceSim) return;
+    if (this.phase !== "racing" || !this.raceSim) { await this.flushLapOutbox(); return; }
+    if (Date.now() >= this._archiveRetryAt) doCtx(this).waitUntil(this.flushLapOutbox());
 
     const now = Date.now();
     this.sweepPendingResume(now);
@@ -437,7 +488,9 @@ export class KartBlitzRoom extends Server<Env> {
     while (this._simAccMs >= SIM_STEP_MS && steps < MAX_CATCHUP_STEPS) {
       this._simAccMs -= SIM_STEP_MS;
       steps++;
+      this.captureOnlineLaps();
       const packet = this.raceSim.step(FIXED_DT);
+      this.captureOnlineLaps();
       if (packet) this.broadcast(packet);
     }
     if (this._simAccMs > SIM_STEP_MS * MAX_CATCHUP_STEPS) {
@@ -723,7 +776,7 @@ export class KartBlitzRoom extends Server<Env> {
     this._alarmScheduled = false;
     this._winRecorded = false;
     try {
-      void doCtx(this).storage.deleteAlarm();
+      void doCtx(this).storage.deleteAlarm().then(() => this.flushLapOutbox());
     } catch {
       /* ignore */
     }
