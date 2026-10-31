@@ -47,12 +47,13 @@ function open(){
   <section class="om-card"><h2>Game camera · selected car</h2><canvas id="om-camera" width="750" height="500"></canvas><p id="om-car-status" class="om-muted">Uses the existing game renderer and camera.</p></section></div>
   <section class="om-card"><h2>Track weights</h2><div class="om-row"><label>Saved run ID<input id="om-load-id" placeholder="Reconnect to a run in this trainer session"></label><button id="om-load">Watch run</button><label>Import candidate package<input id="om-import" type="file" accept=".json,.kartai"></label></div><div id="om-packages"></div><p id="om-installed" class="om-muted"></p><p>Completed packages are automatically saved as candidates in AI Models. Open AI Models to inspect and manually activate a version. Current AI remains available. Download/import transfers candidates between your local trainer and the hosted game.</p></section>
   <section class="om-card"><h2>How to start</h2><p>1. Benchmark the laptop. 2. Train Extreme on one track with no traffic. 3. Inspect completions, paths and real game laps. 4. Resume that run with opponents for racecraft, then train all five difficulties. Training can require many millions of steps; a successful short test only proves the pipeline runs.</p><p>Every completed attempt is stored locally under ml_training/runs/official/&lt;job ID&gt;/attempts.jsonl.gz, including positions, controls, speed, progress, reward and contact counts. Keep last.zip for resuming and best.zip for evaluation. Closing this window does not stop training; use Stop and save.</p><p>Research: <a target="_blank" rel="noreferrer" href="https://www.gran-turismo.com/us/gran-turismo-sophy/project/">GT Sophy</a> · <a target="_blank" rel="noreferrer" href="https://github.com/trackmania-rl/tmrl">TMRL</a> · <a target="_blank" rel="noreferrer" href="https://github.com/Linesight-RL/linesight">Linesight</a> · <a target="_blank" rel="noreferrer" href="https://github.com/learn-to-race/l2r">Learn-to-Race</a> · <a target="_blank" rel="noreferrer" href="https://arxiv.org/abs/2306.07003">Trajectory-aided F1Tenth</a>. See docs/official-ml-research.md for what each supports and where this design differs.</p></section>`;
+  simplifyLayout();
   const names=window.KartBlitzReplayScene;
   for(let id=0;id<8;id++){const t=names?.getTrack(id);$('track').add(new Option(t?.name||`Track ${id}`,id));}
   $('track').add(new Option('All tracks','all'));
   if(location.port==='8766')$('url').value=location.origin;
   $('code').value=rememberedCode;
-  $('budget').onchange=()=>{$('duration-label').hidden=$('budget').value!=='time';$('steps-label').hidden=$('budget').value!=='steps';};
+  $('budget').onchange=updateBudgetControls;
   $('connect').onclick=safe(connect);$('benchmark').onclick=safe(()=>start(true));$('start').onclick=safe(()=>start(false));
   for(const [id,action] of [['pause','pause'],['resume-button','resume'],['stop','stop']])$(id).onclick=safe(()=>control(action));
   $('window').onclick=()=>window.open(location.href,'KartBlitzOfficialTraining','width=1400,height=950');
@@ -173,4 +174,33 @@ function draw(now){requestAnimationFrame(draw);if(now-lastDraw<1000/30)return;la
   cars.forEach((p,i)=>{ctx.fillStyle=i===selected?'#ffe17c':p.offTrack?'#ff8f92':'#7ce6c7';ctx.beginPath();ctx.arc(x(p),y(p),i===selected?5:2.4,0,Math.PI*2);ctx.fill();});
   const camera=$('camera');if(pose){window.KartBlitzReplayScene.draw(camera.getContext('2d'),track,pose,camera.width,camera.height,()=>{});$('car-status').textContent=details+` · speed ${pose.speed?.toFixed(0)||0}`;}else{camera.getContext('2d').clearRect(0,0,camera.width,camera.height);$('car-status').textContent=loadingReplays?'Loading…':'No recorded car available in this range.';}
   $('view-title').textContent=mode==='live'?(previewFrozen?'Training preview · stopped':'Live training batch'):'Recorded training attempts';
+}
+
+function updateBudgetControls(){
+  const timed=$('budget').value==='time';$('duration-preset-label').hidden=!timed;
+  $('duration-label').hidden=!timed||$('duration-preset').value!=='custom';$('steps-label').hidden=timed;
+}
+function simplifyLayout(){
+  const setup=$('track').closest('section'),connection=$('url').closest('section'),progress=$('metrics').closest('section');
+  connection.querySelector('h2').textContent='1. Connect your laptop';setup.querySelector('h2').textContent='2. Choose your training run';
+  const intro=document.createElement('div');intro.className='om-start-guide';
+  intro.innerHTML=`<p>Open <strong>Command Prompt (CMD)</strong> on your laptop, paste these two lines and press Enter. Use the local training window it opens: pairing is automatic.</p><pre id="om-command"></pre><button id="om-copy-command">Copy CMD command</button><p class="om-muted">This command uses the KartBlitz folder shown above. If you moved the project, change the folder in the command. Keep the laptop plugged in and awake while training.</p><details><summary>First time on this laptop?</summary><p>Install Node.js and Python, download this repository, then run <code>npm install</code> and <code>npm run official:install</code> from its folder once. After installation, use the startup command above.</p></details><p><a href="http://127.0.0.1:8766/index.html?tool=official-ml" target="_blank">Open local training window</a> · Unlock with <strong>KartBlitzPass</strong>. If pairing is missing, rerun the startup command.</p>`;
+  intro.querySelector('pre').textContent=String.raw`cd /d "C:\Users\mcmat\Downloads\KartBlitz"`+'\nnpm run official:start';
+  connection.querySelector('h2').after(intro);
+  $('copy-command').onclick=safe(async()=>{await navigator.clipboard.writeText($('command').textContent);$('copy-command').textContent='Copied — paste into CMD';});
+  const advanced=document.createElement('details');advanced.id='om-advanced';advanced.innerHTML='<summary>Advanced settings · defaults are ready for your GPU</summary><div class="om-row"></div>';
+  const advancedRow=advanced.querySelector('.om-row');
+  for(const id of ['envs','workers','device-choice','horizon','batch-size','budget','resume','demos'])advancedRow.append($(id).closest('label'));
+  advancedRow.append($('benchmark'),$('shutdown'));
+  const duration=document.createElement('label');duration.id='om-duration-preset-label';duration.innerHTML='<span>Training time</span><select id="om-duration-preset"><option value="0.5">30 minutes</option><option value="1">1 hour</option><option value="2" selected>2 hours</option><option value="4">4 hours</option><option value="custom">Custom time</option></select>';
+  $('duration-label').before(duration);$('duration-preset').onchange=()=>{if($('duration-preset').value!=='custom')$('hours').value=$('duration-preset').value;updateBudgetControls();};
+  for(const p of [...setup.querySelectorAll(':scope > p')])advanced.append(p);
+  const note=document.createElement('p');note.textContent='Start with one track, Extreme and no opponents. The time is shared across selected tracks. Pause freezes the timer; final checks and saving may take a little longer. Finished weights go to AI Models for you to choose.';
+  setup.querySelector('h2').after(note);setup.append(advanced);updateBudgetControls();
+  const watch=document.createElement('section');watch.className='om-card';watch.innerHTML='<h2>3. Watch the driving</h2><p>Watch one live batch and follow a car with the game camera, or overlay up to 1,000 recorded attempts from this run.</p><div class="om-row"><button data-watch="live">Watch current batch</button><button data-watch="final">Replay latest 1,000 attempts</button><button data-watch="early">Replay first 1,000</button><button data-watch="middle">Replay attempts 3,001–4,000</button></div><p class="om-muted">Start a run first. Replay groups fill as attempts are recorded; they are not 1,000 cars training together. Use Follow car / attempt below to choose the camera car.</p>';
+  const views=$('map').closest('.om-grid');views.before(watch);views.after(progress);
+  for(const button of watch.querySelectorAll('button'))button.onclick=safe(async()=>{if(!jobId)throw Error('Start training first, or use Watch run below to load an existing run.');mode=button.dataset.watch;$('view').value=mode;selected=0;playTime=0;playing=true;$('play').textContent='Pause replay';await loadReplays();views.scrollIntoView({behavior:'smooth',block:'start'});});
+  for(const id of ['performance','hardware','diagnostics']){let detail=progress.querySelector('details');if(!detail){detail=document.createElement('details');detail.innerHTML='<summary>GPU and learning details</summary>';progress.append(detail);}detail.append($(id));}
+  const weights=$('load-id').closest('section');const extra=document.createElement('details');extra.className='om-card';extra.innerHTML='<summary>Saved runs, downloads and research</summary>';weights.before(extra);extra.append(weights);const help=[...$('dashboard').querySelectorAll('section')].find(e=>e.querySelector('h2')?.textContent==='How to start');if(help)extra.append(help);
+  $('dashboard').querySelector('h1').nextElementSibling.textContent='Train on your laptop. Watch real driving. Choose the finished model yourself.';
 }

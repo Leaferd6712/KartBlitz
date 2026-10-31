@@ -46,10 +46,21 @@ test('partial calibration results do not replace settings until calibration fini
       recommendedConfig:{device:'cuda',numEnvs:64,workers:8,horizon:128,batchSize:1024},
       fastestOverall:{device:'cpu',stepsPerSecond:6100}}});
   });
-  await page.locator('#om-benchmark').click();await expect(page.locator('#om-benchmark-results')).toContainText('6000 steps/s');
+  await page.locator('#om-advanced').evaluate(el=>el.open=true);await page.locator('#om-benchmark').click();await expect(page.locator('#om-benchmark-results')).toContainText('6000 steps/s');
   await expect(page.locator('#om-envs')).toHaveValue('128');await expect(page.locator('#om-device-choice')).toHaveValue('cuda');
   complete=true;await expect(page.locator('#om-envs')).toHaveValue('64');
   await expect(page.locator('#om-batch-size')).toHaveValue('1024');
   await expect(page.locator('#om-device-choice')).toHaveValue('cuda');
   await expect(page.locator('#om-message')).toContainText('compute speed, not driving quality');
+});
+
+test('simple training page explains CMD startup, time and replay without setup instructions',async({page},testInfo)=>{
+  await open(page);
+  await expect(page.locator('#om-command')).toHaveText('cd /d "C:\\Users\\mcmat\\Downloads\\KartBlitz"\nnpm run official:start');
+  await expect(page.locator('#om-duration-preset')).toBeVisible();await expect(page.locator('#om-duration-preset')).toHaveValue('2');
+  await page.locator('#om-duration-preset').selectOption('4');await expect(page.locator('#om-hours')).toHaveValue('4');
+  await expect(page.locator('#om-envs')).toBeHidden();
+  await page.getByRole('button',{name:'Watch current batch',exact:true}).click();await expect(page.locator('#om-message')).toContainText('Start training first');
+  await page.locator('#om-duration-preset').selectOption('2');await page.locator('#official-ml').evaluate(el=>el.scrollTop=0);
+  await page.screenshot({path:testInfo.outputPath('simple-training.png'),fullPage:true});
 });
