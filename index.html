@@ -2930,6 +2930,7 @@ function showScreen(id) {
   // Lab races share the engine; leaving a race returns to this tool session.
   if (id === 'menu' && window.KartBlitzTools?.ml && window.KartBlitzMLLab) window.KartBlitzMLLab.open();
   if (id === 'menu' && window.KartBlitzTools?.official && document.getElementById('official-ml')) showScreen('official-ml');
+  if (id === 'menu' && window.KartBlitzTools?.models && document.getElementById('ai-models')) showScreen('ai-models');
 }
 // Bump this when shipping new patch-note content (patch-notes-editor updates it on save).
 const CURRENT_PATCH_VERSION = '2026-10-30';
@@ -3010,7 +3011,7 @@ function startOnboardingFlow() {
   const firstVisit = needsDevicePrompt() && !safeLocalGet('kartblitz_welcome_v1');
   const savedDevice = safeLocalGet('kartblitz_devicemode');
   setDeviceMode(savedDevice === 'touch' || (savedDevice !== 'keyboard' && (navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches)));
-  if (window.KartBlitzTools?.ml || window.KartBlitzTools?.official || window.KartBlitzTools?.track) { _onboardingStep = 'done'; return; }
+  if (window.KartBlitzTools?.ml || window.KartBlitzTools?.official || window.KartBlitzTools?.models || window.KartBlitzTools?.track) { _onboardingStep = 'done'; return; }
   if(firstVisit && window.KartBlitzExperience) { _onboardingStep = 'welcome'; window.KartBlitzExperience.welcome(); return; }
   _onboardingStep = 'done';
 }
@@ -7070,6 +7071,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   for(const el of choices)el.addEventListener('change',()=>{localStorage.setItem('kartblitz_official_driver',el.value);refresh();});
   refresh();window.KartBlitzOfficialReady?.then(refresh);window.addEventListener('official-model-installed',refresh);
+  window.addEventListener('storage',event=>{
+    if(event.key==='kartblitz_ai_library_changed')window.KartBlitzOfficialReady=window.KartBlitzOfficial.loadPackages().then(refresh);
+    if(event.key==='kartblitz_official_driver')refresh();
+  });
 });
 
 function makeAIInput(track, difficulty, aiIndex, opts) {

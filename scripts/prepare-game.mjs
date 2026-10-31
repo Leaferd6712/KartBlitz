@@ -11,7 +11,7 @@ if (!outputs.has(output)) throw new Error('Output must be one of the designated 
 await rm(output,{recursive:true,force:true});
 await mkdir(output, { recursive: true });
 const files = ['index.html','rb6.glb','ui/customisation.bundle.js','online.js','online-codec.js','online-sim.js','LICENSE','core/game-manifest.json','core/activity-host.js','core/shell.js',
-  'ui/tool-entry.js','ui/lap-replay.js','ui/lap-archive.js','ui/official-ml.js','sim/tracks/bakes.json'];
+  'ui/tool-entry.js','ui/lap-replay.js','ui/lap-archive.js','ui/official-ml.js','ui/ai-models.js','ui/ai-models.html','sim/tracks/bakes.json'];
 for(const entry of await readdir(path.join(root,'sim'))) if(entry.endsWith('.mjs')) files.push(`sim/${entry}`);
 for(const entry of await readdir(path.join(root,'ui'))) if(/\.(css|svg|txt)$/.test(entry) || ['app-icon.png','player-experience.js','platform.js','car-preview.bundle.js'].includes(entry)) files.push(`ui/${entry}`);
 for(const entry of await readdir(path.join(root,'ui/fonts'))) files.push(`ui/fonts/${entry}`);

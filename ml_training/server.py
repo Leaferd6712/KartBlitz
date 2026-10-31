@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import secrets
@@ -21,6 +22,40 @@ PAIRING_CODE = ""
 OFFICIAL_CONTROLS: dict[str, Any] = {}
 ROOT = Path(__file__).resolve().parents[1]
 MAX_JOB_BYTES = 10 * 1024 * 1024
+MODEL_CATALOG_CACHE: dict[str, Any] = {}
+
+
+def saved_official_model(job_id: str, track_id: int) -> dict[str, Any]:
+    if len(job_id)!=32 or not all(c in '0123456789abcdef' for c in job_id) or track_id not in range(8):
+        raise ValueError('Invalid saved model id')
+    directory=(ROOT/'ml_training/runs/official').resolve()
+    file=(directory/job_id/f'track-{track_id}.kartai.json').resolve()
+    if not file.is_relative_to(directory):raise ValueError('Model path is outside the run archive')
+    raw=file.read_bytes();pack=json.loads(raw)
+    return {'id':hashlib.sha256(raw).hexdigest(),'package':pack}
+
+
+def saved_official_models() -> list[dict[str, Any]]:
+    directory=ROOT/'ml_training/runs/official';models=[]
+    for file in directory.glob('*/track-*.kartai.json'):
+        job_id=file.parent.name
+        if len(job_id)!=32 or not all(c in '0123456789abcdef' for c in job_id):continue
+        with LOCK:active=JOBS.get(job_id,{}).get('status') in ['queued','running','paused','stopping']
+        if active:continue
+        try:
+            stat=file.stat();key=str(file);version=(stat.st_mtime_ns,stat.st_size)
+            with LOCK:cached=MODEL_CATALOG_CACHE.get(key)
+            if cached and cached[0]==version:models.append(cached[1]);continue
+            track_id=int(file.name.split('-')[1].split('.')[0]);data=saved_official_model(job_id,track_id);pack=data['package']
+            if pack.get('format')!='kartblitz-official-track-v1' or not pack.get('trackFingerprint'):continue
+            row={'id':data['id'],'jobId':job_id,'trackId':track_id,'name':pack.get('name'),'createdAt':pack.get('createdAt'),
+                'physicsHash':pack.get('physicsHash'),'variants':list(pack.get('variants',{}))}
+            with LOCK:
+                if len(MODEL_CATALOG_CACHE)>256:MODEL_CATALOG_CACHE.clear()
+                MODEL_CATALOG_CACHE[key]=(version,row)
+            models.append(row)
+        except (OSError,ValueError,KeyError):continue
+    return sorted(models,key=lambda row:row.get('createdAt') or 0,reverse=True)
 
 
 def torch_status() -> dict[str, Any]:
@@ -73,6 +108,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path=='/api/official/models' or path.startswith('/api/official/models/'):
+            if not self._authorized():self._json(401,{'error':'Incorrect trainer pairing code'});return
+            try:
+                if path=='/api/official/models':self._json(200,{'models':saved_official_models()})
+                else:
+                    parts=path.split('/')
+                    if len(parts)!=6:raise ValueError('Invalid saved model URL')
+                    self._json(200,saved_official_model(parts[4],int(parts[5])))
+            except (OSError,ValueError) as exc:self._json(404,{'error':str(exc)})
+            return
         if path == '/api/official/status':
             import importlib.util
             status=torch_status()
