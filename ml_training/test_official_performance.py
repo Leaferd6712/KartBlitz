@@ -1,9 +1,18 @@
 import types
 import unittest
 from unittest.mock import patch
-from .official_performance import learning_parameters,benchmark_choice,PhaseTimer,HardwareSampler
+from .official_performance import learning_parameters,benchmark_choice,PhaseTimer,HardwareSampler,TrainingBudget
 
 class PerformanceTests(unittest.TestCase):
+    def test_time_budget_splits_remaining_time_across_stages(self):
+        now=[0.];budget=TrainingBudget({'budgetMode':'time','durationSeconds':7200},lambda:now[0])
+        self.assertEqual(budget.stage_deadline(.5,1),3600)
+        now[0]=3600;self.assertEqual(budget.stage_deadline(.125,.5),4500)
+        now[0]=7300;self.assertEqual(budget.fields()['timeRemainingSeconds'],0)
+        self.assertIsNone(TrainingBudget({},lambda:0).stage_deadline(1,1))
+        for value in [0,-1,float('nan'),float('inf'),86401]:
+            with self.assertRaises(ValueError):TrainingBudget({'budgetMode':'time','durationSeconds':value})
+
     def test_benchmark_keeps_explicit_device_preference_and_auto_uses_fastest(self):
         rows=[dict(device=d,numEnvs=n,workers=8,horizon=128,batchSize=b,epochs=6,stepsPerSecond=s) for d,n,b,s in [('cpu',128,2048,9000),('cuda',16,256,2000),('cuda',128,2048,8800)]]
         self.assertEqual(benchmark_choice(rows,'cuda')['numEnvs'],128)

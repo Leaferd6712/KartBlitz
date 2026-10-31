@@ -3,12 +3,29 @@ import os
 import subprocess
 import threading
 import time
+import math
 from collections import deque
 
 DEFAULT_ENVS=128
 DEFAULT_WORKERS=8
 DEFAULT_HORIZON=128
 DEFAULT_BATCH=2048
+
+class TrainingBudget:
+    def __init__(self,config,clock=time.monotonic,autostart=True):
+        self.clock=clock;self.started=clock() if autostart else None;self.mode=config.get('budgetMode','steps')
+        if self.mode not in ['steps','time']:raise ValueError('Choose time or steps for the training budget')
+        self.duration=float(config.get('durationSeconds',7200)) if self.mode=='time' else None
+        if self.duration is not None and (not math.isfinite(self.duration) or not 1<=self.duration<=86400):raise ValueError('Training duration must be between one second and 24 hours')
+    def start(self):
+        if self.started is None:self.started=self.clock()
+    def fields(self):
+        if self.duration is None:return {'budgetMode':'steps'}
+        elapsed=max(0,self.clock()-self.started) if self.started is not None else 0
+        return {'budgetMode':'time','durationSeconds':self.duration,'elapsedSeconds':elapsed,'timeRemainingSeconds':max(0,self.duration-elapsed)}
+    def stage_deadline(self,weight,remaining_weight):
+        if self.duration is None:return None
+        return self.clock()+self.fields()['timeRemainingSeconds']*weight/remaining_weight
 
 def learning_parameters(config,num_envs):
     horizon=max(16,min(512,int(config.get('horizon',DEFAULT_HORIZON))))

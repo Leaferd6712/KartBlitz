@@ -2,6 +2,12 @@
 import * as official from './official-policy.mjs';
 export const DRIVER_KEY='kartblitz_official_driver';
 export const CHANGE_KEY='kartblitz_ai_library_changed';
+export const TRACK_CHOICES_KEY='kartblitz_official_track_choices';
+export function trackChoices(){try{const value=JSON.parse(localStorage.getItem(TRACK_CHOICES_KEY)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch{return {};}}
+export function usesTrainedTrack(id){const choice=trackChoices()[id];return choice?choice!=='legacy':localStorage.getItem(DRIVER_KEY)==='trained';}
+function editableChoices(){const choices=trackChoices();for(let id=0;id<8;id++)if(!choices[id])choices[id]=localStorage.getItem(DRIVER_KEY)==='trained'&&official.packages.has(id)?'installed':'legacy';return choices;}
+function saveChoices(choices){localStorage.setItem(TRACK_CHOICES_KEY,JSON.stringify(choices));localStorage.setItem(DRIVER_KEY,Object.values(choices).some(v=>v!=='legacy')?'trained':'current');notify();}
+export function useLegacyForTrack(id){const choices=editableChoices();choices[id]='legacy';saveChoices(choices);}
 const JOBS_KEY='kartblitz_ai_library_jobs';
 function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open('kartblitz-ai-library',1);r.onupgradeneeded=()=>r.result.createObjectStore('candidates',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function transaction(mode,fn){const db=await database();try{return await new Promise((resolve,reject)=>{const tx=db.transaction('candidates',mode),r=fn(tx.objectStore('candidates'));tx.oncomplete=()=>resolve(r?.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Model library write failed'));});}finally{db.close();}}
@@ -23,9 +29,9 @@ export async function activateCandidate(id,track){
   await official.loadPackages();const previous=official.packages.get(row.package.trackId);
   if(previous)await saveCandidate(previous,{kind:'previously-installed'});
   await official.installPackage(row.package);
-  localStorage.setItem(DRIVER_KEY,'trained');notify();return row;
+  const choices=editableChoices();choices[row.package.trackId]=row.id;saveChoices(choices);return row;
 }
-export function useCurrentAI(){localStorage.setItem(DRIVER_KEY,'current');notify();}
+export function useCurrentAI(){localStorage.removeItem(TRACK_CHOICES_KEY);localStorage.setItem(DRIVER_KEY,'current');notify();}
 export function knownJobs(){try{return JSON.parse(localStorage.getItem(JOBS_KEY)||'[]');}catch{return [];}}
 export function rememberJob(id,url){if(!id)return;const jobs=knownJobs().filter(j=>j.id!==id||j.url!==url);jobs.unshift({id,url});localStorage.setItem(JOBS_KEY,JSON.stringify(jobs.slice(0,100)));}
 export async function captureFinishedJob(job,fetchModel){

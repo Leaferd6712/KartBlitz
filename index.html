@@ -7040,7 +7040,8 @@ function fixAIKartOrientation(k, td) {
 function makeRaceAIInput(track, difficulty, aiIndex, mode) {
   const official=window.KartBlitzOfficial;
   const pack=official?.packages.get(track.id);
-  const wanted=localStorage.getItem('kartblitz_official_driver')==='trained';
+  let trackChoice=null;try{trackChoice=JSON.parse(localStorage.getItem('kartblitz_official_track_choices')||'{}')?.[track.id];}catch{}
+  const wanted=trackChoice?trackChoice!=='legacy':localStorage.getItem('kartblitz_official_driver')==='trained';
   if(wanted && (mode==='ai'||mode==='shootout') && pack?.variants[difficulty] && pack.trackFingerprint===official.trackFingerprint(track)) {
     const learned=official.makeController(track,pack,difficulty,{mode,getOpponents:()=>race?.karts||[]});
     let kart=null,lastPitLap=0;
@@ -7069,7 +7070,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const count=window.KartBlitzOfficial?.packages.size||0;
     for(const el of document.querySelectorAll('.official-driver-status'))el.textContent=`${count} track packages installed. Missing track/difficulty uses current AI.`;
   };
-  for(const el of choices)el.addEventListener('change',()=>{localStorage.setItem('kartblitz_official_driver',el.value);refresh();});
+  for(const el of choices)el.addEventListener('change',()=>{localStorage.removeItem('kartblitz_official_track_choices');localStorage.setItem('kartblitz_official_driver',el.value);refresh();});
   refresh();window.KartBlitzOfficialReady?.then(refresh);window.addEventListener('official-model-installed',refresh);
   window.addEventListener('storage',event=>{
     if(event.key==='kartblitz_ai_library_changed')window.KartBlitzOfficialReady=window.KartBlitzOfficial.loadPackages().then(refresh);

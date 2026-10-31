@@ -13,7 +13,7 @@ import uuid
 import zipfile
 from pathlib import Path
 from collections import deque
-from .official_performance import learning_parameters,benchmark_choice,PhaseTimer,HardwareSampler
+from .official_performance import learning_parameters,benchmark_choice,PhaseTimer,HardwareSampler,TrainingBudget
 
 ROOT=Path(__file__).resolve().parents[1]
 DIFFICULTIES=['extreme','hard','medium','easy','ultraeasy']
@@ -21,10 +21,15 @@ DIFFICULTIES=['extreme','hard','medium','easy','ultraeasy']
 class TrainingControl:
     def __init__(self):
         self.running=threading.Event();self.running.set();self.cancelled=threading.Event()
-        self.batch=0;self.attempts=0;self.track_attempts={};self.lock=threading.RLock();self.steps=0;self.update=0
+        self.batch=0;self.attempts=0;self.track_attempts={};self.lock=threading.RLock();self.steps=0;self.update=0;self.paused_seconds=0.
+    def active_time(self):return time.monotonic()-self.paused_seconds
     def check(self):
-        while not self.running.wait(.2):
-            if self.cancelled.is_set():return False
+        if not self.running.is_set():
+            started=time.monotonic()
+            try:
+                while not self.running.wait(.2):
+                    if self.cancelled.is_set():return False
+            finally:self.paused_seconds+=time.monotonic()-started
         return not self.cancelled.is_set()
 
 def _dependencies():
@@ -41,7 +46,7 @@ def export_policy(model):
         if isinstance(layer,torch.nn.Linear):layers.append({'kernel':layer.weight.detach().cpu().tolist(),'bias':layer.bias.detach().cpu().tolist()})
     return {'activation':'tanh','output':'clipped-linear','layers':layers}
 
-def evaluate_policy(model, config, control, count=3):
+def evaluate_policy(model, config, control, count=3,deadline=None):
     from .official_environment import OfficialVecEnv
     env=OfficialVecEnv({**config,'numEnvs':1,'workers':1,'seed':int(config.get('seed',1))+900001,'randomization':False})
     rows=[];paths=[]
@@ -53,7 +58,7 @@ def evaluate_policy(model, config, control, count=3):
                 while True:
                     # Evaluation can last a whole lap. Honour pause/stop at each
                     # decision, rather than making cancellation wait for a finish.
-                    if not control.check():return {'cancelled':True,'finishRate':0,'meanProgress':0,'medianLapTime':None,'offTrackRate':1,'episodes':rows},paths
+                    if not control.check() or (deadline is not None and control.active_time()>=deadline):return {'cancelled':True,'finishRate':0,'meanProgress':0,'medianLapTime':None,'offTrackRate':1,'episodes':rows},paths
                     action,_=model.predict(obs,deterministic=True)
                     obs,_,done,infos=env.step(action)
                     if done[0]:
@@ -128,15 +133,19 @@ def train_official(config, callback, control, run_dir):
     variants=DIFFICULTIES if config.get('allDifficulties',True) else [config.get('difficulty','extreme')]
     if any(d not in DIFFICULTIES for d in variants):raise ValueError('Unknown difficulty')
     budget=max(128,min(100_000_000,int(config.get('totalSteps',1_000_000))))
-    total_budget=budget*len(track_ids);completed_total=0;packages=[];history=[];logs=[];last_performance=None;last_hardware=None
+    time_budget=TrainingBudget(config,control.active_time,autostart=False);remaining_weight=float(len(track_ids))
+    total_budget=0 if time_budget.duration is not None else budget*len(track_ids);completed_total=0;packages=[];history=[];logs=[];last_performance=None;last_hardware=None
     replay_path=run_dir/'attempts.jsonl.gz'
     def emit(**fields):
-        callback({'totalSteps':total_budget,'completedSteps':control.steps,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:],**fields})
+        callback({'totalSteps':total_budget,'completedSteps':control.steps,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:],**time_budget.fields(),**fields})
     for track_id in track_ids:
         package=None;base_checkpoint=None
         for difficulty in variants:
             if not control.check():break
-            stage_budget=budget if len(variants)==1 else round(budget*(.5 if difficulty=='extreme' else .125))
+            weight=1 if len(variants)==1 else .5 if difficulty=='extreme' else .125
+            if time_budget.duration is not None and time_budget.fields()['timeRemainingSeconds']<=0:break
+            stage_deadline=time_budget.stage_deadline(weight,remaining_weight);remaining_weight-=weight
+            stage_budget=1_000_000_000_000 if stage_deadline is not None else round(budget*weight)
             stage_dir=run_dir/f'track-{track_id}'/difficulty;stage_dir.mkdir(parents=True,exist_ok=True)
             env_config={**config,'trackId':track_id,'difficulty':difficulty,'mode':'mixed','traffic':max(0,min(3,int(config.get('traffic',0))))}
             episode_rows=[]
@@ -160,7 +169,8 @@ def train_official(config, callback, control, run_dir):
                 if config.get('demonstrations') and difficulty=='extreme':
                     config['demonstrationPairs']=env.batches[0].call({'command':'demonstrations','replays':config['demonstrations']})['pairs']
                 if package is None:
-                    package={'format':'kartblitz-official-track-v1','trackId':track_id,'name':env.metadata['tracks'][track_id]['name']+' Official AI',
+                    run_name=str(config.get('runName','')).strip()[:80] or 'Run '+run_dir.name[:8]
+                    package={'format':'kartblitz-official-track-v1','trackId':track_id,'name':env.metadata['tracks'][track_id]['name']+' · '+run_name,
                         'physicsHash':env.physics_hash,'trackFingerprint':env.metadata['tracks'][track_id]['fingerprint'],'observationVersion':1,'observationCount':len(env.metadata['observationNames']),'observationNames':env.metadata['observationNames'],
                         'decisionHz':20,'environmentVersion':env.metadata.get('environmentVersion',1),'startMode':env.metadata.get('startMode'),'variants':{},'createdAt':int(time.time()*1000),'humanLevelClaimed':False}
                 if package['physicsHash']!=env.physics_hash:raise RuntimeError('Physics changed during training')
@@ -183,6 +193,9 @@ def train_official(config, callback, control, run_dir):
                 else:
                     emit(status='running',phase='initializing-policy',trackId=track_id,difficulty=difficulty)
                     model=new_driving_policy(torch,PPO,env,device,sizes,int(config.get('seed',42)))
+                if time_budget.started is None:
+                    time_budget.start()
+                    stage_deadline=time_budget.stage_deadline(weight,remaining_weight+weight)
                 (stage_dir/'contract.json').write_text(json.dumps({'physicsHash':env.physics_hash,'environmentVersion':env.metadata.get('environmentVersion',1),'startMode':env.metadata.get('startMode'),'trackId':track_id,'difficulty':difficulty,'config':{k:v for k,v in config.items() if k not in ['demonstrations','demonstrationPairs']}},indent=2),encoding='utf-8')
                 # Optional imitation is a separate initialization objective, never mixed into PPO returns.
                 pairs=config.get('demonstrationPairs',[])
@@ -208,7 +221,7 @@ def train_official(config, callback, control, run_dir):
                         # saved policy under this run's evaluation conditions.
                         baseline=PPO.load(previous_best,device=device)
                         emit(status='running',phase='evaluation',trackId=track_id,difficulty=difficulty)
-                        metrics,paths=evaluate_policy(baseline,env_config,control,int(config.get('evaluationEpisodes',3)))
+                        metrics,paths=evaluate_policy(baseline,env_config,control,int(config.get('evaluationEpisodes',3)),deadline=stage_deadline)
                         with (stage_dir/'evaluations.jsonl').open('a',encoding='utf-8') as out:out.write(json.dumps({'steps':0,'source':'resume-best-recheck','metrics':metrics,'paths':paths})+'\n')
                         if not metrics.get('cancelled'):
                             best_metrics=metrics;best_score=score(metrics)
@@ -232,6 +245,7 @@ def train_official(config, callback, control, run_dir):
                         nonlocal best_metrics,best_score
                         control.steps=initial_steps+self.num_timesteps;control.update=self.model._n_updates
                         if not control.check():return False
+                        if stage_deadline is not None and control.active_time()>=stage_deadline:return False
                         now=time.monotonic()
                         if now-self.last>=.75:
                             self.last=now
@@ -245,7 +259,7 @@ def train_official(config, callback, control, run_dir):
                         if self.num_timesteps-self.last_eval>=interval:
                             self.last_eval=self.num_timesteps;save_checkpoint(self.model,last_checkpoint)
                             outer_emit(status='running',phase='evaluation',trackId=track_id,difficulty=difficulty,completedSteps=control.steps)
-                            metrics,paths=evaluate_policy(self.model,env_config,control,int(config.get('evaluationEpisodes',3)))
+                            metrics,paths=evaluate_policy(self.model,env_config,control,int(config.get('evaluationEpisodes',3)),deadline=stage_deadline)
                             with (stage_dir/'evaluations.jsonl').open('a',encoding='utf-8') as out:out.write(json.dumps({'steps':self.num_timesteps,'metrics':metrics,'paths':paths})+'\n')
                             if not metrics.get('cancelled') and (best_score is None or score(metrics)>best_score):
                                 best_metrics=metrics;best_score=score(metrics);save_checkpoint(self.model,best_checkpoint)
@@ -258,6 +272,7 @@ def train_official(config, callback, control, run_dir):
                 last_performance=phase_timer.snapshot(model.num_timesteps);last_hardware=hardware.snapshot(device)
                 save_checkpoint(model,last_checkpoint)
                 completed_total+=model.num_timesteps
+                emit(status='running',phase='evaluation',trackId=track_id,difficulty=difficulty,completedSteps=completed_total)
                 metrics,paths=evaluate_policy(model,env_config,control,int(config.get('evaluationEpisodes',3)))
                 with (stage_dir/'evaluations.jsonl').open('a',encoding='utf-8') as out:out.write(json.dumps({'steps':model.num_timesteps,'metrics':metrics,'paths':paths})+'\n')
                 if not metrics.get('cancelled') and (best_score is None or score(metrics)>best_score):
@@ -274,7 +289,7 @@ def train_official(config, callback, control, run_dir):
                 emit(status='running',phase='checkpoint-saved',packages=packages,evaluation=best_metrics,completedSteps=completed_total)
             finally:hardware.close();env.close()
         if control.cancelled.is_set():break
-    return {'status':'cancelled' if control.cancelled.is_set() else 'complete','phase':'finished','packages':packages,'completedSteps':completed_total,'totalSteps':total_budget,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:],'performance':last_performance,'hardware':last_hardware}
+    return {'status':'cancelled' if control.cancelled.is_set() else 'complete','phase':'finished','packages':packages,'completedSteps':completed_total,'totalSteps':total_budget,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:],'performance':last_performance,'hardware':last_hardware,**time_budget.fields()}
 
 def benchmark_official(config,callback,control):
     torch,PPO,BaseCallback,OfficialVecEnv=_dependencies()

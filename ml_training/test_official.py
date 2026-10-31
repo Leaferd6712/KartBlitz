@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 import numpy as np
 import torch
 from stable_baselines3 import PPO
@@ -92,6 +93,22 @@ class OfficialTests(unittest.TestCase):
     def test_pause_and_stop_control(self):
         control=TrainingControl();control.running.clear();control.cancelled.set();self.assertFalse(control.check())
         control.running.set();self.assertFalse(control.check())
+
+    def test_pausing_does_not_use_the_active_time_budget(self):
+        now=[10.];control=TrainingControl();control.running.clear()
+        def resume(_):now[0]=70.;control.running.set();return True
+        with patch('ml_training.official_train.time.monotonic',side_effect=lambda:now[0]),patch.object(control.running,'wait',side_effect=resume):
+            before=control.active_time();self.assertTrue(control.check());self.assertEqual(control.active_time(),before)
+
+    def test_timed_training_saves_weights_when_the_clock_expires(self):
+        with tempfile.TemporaryDirectory(dir=ROOT/'ml_training/runs') as directory:
+            result=train_official({'trackIds':[0],'allDifficulties':False,'totalSteps':128,'budgetMode':'time','durationSeconds':6,'runName':'Timed test','numEnvs':2,'workers':1,'horizon':16,'episodeSeconds':.2,'evaluationEpisodes':1,'device':'cpu'},lambda _:None,TrainingControl(),directory)
+            self.assertEqual(result['status'],'complete');self.assertEqual(result['budgetMode'],'time')
+            self.assertGreater(result['completedSteps'],128);self.assertGreaterEqual(result['elapsedSeconds'],6)
+            self.assertEqual(result['timeRemainingSeconds'],0);self.assertEqual(result['totalSteps'],0)
+            self.assertTrue((Path(directory)/'track-0/extreme/last.zip').exists())
+            package=json.loads((Path(directory)/'track-0.kartai.json').read_text())
+            self.assertIn('Timed test',package['name']);self.assertFalse(package['variants']['extreme']['evaluation'].get('cancelled',False))
 
     def test_stopping_real_learning_saves_a_resumable_checkpoint(self):
         control=TrainingControl()
