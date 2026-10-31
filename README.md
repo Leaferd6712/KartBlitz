@@ -64,6 +64,11 @@ Open these tools directly from here. The player menus contain racing, garage, le
 ### ML Lab & training
 
 - **[Official ML for AI](https://leaferd6712.github.io/KartBlitz/index.html?tool=official-ml)** — password `KartBlitzPass`; actual-game local RL, live batch/game camera, saved attempt overlays, per-track difficulty packages. **[Start here](docs/official-ml.md)** · [five-project research](docs/official-ml-research.md). Run `npm run official:start` locally after setup.
+
+http://127.0.0.1:8766/index.html?tool=official-ml 
+
+http://127.0.0.1:8766/index.html?tool=official-ml
+
 - **[AI Models](https://leaferd6712.github.io/KartBlitz/ui/ai-models.html)** — choose Legacy AI or a named RL model independently on each track card; compare measured lap completion and lap times. Earlier versions are retained. Uses the same `KartBlitzPass` gate.
 
 - **[Open ML Lab](https://leaferd6712.github.io/KartBlitz/index.html?tool=ml)** — lessons, reward experiments, training configuration, checkpoint replays, model import/export and model races. No menu opt-in is needed. Leaving a lab race returns to the lab; Back opens the normal game.
