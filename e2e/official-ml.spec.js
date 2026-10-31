@@ -56,6 +56,36 @@ test('official gate, real trajectory rendering and batch controls',async({page})
   expect(errors).toEqual([]);
 });
 
+test('off-track speed, strict limits and corner-cut flags match the actual game',async({page})=>{
+  await gotoGame(page,{path:'/index.html?tool=official-ml'});
+  const errors=await page.evaluate(async()=>{
+    const {createOfficialGame}=await import('/sim/official-game.mjs'),core=createOfficialGame({OnlineSim:window.OnlineSim});core.setHoldBindings();
+    const errors=[],oldRace=race,oldNow=Object.getOwnPropertyDescriptor(performance,'now');let clock=0;
+    Object.defineProperty(performance,'now',{configurable:true,value:()=>clock});
+    try{for(let id=0;id<8;id++)for(const mode of ['ai','shootout']){
+      const tr=TRACKS[id],ct=core.tracks[id],sf=tr.cpLines[0],n=tr.spline.length;
+      const before=tr.spline[(sf.idx-1+n)%n],after=tr.spline[(sf.idx+1)%n],a=Math.atan2(after.y-before.y,after.x-before.x),tx=Math.cos(a),ty=Math.sin(a);
+      const speeds=[];
+      for(const offset of [0,tr.trackWidth/2+30,tr.trackWidth/2+90]){
+        const x=sf.cx-tx*30-ty*offset,y=sf.cy-ty*30+tx*offset,input={steer:0,throttle:1,brake:0,ers:false,drs:false};
+        const real=new Kart(1,x,y,a,'#fff','#000',()=>input),copy=new core.Kart(1,x,y,a,'#fff','#000',()=>input);
+        for(const k of [real,copy]){k.isAI=true;k._officialML=true;k.totalLaps=Infinity;k.lapStart=0;k.speed=300;k._nearestSplineIdx=sf.idx;}
+        applyStockPerformanceToKart(real);applyWeatherToKart(real,'dry','med');core.applyStockPerformanceToKart(copy);core.applyWeatherToKart(copy,'dry','med');
+        if(mode==='shootout'){applyShootoutBoost(real);core.applyShootoutBoost(copy);}
+        window._raceWeather='dry';race={mode,weather:'dry',track:tr,karts:[real],collisionMode:'collision'};core.setWorld({...race,track:ct,karts:[copy]});
+        for(let tick=0;tick<15;tick++){
+          clock+=1000/60;core.setClock(clock);real.update(1/60,tr,[real]);copy.update(1/60,ct,[copy]);
+          for(const field of ['speed','x','y','angle'])if(Math.abs(real[field]-copy[field])>1e-7)errors.push(`${id}/${mode}/${offset}: ${field}`);
+          for(const field of ['isOffTrack','_isCompletelyOff','_cornerCutLatched'])if(real[field]!==copy[field])errors.push(`${id}/${mode}/${offset}: ${field}`);
+        }
+        speeds.push(real.speed);if(offset>0&&!real._isCompletelyOff)errors.push(`${id}/${mode}: expected strict track limit`);
+      }
+      if(speeds[1]>=speeds[0]||speeds[2]>=speeds[0])errors.push(`${id}/${mode}: off-track did not slow the kart`);
+    }}finally{race=oldRace;if(oldNow)Object.defineProperty(performance,'now',oldNow);else delete performance.now;}
+    return errors;
+  });expect(errors).toEqual([]);
+});
+
 test('installed policy is used only by the two requested race modes',async({page})=>{
   await gotoGame(page,{path:'/index.html?tool=official-ml'});
   const states=await page.evaluate(async()=>{

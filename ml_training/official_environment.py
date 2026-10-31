@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 from stable_baselines3.common.vec_env import VecEnv
 from gymnasium import spaces
+from .official_performance import DEFAULT_ENVS,DEFAULT_WORKERS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,10 +38,15 @@ class NodeBatch:
             if stream: stream.close()
 
 class OfficialVecEnv(VecEnv):
+    def _observations(self,values):
+        observations=np.asarray(values,dtype=np.float32)
+        if observations.shape!=(self.num_envs,*self.observation_space.shape) or not np.isfinite(observations).all():
+            raise RuntimeError('Simulator returned invalid observations; training stopped before updating weights')
+        return observations
     def __init__(self, config, on_episode=None):
         self.config = dict(config); self.on_episode = on_episode
-        count = max(1,min(128,int(config.get('numEnvs',16))))
-        workers = max(1,min(count,16,int(config.get('workers', min(4,os.cpu_count() or 1)))))
+        count = max(1,min(128,int(config.get('numEnvs',DEFAULT_ENVS))))
+        workers = max(1,min(count,16,max(1,(os.cpu_count() or 4)-2),int(config.get('workers',DEFAULT_WORKERS))))
         self.batches=[]; self.attributes={}; self.closed=False
         try:
             for index in range(workers):
@@ -57,11 +63,14 @@ class OfficialVecEnv(VecEnv):
         self.metadata=self.batches[0].metadata
     def reset(self):
         for batch in self.batches: batch.send({'command':'reset'})
-        return np.asarray([obs for b in self.batches for obs in b.receive()['observations']],dtype=np.float32)
-    def fixed_reset(self, mode='ai', random_start=False):
-        for batch in self.batches: batch.send({'command':'reset','options':{'fixed':True,'mode':mode,'randomStart':random_start}})
-        return np.asarray([obs for b in self.batches for obs in b.receive()['observations']],dtype=np.float32)
+        return self._observations([obs for b in self.batches for obs in b.receive()['observations']])
+    def fixed_reset(self, mode='ai'):
+        for batch in self.batches: batch.send({'command':'reset','options':{'fixed':True,'mode':mode}})
+        return self._observations([obs for b in self.batches for obs in b.receive()['observations']])
     def step_async(self, actions):
+        actions=np.asarray(actions,dtype=np.float32)
+        if actions.shape!=(self.num_envs,*self.action_space.shape) or not np.isfinite(actions).all():
+            raise RuntimeError('Policy returned invalid actions; training stopped before advancing physics')
         offset=0
         for batch in self.batches:
             batch.send({'command':'step','actions':np.asarray(actions[offset:offset+batch.count]).tolist()});offset+=batch.count
@@ -77,7 +86,10 @@ class OfficialVecEnv(VecEnv):
             if 'terminal_observation' in info: info['terminal_observation']=np.asarray(info['terminal_observation'],dtype=np.float32)
             infos.append(info)
         self.last_infos=infos
-        return np.asarray([r['observation'] for r in rows],dtype=np.float32),np.asarray([r['reward'] for r in rows],dtype=np.float32),np.asarray([r['done'] for r in rows],dtype=bool),infos
+        observations=self._observations([r['observation'] for r in rows])
+        rewards=np.asarray([r['reward'] for r in rows],dtype=np.float32)
+        if not np.isfinite(rewards).all():raise RuntimeError('Simulator returned invalid rewards; training stopped before updating weights')
+        return observations,rewards,np.asarray([r['done'] for r in rows],dtype=bool),infos
     def snapshot(self, batch=0):
         index=max(0,min(len(self.batches)-1,int(batch)))
         return {'batch':index,'batchCount':len(self.batches),**self.batches[index].call({'command':'snapshot'})}

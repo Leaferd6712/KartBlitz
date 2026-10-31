@@ -5,6 +5,19 @@ window.showScreen?.('official-ml');
 root.innerHTML=`<section id="om-lock" class="om-card"><h1>Official ML for AI</h1><p>Local training for AI Race and One Lap Shootout.</p><form id="om-unlock"><label>Password<input id="om-password" type="password" autocomplete="off" required></label><button class="om-primary">Unlock</button><p id="om-lock-error" role="alert"></p></form></section><div id="om-dashboard" hidden></div>`;
 const $=id=>document.getElementById('om-'+id);
 let jobId='',capturedJob='',job=null,track=null,liveTrack=null,replays=[],selected=0,mode='live',playTime=0,playing=true,previous=0,lastDraw=0,lastEpisode=null,pollTimer=null,replayCache=null,liveClip=null,clipTime=0,clipWall=0,replayRequest=0,loadingReplays=false;
+let appliedBenchmark='';
+let previewFrozen=true,previewReason='Waiting for actual car positions.',connectionLost=false,stopRequested=false,stopAcknowledged=false,pauseRequested=false,lastFrozenRender='';
+function stopPlayback(){playing=false;if($('play'))$('play').textContent='Play replay';}
+const terminal=status=>['complete','cancelled','failed'].includes(status);
+function freezePreview(reason){previewFrozen=true;previewReason=reason;}
+function updatePreviewState(){
+  if(connectionLost)return freezePreview('Connection lost — last preview frozen. Trainer status is unconfirmed.');
+  if(terminal(job?.status))return freezePreview(`${job.phase==='benchmark-finished'?'Benchmark': 'Job'} ${job.status} — preview stopped.`);
+  if(stopRequested||job?.status==='stopping')return freezePreview(stopAcknowledged||job?.status==='stopping'?'Stop accepted — preview frozen while the trainer saves.':'Stop not confirmed — preview frozen; waiting for trainer acknowledgement.');
+  if(pauseRequested||job?.status==='paused')return freezePreview('Training paused — preview frozen.');
+  if(job?.phase==='evaluation')return freezePreview('Evaluating policy — training preview frozen.');
+  previewFrozen=job?.status!=='running';previewReason='Waiting for the trainer to start.';
+}
 const params=new URLSearchParams(location.search);
 // The trainer pairing code is separate from the deliberately simple HTML gate.
 const incoming=params.get('trainerCode');
@@ -15,17 +28,21 @@ $('unlock').onsubmit=event=>{event.preventDefault();if(!window.unlockOfficialML(
 function message(value){$('message').textContent=value;}
 async function api(path,body){
   const base=$('url').value.replace(/\/$/,'');
-  const response=await fetch(base+'/api/official/'+path,{method:body?'POST':'GET',headers:{'X-KartBlitz-Key':$('code').value,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  let response;
+  try{response=await fetch(base+'/api/official/'+path,{method:body?'POST':'GET',headers:{'X-KartBlitz-Key':$('code').value,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});}
+  catch{connectionLost=true;stopPlayback();updatePreviewState();throw Error('Cannot reach the local trainer. Preview frozen; any stop request is unconfirmed. Click Connect to retry.');}
   const data=await response.json();if(!response.ok)throw Error(data.error||`Trainer ${response.status}`);return data;
 }
 function safe(action){return async()=>{try{await action();}catch(error){message(error.message);}};}
 function open(){
   $('dashboard').innerHTML=`<div class="om-row"><div style="flex:1"><h1>Official ML for AI</h1><p>One learner, parallel driving environments. The preview observes training without slowing every car down to screen speed.</p></div><button id="om-window">Open separate window</button><a id="om-model-library" href="ui/ai-models.html" target="_blank">AI Models</a><a href="index.html">Game</a></div>
-  <section class="om-card"><h2>Local trainer</h2><div class="om-row"><label>Trainer URL<input id="om-url" value="http://127.0.0.1:8766"></label><label>Pairing code<input id="om-code" autocomplete="off"></label><button id="om-connect">Connect</button><button id="om-benchmark">Benchmark CPU / GPU</button><button id="om-shutdown">Shut down trainer</button></div><p id="om-device">Start the local trainer with npm run official:start. This opens the window and pairs it automatically.</p></section>
-  <section class="om-card"><h2>Training setup</h2><div class="om-row"><label>Track<select id="om-track"></select></label><label>Steps per track<input id="om-steps" type="number" min="128" max="100000000" value="1000000"></label><label>Parallel cars<input id="om-envs" type="number" min="1" max="128" value="16"></label><label>CPU worker batches<input id="om-workers" type="number" min="1" max="16" value="4"></label><label>Learning device<select id="om-device-choice"><option value="auto">Auto (CUDA if available)</option><option value="cpu">CPU</option><option value="cuda">NVIDIA CUDA</option></select></label></div>
-  <div class="om-row" style="margin-top:12px"><label>Difficulties<select id="om-difficulties"><option value="all">All five</option><option value="extreme">Extreme first</option><option value="hard">Hard</option><option value="medium">Medium</option><option value="easy">Easy</option><option value="ultraeasy">Ultra easy</option></select></label><label>Opponents per environment<select id="om-traffic"><option value="0">0 · learn the track</option><option value="1">1</option><option value="2">2</option><option value="3">3 · racecraft</option></select></label><label>Resume earlier job ID (optional)<input id="om-resume" placeholder="Saved job ID"></label><label>Human laps, full archive JSON (optional)<input id="om-demos" type="file" accept=".json" multiple></label></div>
-  <p class="om-muted">Start with one track and no traffic. A step is one 50 ms driving decision per car. An attempt is a completed or failed episode; it is not a training update. Budgets round to full PPO rollouts. Current training conditions: dry, medium tyres, stock dynamics with variation. Test wet weather and upgrades before using a policy there.</p><div class="om-row"><button id="om-start" class="om-primary">Start training</button><button id="om-pause">Pause</button><button id="om-resume-button">Resume</button><button id="om-stop">Stop and save</button></div></section>
-  <p id="om-message" role="status"></p><section class="om-card"><h2>Measured progress</h2><div id="om-metrics">No training job yet.</div><p id="om-job" class="om-muted"></p><canvas id="om-history" width="1000" height="130" aria-label="Track completion progress history"></canvas><p class="om-muted">Chart: mean distance through an attempt (blue), completion rate (green). Evaluation uses a frozen policy in both modes. Evaluation times are diagnostics; compare real game laps under matched settings before claiming human or WR pace.</p></section>
+  <section class="om-card"><h2>Local trainer</h2><div class="om-row"><label>Trainer URL<input id="om-url" value="http://127.0.0.1:8766"></label><label>Pairing code<input id="om-code" autocomplete="off"></label><button id="om-connect">Connect</button><button id="om-benchmark">Benchmark CPU / GPU</button><button id="om-shutdown">Shut down trainer</button></div><p id="om-benchmark-results" class="om-muted" style="white-space:pre-line"></p><p id="om-device">Start the local trainer with npm run official:start. This opens the window and pairs it automatically.</p></section>
+  <section class="om-card"><h2>Training setup</h2><div class="om-row"><label>Track<select id="om-track"></select></label><label>Steps per track<input id="om-steps" type="number" min="128" max="100000000" value="1000000"></label><label>Parallel cars<input id="om-envs" type="number" min="1" max="128" value="128"></label><label>CPU worker batches<input id="om-workers" type="number" min="1" max="16" value="8"></label><label>Learning device<select id="om-device-choice"><option value="auto">Auto (CUDA if available)</option><option value="cpu">CPU</option><option value="cuda" selected>NVIDIA CUDA</option></select></label></div>
+  <div class="om-row" style="margin-top:12px"><label>Difficulties<select id="om-difficulties"><option value="all">All five</option><option value="extreme" selected>Extreme first</option><option value="hard">Hard</option><option value="medium">Medium</option><option value="easy">Easy</option><option value="ultraeasy">Ultra easy</option></select></label><label>Opponents per environment<select id="om-traffic"><option value="0">0 · learn the track</option><option value="1">1</option><option value="2">2</option><option value="3">3 · racecraft</option></select></label><label>Resume earlier job ID (optional)<input id="om-resume" placeholder="Saved job ID"></label><label>Human laps, full archive JSON (optional)<input id="om-demos" type="file" accept=".json" multiple></label></div>
+  <div class="om-row" style="margin-top:12px"><label>Rollout steps per car<input id="om-horizon" type="number" min="16" max="512" value="128"></label><label>Learning minibatch size<input id="om-batch-size" type="number" min="32" max="16384" value="2048"></label></div>
+  <p class="om-muted">GPU throughput defaults: 128 cars, eight physics workers and 2,048 samples per learning minibatch. The browser actor stays small. Larger batches can improve speed but change learning behaviour; compare completion and lap times. GPU load varies while CPU physics gathers experience. Calibration compares 16, 64 and 128 cars on CPU/CUDA and applies the best result for your selected device; Auto chooses the fastest overall.</p>
+  <p class="om-muted">New attempts start from rest just behind the actual start/finish line. Start with one track and no traffic. A step is one 50 ms driving decision per car. An attempt is a completed or failed episode; it is not a training update. Budgets round to full PPO rollouts. Current training conditions: dry, medium tyres, stock dynamics with variation. Test wet weather and upgrades before using a policy there.</p><div class="om-row"><button id="om-start" class="om-primary">Start training</button><button id="om-pause">Pause</button><button id="om-resume-button">Resume</button><button id="om-stop">Stop and save</button></div></section>
+  <p id="om-message" role="status"></p><section class="om-card"><h2>Measured progress</h2><div id="om-metrics">No training job yet.</div><p id="om-job" class="om-muted"></p><p id="om-performance" class="om-muted"></p><p id="om-hardware" class="om-muted"></p><p id="om-diagnostics" class="om-muted"></p><canvas id="om-history" width="1000" height="130" aria-label="Track completion progress history"></canvas><p class="om-muted">Chart: mean distance through an attempt (blue), completion rate (green). Evaluation uses a frozen policy in both modes. Evaluation times are diagnostics; compare real game laps under matched settings before claiming human or WR pace.</p></section>
   <div class="om-grid"><section class="om-card"><h2 id="om-view-title">Live training batch</h2><div class="om-row"><label>View<select id="om-view"><option value="live">Live batch</option><option value="early">Recorded attempts 1–1,000</option><option value="middle">Recorded attempts 3,001–4,000</option><option value="final">Last 1,000 recorded attempts</option></select></label><label>Worker batch<select id="om-batch"><option value="0">0</option></select></label><label>Follow car / attempt<select id="om-car"><option value="0">0</option></select></label><button id="om-refresh">Load recordings</button></div><canvas id="om-map" width="900" height="600"></canvas><p id="om-view-status" class="om-muted">Waiting for actual car positions.</p><div class="om-row"><button id="om-play">Pause replay</button><label>Replay seconds<input id="om-time" type="range" min="0" max="120" step=".05" value="0"></label><label>Replay speed<select id="om-speed"><option>1</option><option>4</option><option>10</option><option>25</option></select></label></div></section>
   <section class="om-card"><h2>Game camera · selected car</h2><canvas id="om-camera" width="750" height="500"></canvas><p id="om-car-status" class="om-muted">Uses the existing game renderer and camera.</p></section></div>
   <section class="om-card"><h2>Track weights</h2><div class="om-row"><label>Saved run ID<input id="om-load-id" placeholder="Reconnect to a run in this trainer session"></label><button id="om-load">Watch run</button><label>Import candidate package<input id="om-import" type="file" accept=".json,.kartai"></label></div><div id="om-packages"></div><p id="om-installed" class="om-muted"></p><p>Completed packages are automatically saved as candidates in AI Models. Open AI Models to inspect and manually activate a version. Current AI remains available. Download/import transfers candidates between your local trainer and the hosted game.</p></section>
@@ -38,39 +55,77 @@ function open(){
   $('connect').onclick=safe(connect);$('benchmark').onclick=safe(()=>start(true));$('start').onclick=safe(()=>start(false));
   for(const [id,action] of [['pause','pause'],['resume-button','resume'],['stop','stop']])$(id).onclick=safe(()=>control(action));
   $('window').onclick=()=>window.open(location.href,'KartBlitzOfficialTraining','width=1400,height=950');
-  $('shutdown').onclick=safe(async()=>{await api('shutdown',{});message('Trainer is saving and shutting down.');clearTimeout(pollTimer);});
+  $('shutdown').onclick=safe(async()=>{stopRequested=true;stopPlayback();updatePreviewState();await api('shutdown',{});message('Shutdown requested. Trainer is saving; preview stopped.');clearTimeout(pollTimer);});
   $('batch').onchange=safe(()=>control('batch',{batch:Number($('batch').value)}));
   $('car').onchange=()=>{selected=Number($('car').value);lastEpisode=null;liveClip=null;};
   $('view').onchange=safe(async()=>{mode=$('view').value;selected=0;playTime=0;await loadReplays();});
   $('refresh').onclick=safe(loadReplays);$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'Pause replay':'Play replay';};
   $('time').oninput=()=>{playTime=Number($('time').value);};
-  $('load').onclick=safe(async()=>{jobId=$('load-id').value.trim();await poll();});
+  $('load').onclick=safe(async()=>{const next=$('load-id').value.trim();if(next!==jobId){job=null;stopRequested=false;stopAcknowledged=false;pauseRequested=false;liveClip=null;freezePreview('Loading selected job…');}jobId=next;await poll();});
   $('import').onchange=safe(async()=>{const file=$('import').files[0];if(file)await install(JSON.parse(await file.text()));});
   updateInstalled();requestAnimationFrame(draw);if($('code').value)connect().catch(e=>message(e.message));
 }
-async function connect(){const s=await api('status');$('device').textContent=`${s.deviceName} · ${s.torchVersion||'No PyTorch'} · ${s.ready?'Ready':'Install dependencies first'} · CUDA ${s.cudaAvailable?'available':'unavailable'}`;sessionStorage.setItem('official-trainer-code',$('code').value);localStorage.setItem('official-trainer-code',$('code').value);message('Trainer status loaded.');}
+async function connect(){const s=await api('status');connectionLost=false;$('device').textContent=`${s.deviceName} · ${s.torchVersion||'No PyTorch'} · ${s.ready?'Ready':'Install dependencies first'} · CUDA ${s.cudaAvailable?'available':'unavailable'}`;if(!s.cudaAvailable&&$('device-choice').value==='cuda')$('device-choice').value='cpu';sessionStorage.setItem('official-trainer-code',$('code').value);localStorage.setItem('official-trainer-code',$('code').value);message('Trainer status loaded.');if(jobId)await poll();}
 async function start(benchmarkOnly){
+  freezePreview('Starting a new job…');stopRequested=false;stopAcknowledged=false;pauseRequested=false;
   const demonstrations=[];for(const file of $('demos').files)demonstrations.push(JSON.parse(await file.text()));
   const d=$('difficulties').value;
-  const config={format:'kartblitz-official-job-v1',benchmarkOnly,trackIds:$('track').value==='all'?[0,1,2,3,4,5,6,7]:[Number($('track').value)],totalSteps:Number($('steps').value),numEnvs:Number($('envs').value),workers:Number($('workers').value),device:$('device-choice').value,allDifficulties:d==='all',difficulty:d==='all'?'extreme':d,traffic:Number($('traffic').value),demonstrations,...($('resume').value.trim()?{resumeJobId:$('resume').value.trim()}:{})};
-  const s=await api('jobs',config);jobId=s.id;capturedJob='';library.rememberJob(jobId,$('url').value.replace(/\/$/,''));job=null;replays=[];mode='live';$('view').value='live';message('Training job queued. Keep its ID to resume later.');await poll();
+  const config={format:'kartblitz-official-job-v1',benchmarkOnly,trackIds:$('track').value==='all'?[0,1,2,3,4,5,6,7]:[Number($('track').value)],totalSteps:Number($('steps').value),numEnvs:Number($('envs').value),workers:Number($('workers').value),horizon:Number($('horizon').value),batchSize:Number($('batch-size').value),device:$('device-choice').value,allDifficulties:d==='all',difficulty:d==='all'?'extreme':d,traffic:Number($('traffic').value),demonstrations,...($('resume').value.trim()?{resumeJobId:$('resume').value.trim()}:{})};
+  const s=await api('jobs',config);connectionLost=false;jobId=s.id;capturedJob='';library.rememberJob(jobId,$('url').value.replace(/\/$/,''));job=null;liveClip=null;replays=[];playing=true;mode='live';$('view').value='live';message(benchmarkOnly?'Benchmark queued. This compares devices; it does not produce trained weights.':'Training job queued. Keep its ID to resume later.');await poll();
 }
-async function control(action,extra={}){if(!jobId)throw Error('Start or select a run first');await api(`jobs/${jobId}/control`,{action,...extra});message(`${action} requested`);}
+async function control(action,extra={}){
+  if(!jobId)throw Error('Start or select a run first');
+  if(action==='stop'){stopRequested=true;stopAcknowledged=false;stopPlayback();updatePreviewState();
+    if(terminal(job?.status)){freezePreview(`Displayed job is already ${job.status} — preview stopped.`);message('The displayed job has already finished. Its preview is now stopped.');return;}}
+  if(terminal(job?.status)&&['pause','resume'].includes(action)){message('This job has finished. To continue training, start a new run using Resume earlier job ID.');return;}
+  if(action==='pause'){pauseRequested=true;updatePreviewState();}
+  try{
+    const result=await api(`jobs/${jobId}/control`,{action,...extra});connectionLost=false;
+    if(result.alreadyFinished){job.status=result.status;message('This job has already finished. Preview stopped.');}
+    else if(action==='stop'){stopAcknowledged=true;job.status=result.status||'stopping';message('Stop accepted. Preview stopped; waiting for checkpoint save confirmation.');}
+    else if(action==='pause'){job.status=result.status||'paused';message('Pause accepted.');}
+    else if(action==='resume'){pauseRequested=false;job.status=result.status||'running';message('Resume accepted.');}
+    else message(`${action} requested`);
+    updatePreviewState();if(action!=='batch')await poll();
+  }catch(error){if(action==='stop'){connectionLost=true;updatePreviewState();message('STOP NOT CONFIRMED: '+error.message);}else message(error.message);}
+}
 async function poll(){
   clearTimeout(pollTimer);if(!jobId)return;
   try{
-    job=await api(`jobs/${jobId}`);$('model-library').href='ui/ai-models.html?jobId='+encodeURIComponent(jobId);library.rememberJob(jobId,$('url').value.replace(/\/$/,''));if(job.track){const t=job.track;liveTrack=window.KartBlitzReplayScene.getTrack(t.id,{spline:t.spline,trackWidth:t.width,cpLines:t.cpLines,cum:t.cum,totalLen:t.length});if(mode==='live')track=liveTrack;}
+    job=await api(`jobs/${jobId}`);connectionLost=false;updatePreviewState();$('model-library').href='ui/ai-models.html?jobId='+encodeURIComponent(jobId);library.rememberJob(jobId,$('url').value.replace(/\/$/,''));if(job.track){const t=job.track;liveTrack=window.KartBlitzReplayScene.getTrack(t.id,{spline:t.spline,trackWidth:t.width,cpLines:t.cpLines,cum:t.cum,totalLen:t.length});if(mode==='live')track=liveTrack;}
     $('job').textContent=`Job ${jobId} · track ${job.trackId??'—'} · ${job.difficulty||'—'} · ${job.phase||job.status}`;$('load-id').value=jobId;
     const evaluation=job.evaluation;
-    $('metrics').textContent=`${job.status} · ${(job.completedSteps||0).toLocaleString()} / ${(job.totalSteps||0).toLocaleString()} steps · ${(job.attempts||0).toLocaleString()} attempts · ${job.device||'initializing'}${evaluation?`\nEvaluation: ${(evaluation.finishRate*100).toFixed(0)}% completed · median ${evaluation.medianLapTime?.toFixed(2)||'—'} s · ${(evaluation.offTrackRate*100).toFixed(1)}% off track`:''}`;
+    const benchmark=job.kind==='benchmark'||job.phase?.startsWith('benchmark');
+    $('metrics').textContent=`${benchmark?'Benchmark':'Training'} · ${job.status} · ${(job.completedSteps||0).toLocaleString()}${job.totalSteps?' / '+job.totalSteps.toLocaleString():''} steps${benchmark?'':` · ${(job.attempts||0).toLocaleString()} attempts`} · ${job.device||'initializing'}${evaluation?.cancelled?'\nEvaluation incomplete: stopped before the test finished.':evaluation?`\nEvaluation: ${(evaluation.finishRate*100).toFixed(0)}% completed · median ${evaluation.medianLapTime?.toFixed(2)||'—'} s · ${(evaluation.offTrackRate*100).toFixed(1)}% off track`:''}`;
+    if(stopRequested&&terminal(job.status))message(`Stop confirmed: job ${job.status}. Preview stopped.`);
     if(job.error)message(job.error);
-    if(job.benchmark?.length){message(job.benchmark.map(r=>`${r.device}: ${r.stepsPerSecond.toFixed(0)} steps/s`).join(' · ')+` · Measured choice: ${job.recommendedDevice}`);$('device-choice').value=job.recommendedDevice;}
+    if(job.benchmark?.length){
+      $('benchmark-results').textContent=job.benchmark.map(r=>`${r.device.toUpperCase()} · ${r.numEnvs??'—'} cars / ${r.workers??'—'} workers · batch ${r.batchSize??'—'} · ${r.stepsPerSecond.toFixed(0)} steps/s`).join('\n');
+      if(job.phase==='benchmark-finished'&&job.status==='complete'&&appliedBenchmark!==jobId){
+        const c=job.recommendedConfig||{device:job.recommendedDevice};
+        if(c.device)$('device-choice').value=c.device;
+        for(const [field,key] of [['envs','numEnvs'],['workers','workers'],['horizon','horizon'],['batch-size','batchSize']])if(c[key])$(field).value=c[key];
+        appliedBenchmark=jobId;message(`Calibration complete. Applied ${c.device} settings for the selected device preference. `+(job.fastestOverall?`Fastest overall: ${job.fastestOverall.device}, ${job.fastestOverall.stepsPerSecond.toFixed(0)} steps/s. `:'')+'These measure compute speed, not driving quality.');
+      }
+    }
+    renderPerformance();
     if(job.preview){options($('batch'),job.preview.batchCount,i=>`Batch ${i}`,Number($('batch').value));if(mode==='live')options($('car'),job.preview.environments.length,i=>`Car ${i}`,selected);}
     renderPackages();chart();
-    if(['complete','cancelled'].includes(job.status)&&job.packages?.length&&capturedJob!==jobId){await library.captureFinishedJob({...job,id:jobId},track=>api(`jobs/${jobId}/model?trackId=${track}`));capturedJob=jobId;message('Training weights saved to AI Models as inactive candidates. Your selected driver has not changed.');}
+    if(['complete','cancelled'].includes(job.status)&&job.packages?.length&&capturedJob!==jobId){await library.captureFinishedJob({...job,id:jobId},track=>api(`jobs/${jobId}/model?trackId=${track}`));capturedJob=jobId;message((stopRequested?'Stop confirmed. ':'')+'Training weights saved to AI Models as inactive candidates. Your selected driver has not changed.');}
     const active=['queued','running','paused','stopping'].includes(job.status);$('start').disabled=active;$('benchmark').disabled=active;
     if(active)pollTimer=setTimeout(()=>poll(),900);
-  }catch(error){message(error.message+' · Reconnect with Watch run.');}
+  }catch(error){connectionLost=true;stopPlayback();updatePreviewState();message(error.message+' · Click Connect or Watch run to verify the job status.');}
+}
+function renderPerformance(){
+  const d=job.diagnostics,number=(v,digits=3)=>Number.isFinite(v)?v.toFixed(digits):'unavailable';
+  $('diagnostics').textContent=d?`PPO health: KL ${number(d.approx_kl)} · clipped updates ${number(Number.isFinite(d.clip_fraction)?d.clip_fraction*100:null,1)}% · value explained variance ${number(d.explained_variance)}. Saved with each completed update; these are diagnostics, not a driving score.`:'';
+  const p=job.performance,h=job.hardware;
+  $('performance').textContent=p?`${p.stepsPerSecond.toFixed(0)} actual steps/s · sampling / logging / checks ${p.collectionSeconds.toFixed(1)} s · updates ${p.updateSeconds.toFixed(1)} s (${(p.updateWallFraction*100).toFixed(0)}% of measured wall time)`:'Throughput and timing appear after collection starts.';
+  if(!h||h.gpuMemoryUsedMiB==null){$('hardware').textContent='GPU telemetry is being collected or is unavailable.';return;}
+  const label=terminal(job.status)?'Last GPU sample':'GPU sample';
+  $('hardware').textContent=`${label}: ${h.gpuUtilizationPercent.toFixed(0)}% whole-device utilization · VRAM ${(h.gpuMemoryUsedMiB/1024).toFixed(2)} / ${(h.gpuMemoryTotalMiB/1024).toFixed(2)} GiB`+
+    (h.torchAllocatedMiB!=null?` · Torch tensors ${h.torchAllocatedMiB.toFixed(1)} MiB, peak ${h.torchPeakAllocatedMiB.toFixed(1)} MiB, reserved ${h.torchReservedMiB.toFixed(1)} MiB`:' · CPU learning does not store its model on CUDA')+
+    (h.sampleAt?` · ${new Date(h.sampleAt*1000).toLocaleTimeString()}`:'');
 }
 function options(el,count,label,value){if(el.options.length!==count){el.replaceChildren(...Array.from({length:count},(_,i)=>new Option(label(i),i)));}el.value=String(Math.min(Math.max(0,value),count-1));}
 async function loadReplays(){
@@ -89,18 +144,22 @@ function renderPackages(){const parent=$('packages');const signature=JSON.string
 function chart(){const c=$('history'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);const h=(job.history||[]).filter(r=>r.trackId===job.trackId&&r.difficulty===job.difficulty);for(const [key,color] of [['progress','#77bfff'],['finishRate','#67e0ab']]){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();let first=true;for(let i=0;i<h.length;i++){if(h[i][key]==null)continue;const x=i/Math.max(1,h.length-1)*c.width,y=(1-Math.max(0,Math.min(1,h[i][key])))*(c.height-10)+5;if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);}ctx.stroke();}}
 function poseAt(points,t){if(!points?.length)return null;let lo=0,hi=points.length-1;while(lo<hi){const mid=(lo+hi)>>1;if(points[mid].t<t)lo=mid+1;else hi=mid;}const b=points[lo],a=points[Math.max(0,lo-1)],f=Math.min(1,Math.max(0,(t-a.t)/Math.max(.001,b.t-a.t)));return {...b,x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f,a:a.a+Math.atan2(Math.sin(b.a-a.a),Math.cos(b.a-a.a))*f};}
 function draw(now){requestAnimationFrame(draw);if(now-lastDraw<1000/30)return;lastDraw=now;const dt=Math.min(.1,(now-previous)/1000||0);previous=now;if(!track)return;
+  const frozenKey=mode==='live'&&previewFrozen?`${jobId}:${selected}:${$('batch').value}:${previewReason}`:'';
+  if(frozenKey&&lastFrozenRender===frozenKey)return;lastFrozenRender=frozenKey;
   const c=$('map'),ctx=c.getContext('2d'),spl=track.spline;
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(const p of spl){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y);}const scale=Math.min((c.width-50)/(maxX-minX+track.trackWidth),(c.height-50)/(maxY-minY+track.trackWidth));const x=p=>(p.x-(minX+maxX)/2)*scale+c.width/2,y=p=>(p.y-(minY+maxY)/2)*scale+c.height/2;
   ctx.clearRect(0,0,c.width,c.height);ctx.beginPath();spl.forEach((p,i)=>i?ctx.lineTo(x(p),y(p)):ctx.moveTo(x(p),y(p)));ctx.closePath();ctx.strokeStyle='#354156';ctx.lineWidth=track.trackWidth*scale;ctx.lineJoin='round';ctx.stroke();
+  const sf=track.cpLines?.[0];if(sf){ctx.beginPath();ctx.strokeStyle='#ffffff';ctx.lineWidth=3;ctx.setLineDash([5,5]);ctx.moveTo(x({x:sf.x1,y:sf.y1}),y({x:sf.x1,y:sf.y1}));ctx.lineTo(x({x:sf.x2,y:sf.y2}),y({x:sf.x2,y:sf.y2}));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#ffffff';ctx.font='12px Nunito, sans-serif';ctx.fillText('START / FINISH',x({x:(sf.x1+sf.x2)/2})+10,y({y:(sf.y1+sf.y2)/2})-10);}
   let cars=[],pose=null,details='';
   if(mode==='live'){
     const rows=job?.preview?.environments||[];const row=rows[selected]||rows[0];cars=rows.map(r=>r.car);pose=row?.car;
     if(row){const key=`${jobId}:${job.preview.batch}:${row.environment}:${row.episode}`;if(lastEpisode!==key){window.KartBlitzReplayScene.clear();lastEpisode=key;}
       ctx.strokeStyle='#73c8ff';ctx.lineWidth=1.5;ctx.beginPath();row.path.forEach((p,i)=>i?ctx.lineTo(x(p),y(p)):ctx.moveTo(x(p),y(p)));ctx.stroke();
-      if(!liveClip||liveClip.track!==track.id||liveClip.batch!==job.preview.batch||liveClip.selected!==selected||clipTime>=liveClip.points.at(-1).t||clipWall>8){liveClip={...row,track:track.id,batch:job.preview.batch,selected,points:row.path};clipTime=row.path[0]?.t||0;clipWall=0;}
-      clipTime+=dt;clipWall+=dt;pose=poseAt(liveClip.points,clipTime)||row.car;
+      if(!liveClip||liveClip.track!==track.id||liveClip.batch!==job.preview.batch||liveClip.selected!==selected||(!previewFrozen&&(clipTime>=liveClip.points.at(-1).t||clipWall>8))){liveClip={...row,track:track.id,batch:job.preview.batch,selected,points:row.path};clipTime=row.path[0]?.t||0;clipWall=0;}
+      if(!previewFrozen){clipTime+=dt;clipWall+=dt;}pose=poseAt(liveClip.points,clipTime)||row.car;
       details=`Car ${row.environment} · sampled attempt ${liveClip.episode} · ${liveClip.mode} · camera ${clipTime.toFixed(1)} s · batch reward ${row.reward.toFixed(1)}`;}
-    $('view-status').textContent=`${cars.length} live environments from batch ${job?.preview?.batch??0}. Updates are sampled; training runs faster than playback.`;
+    $('view-status').textContent=previewFrozen?previewReason:`${cars.length} live environments from batch ${job?.preview?.batch??0}. Updates are sampled; training runs faster than playback.`;
+    if(previewFrozen)details+=' · PREVIEW STOPPED';
   }else{
     if(playing)playTime+=dt*Number($('speed').value);const max=Number($('time').max);if(playTime>max)playTime=0;$('time').value=playTime;
     if(!replayCache){replayCache=document.createElement('canvas');replayCache.width=c.width;replayCache.height=c.height;const rc=replayCache.getContext('2d');rc.strokeStyle='rgba(100,190,255,.07)';rc.lineWidth=1;for(const r of replays){rc.beginPath();r.points.forEach((p,i)=>i?rc.lineTo(x(p),y(p)):rc.moveTo(x(p),y(p)));rc.stroke();}}
@@ -111,5 +170,5 @@ function draw(now){requestAnimationFrame(draw);if(now-lastDraw<1000/30)return;la
   }
   cars.forEach((p,i)=>{ctx.fillStyle=i===selected?'#ffe17c':p.offTrack?'#ff8f92':'#7ce6c7';ctx.beginPath();ctx.arc(x(p),y(p),i===selected?5:2.4,0,Math.PI*2);ctx.fill();});
   const camera=$('camera');if(pose){window.KartBlitzReplayScene.draw(camera.getContext('2d'),track,pose,camera.width,camera.height,()=>{});$('car-status').textContent=details+` · speed ${pose.speed?.toFixed(0)||0}`;}else{camera.getContext('2d').clearRect(0,0,camera.width,camera.height);$('car-status').textContent=loadingReplays?'Loading…':'No recorded car available in this range.';}
-  $('view-title').textContent=mode==='live'?'Live training batch':'Recorded training attempts';
+  $('view-title').textContent=mode==='live'?(previewFrozen?'Training preview · stopped':'Live training batch'):'Recorded training attempts';
 }

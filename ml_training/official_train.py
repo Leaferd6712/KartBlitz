@@ -1,13 +1,11 @@
 """Per-track PPO training, evaluation, resumable checkpoints and measured replay capture."""
 from __future__ import annotations
-import copy
 import gzip
 import io
 import json
 import math
 import os
 import statistics
-import shutil
 import subprocess
 import threading
 import time
@@ -15,6 +13,7 @@ import uuid
 import zipfile
 from pathlib import Path
 from collections import deque
+from .official_performance import learning_parameters,benchmark_choice,PhaseTimer,HardwareSampler
 
 ROOT=Path(__file__).resolve().parents[1]
 DIFFICULTIES=['extreme','hard','medium','easy','ultraeasy']
@@ -48,10 +47,13 @@ def evaluate_policy(model, config, control, count=3):
     rows=[];paths=[]
     try:
         for mode in ['ai','shootout']:
-            for episode in range(count):
+            for episode in range(max(1,min(20,int(count)))):
                 if not control.check():return {'cancelled':True,'finishRate':0,'meanProgress':0,'medianLapTime':None,'offTrackRate':1,'episodes':rows},paths
-                obs=env.fixed_reset(mode,episode>0)
+                obs=env.fixed_reset(mode)
                 while True:
+                    # Evaluation can last a whole lap. Honour pause/stop at each
+                    # decision, rather than making cancellation wait for a finish.
+                    if not control.check():return {'cancelled':True,'finishRate':0,'meanProgress':0,'medianLapTime':None,'offTrackRate':1,'episodes':rows},paths
                     action,_=model.predict(obs,deterministic=True)
                     obs,_,done,infos=env.step(action)
                     if done[0]:
@@ -68,8 +70,30 @@ def score(metrics):
     # than rewarding the tiny distance overshoot past the finish gate.
     finished=metrics.get('finishRate',0)
     clean=metrics.get('offTrackRate',1)<.01 and metrics.get('meanContacts',0)==0
-    pace=-(metrics.get('medianLapTime') or math.inf) if finished==1 else metrics.get('meanProgress',0)
-    return (finished,int(clean),pace,-metrics.get('meanContacts',0),-metrics.get('offTrackRate',1))
+    # Before it can lap, a clean car that barely moves must not outrank one
+    # learning to reach the later corners. Once it laps reliably, favour clean
+    # racing and then pace. The underlying training penalties still apply.
+    quality=(int(clean),-(metrics.get('medianLapTime') or math.inf)) if finished==1 else (metrics.get('meanProgress',0),int(clean))
+    return (finished,*quality,-metrics.get('meanContacts',0),-metrics.get('offTrackRate',1))
+
+def ppo_diagnostics(model):
+    names=['approx_kl','clip_fraction','entropy_loss','explained_variance','value_loss','policy_gradient_loss','std','learning_rate']
+    result={'step':model.num_timesteps,'updates':model._n_updates}
+    for name in names:
+        value=model.logger.name_to_value.get('train/'+name)
+        if value is not None:result[name]=float(value) if math.isfinite(float(value)) else None
+    return result
+
+def new_driving_policy(torch,PPO,env,device,sizes,seed=42):
+    model=PPO('MlpPolicy',env,device=device,learning_rate=3e-4,n_steps=sizes['horizon'],batch_size=sizes['batchSize'],n_epochs=sizes['epochs'],
+        gamma=.995,gae_lambda=.95,ent_coef=.008,policy_kwargs={'net_arch':{'pi':[128,128],'vf':[128,128]},'activation_fn':torch.nn.Tanh,'log_std_init':-.5},seed=seed,verbose=0)
+    # Neutral Gaussian outputs mean half throttle AND half brake. This game's
+    # brake engages reverse at rest. Bias only initialization; PPO still learns
+    # every control, with no scripted steering or expert demonstrations.
+    with torch.no_grad():
+        model.policy.action_net.bias[1]=.5
+        model.policy.action_net.bias[2]=-2.
+    return model
 
 def save_checkpoint(model,path):
     # Torch 2.9 on Windows cannot reliably read its nested ZIP tensors through
@@ -104,10 +128,10 @@ def train_official(config, callback, control, run_dir):
     variants=DIFFICULTIES if config.get('allDifficulties',True) else [config.get('difficulty','extreme')]
     if any(d not in DIFFICULTIES for d in variants):raise ValueError('Unknown difficulty')
     budget=max(128,min(100_000_000,int(config.get('totalSteps',1_000_000))))
-    total_budget=budget*len(track_ids);completed_total=0;packages=[];history=[];logs=[]
+    total_budget=budget*len(track_ids);completed_total=0;packages=[];history=[];logs=[];last_performance=None;last_hardware=None
     replay_path=run_dir/'attempts.jsonl.gz'
     def emit(**fields):
-        callback({'totalSteps':total_budget,'completedSteps':completed_total,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:],**fields})
+        callback({'totalSteps':total_budget,'completedSteps':control.steps,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:],**fields})
     for track_id in track_ids:
         package=None;base_checkpoint=None
         for difficulty in variants:
@@ -119,8 +143,8 @@ def train_official(config, callback, control, run_dir):
             def on_episode(info):
                 control.attempts+=1
                 control.track_attempts[track_id]=control.track_attempts.get(track_id,0)+1
-                record={'attempt':control.attempts,'trackAttempt':control.track_attempts[track_id],'trackId':track_id,'difficulty':difficulty,'policyStep':control.steps,'policyUpdate':control.update,
-                    **{k:v for k,v in info.items() if k in ['mode','finished','lapTime','progress','contacts','offTrackRate']},'points':info.get('trajectory',[])}
+                record={'attempt':control.attempts,'trackAttempt':control.track_attempts[track_id],'trackId':track_id,'difficulty':difficulty,'environmentVersion':env.metadata.get('environmentVersion',1),'policyStep':control.steps+env.num_envs,'policyUpdate':control.update,
+                    **{k:v for k,v in info.items() if k in ['mode','finished','validLap','lapTime','completedLapTime','progress','contacts','offTrackRate','offTrackSeconds']},'points':info.get('trajectory',[])}
                 episode_rows.append({k:v for k,v in record.items() if k!='points'})
                 if len(episode_rows)>100:episode_rows.pop(0)
                 with control.lock:
@@ -130,6 +154,7 @@ def train_official(config, callback, control, run_dir):
                         index.write(json.dumps({**{k:v for k,v in record.items() if k!='points'},'offset':offset,'bytes':replay_path.stat().st_size-offset})+'\n')
             emit(status='running',phase='starting-workers',trackId=track_id,difficulty=difficulty)
             env=OfficialVecEnv(env_config,on_episode)
+            hardware=HardwareSampler().start()
             try:
                 (stage_dir.parent/'track.json').write_text(json.dumps(env.metadata['tracks'][track_id]),encoding='utf-8')
                 if config.get('demonstrations') and difficulty=='extreme':
@@ -137,9 +162,9 @@ def train_official(config, callback, control, run_dir):
                 if package is None:
                     package={'format':'kartblitz-official-track-v1','trackId':track_id,'name':env.metadata['tracks'][track_id]['name']+' Official AI',
                         'physicsHash':env.physics_hash,'trackFingerprint':env.metadata['tracks'][track_id]['fingerprint'],'observationVersion':1,'observationCount':len(env.metadata['observationNames']),'observationNames':env.metadata['observationNames'],
-                        'decisionHz':20,'variants':{},'createdAt':int(time.time()*1000),'humanLevelClaimed':False}
+                        'decisionHz':20,'environmentVersion':env.metadata.get('environmentVersion',1),'startMode':env.metadata.get('startMode'),'variants':{},'createdAt':int(time.time()*1000),'humanLevelClaimed':False}
                 if package['physicsHash']!=env.physics_hash:raise RuntimeError('Physics changed during training')
-                horizon=max(16,min(512,int(config.get('horizon',128))));batch_size=min(256,horizon*env.num_envs)
+                sizes=learning_parameters(config,env.num_envs);horizon=sizes['horizon'];batch_size=sizes['batchSize']
                 resume=None
                 if config.get('resumeRun'):
                     candidate=Path(config['resumeRun'])/f'track-{track_id}'/difficulty/'last.zip'
@@ -152,11 +177,13 @@ def train_official(config, callback, control, run_dir):
                 if resume or (base_checkpoint and difficulty!='extreme'):
                     emit(status='running',phase='loading-checkpoint',trackId=track_id,difficulty=difficulty)
                     model=PPO.load(resume or base_checkpoint,env=env,device=device)
+                    # Resize rollout/minibatch settings for the current hardware.
+                    model.n_steps=horizon;model.batch_size=batch_size;model.n_epochs=sizes['epochs']
+                    model.rollout_buffer=model.rollout_buffer_class(horizon,model.observation_space,model.action_space,device=model.device,gamma=model.gamma,gae_lambda=model.gae_lambda,n_envs=env.num_envs,**model.rollout_buffer_kwargs)
                 else:
                     emit(status='running',phase='initializing-policy',trackId=track_id,difficulty=difficulty)
-                    model=PPO('MlpPolicy',env,device=device,learning_rate=3e-4,n_steps=horizon,batch_size=batch_size,n_epochs=6,
-                        gamma=.995,gae_lambda=.95,ent_coef=.008,policy_kwargs={'net_arch':{'pi':[128,128],'vf':[128,128]},'activation_fn':torch.nn.Tanh},seed=int(config.get('seed',42)),verbose=0)
-                (stage_dir/'contract.json').write_text(json.dumps({'physicsHash':env.physics_hash,'trackId':track_id,'difficulty':difficulty,'config':{k:v for k,v in config.items() if k not in ['demonstrations','demonstrationPairs']}},indent=2),encoding='utf-8')
+                    model=new_driving_policy(torch,PPO,env,device,sizes,int(config.get('seed',42)))
+                (stage_dir/'contract.json').write_text(json.dumps({'physicsHash':env.physics_hash,'environmentVersion':env.metadata.get('environmentVersion',1),'startMode':env.metadata.get('startMode'),'trackId':track_id,'difficulty':difficulty,'config':{k:v for k,v in config.items() if k not in ['demonstrations','demonstrationPairs']}},indent=2),encoding='utf-8')
                 # Optional imitation is a separate initialization objective, never mixed into PPO returns.
                 pairs=config.get('demonstrationPairs',[])
                 if pairs and not resume and difficulty=='extreme':
@@ -169,23 +196,42 @@ def train_official(config, callback, control, run_dir):
                                 loss=torch.nn.functional.mse_loss(dist.mean,actions[indices]);model.policy.optimizer.zero_grad();loss.backward();model.policy.optimizer.step()
                     logs.append(f'Imitation initialized from {len(actions)} same-track samples; PPO now learns independently.')
                 initial_steps=completed_total
+                control.steps=initial_steps;control.update=model._n_updates
                 last_checkpoint=stage_dir/'last.zip';best_checkpoint=stage_dir/'best.zip'
                 best_metrics=None;best_score=None
                 if resume:
                     previous_package=Path(config['resumeRun'])/f'track-{track_id}.kartai.json'
                     previous_best=resume.parent/'best.zip'
                     if previous_package.exists() and previous_best.exists():
-                        previous=json.loads(previous_package.read_text(encoding='utf-8')).get('variants',{}).get(difficulty)
-                        if previous:
-                            best_metrics=previous['evaluation'];best_score=score(best_metrics)
-                            if previous_best.resolve()!=best_checkpoint.resolve():shutil.copyfile(previous_best,best_checkpoint)
+                        # Old scores can come from solo traffic, different time
+                        # limits or older reset/reward rules. Re-test the actual
+                        # saved policy under this run's evaluation conditions.
+                        baseline=PPO.load(previous_best,device=device)
+                        emit(status='running',phase='evaluation',trackId=track_id,difficulty=difficulty)
+                        metrics,paths=evaluate_policy(baseline,env_config,control,int(config.get('evaluationEpisodes',3)))
+                        with (stage_dir/'evaluations.jsonl').open('a',encoding='utf-8') as out:out.write(json.dumps({'steps':0,'source':'resume-best-recheck','metrics':metrics,'paths':paths})+'\n')
+                        if not metrics.get('cancelled'):
+                            best_metrics=metrics;best_score=score(metrics)
+                            save_checkpoint(baseline,best_checkpoint)
+                        del baseline
                 outer_emit=emit
+                phase_timer=PhaseTimer()
                 class Progress(BaseCallback):
-                    def __init__(self):super().__init__();self.last=0;self.last_eval=0
+                    def __init__(self):super().__init__();self.last=0;self.last_eval=0;self.logged_updates=model._n_updates
+                    def record_update(self):
+                        control.update=self.model._n_updates
+                        if self.model._n_updates==self.logged_updates:return
+                        self.logged_updates=self.model._n_updates
+                        diagnostics=ppo_diagnostics(self.model)
+                        with (stage_dir/'training-diagnostics.jsonl').open('a',encoding='utf-8') as out:out.write(json.dumps(diagnostics)+'\n')
+                        outer_emit(diagnostics=diagnostics)
+                    def _on_rollout_start(self):self.record_update();phase_timer.begin_rollout()
+                    def _on_rollout_end(self):phase_timer.end_rollout()
+                    def _on_training_end(self):self.record_update();phase_timer.finish()
                     def _on_step(self):
                         nonlocal best_metrics,best_score
-                        if not control.check():return False
                         control.steps=initial_steps+self.num_timesteps;control.update=self.model._n_updates
+                        if not control.check():return False
                         now=time.monotonic()
                         if now-self.last>=.75:
                             self.last=now
@@ -193,59 +239,106 @@ def train_official(config, callback, control, run_dir):
                             history.append({'step':control.steps,'trackId':track_id,'difficulty':difficulty,'progress':avg,'finishRate':statistics.fmean(r['finished'] for r in episode_rows) if episode_rows else None,
                                 'medianLapTime':statistics.median([r['lapTime'] for r in episode_rows if r['finished']]) if any(r['finished'] for r in episode_rows) else None})
                             outer_emit(status='running',phase='learning',trackId=track_id,difficulty=difficulty,completedSteps=control.steps,
-                                stageSteps=self.num_timesteps,stageBudget=stage_budget,preview=env.snapshot(control.batch),recentEpisodes=episode_rows[-10:])
+                                stageSteps=self.num_timesteps,stageBudget=stage_budget,preview=env.snapshot(control.batch),recentEpisodes=episode_rows[-10:],
+                                performance=phase_timer.snapshot(self.num_timesteps),hardware=hardware.snapshot(device),trainingSettings={**sizes,'numEnvs':env.num_envs,'workers':len(env.batches)})
                         interval=max(horizon*env.num_envs,int(config.get('checkpointEvery',100000)))
                         if self.num_timesteps-self.last_eval>=interval:
                             self.last_eval=self.num_timesteps;save_checkpoint(self.model,last_checkpoint)
                             outer_emit(status='running',phase='evaluation',trackId=track_id,difficulty=difficulty,completedSteps=control.steps)
                             metrics,paths=evaluate_policy(self.model,env_config,control,int(config.get('evaluationEpisodes',3)))
                             with (stage_dir/'evaluations.jsonl').open('a',encoding='utf-8') as out:out.write(json.dumps({'steps':self.num_timesteps,'metrics':metrics,'paths':paths})+'\n')
-                            if best_score is None or score(metrics)>best_score:
+                            if not metrics.get('cancelled') and (best_score is None or score(metrics)>best_score):
                                 best_metrics=metrics;best_score=score(metrics);save_checkpoint(self.model,best_checkpoint)
-                            outer_emit(status='running',phase='learning',evaluation=metrics)
+                            if not metrics.get('cancelled'):outer_emit(status='running',phase='learning',evaluation=metrics)
+                            if control.cancelled.is_set():return False
                         return True
-                logs.append(f'Track {track_id} / {difficulty}: PPO in the actual game physics, {env.num_envs} environments across {len(env.batches)} workers.')
+                logs.append(f'Track {track_id} / {difficulty}: {env.num_envs} cars / {len(env.batches)} workers, {horizon} steps per car, {batch_size} samples per update minibatch. Same 128-unit browser actor.')
                 emit(status='running',phase='learning',trackId=track_id,difficulty=difficulty,track=env.metadata['tracks'][track_id],physicsHash=env.physics_hash,preview=env.snapshot(control.batch))
                 model.learn(total_timesteps=stage_budget,callback=Progress(),reset_num_timesteps=True)
+                last_performance=phase_timer.snapshot(model.num_timesteps);last_hardware=hardware.snapshot(device)
                 save_checkpoint(model,last_checkpoint)
                 completed_total+=model.num_timesteps
                 metrics,paths=evaluate_policy(model,env_config,control,int(config.get('evaluationEpisodes',3)))
                 with (stage_dir/'evaluations.jsonl').open('a',encoding='utf-8') as out:out.write(json.dumps({'steps':model.num_timesteps,'metrics':metrics,'paths':paths})+'\n')
-                if best_score is None or score(metrics)>best_score:
+                if not metrics.get('cancelled') and (best_score is None or score(metrics)>best_score):
                     best_metrics=metrics;best_score=score(metrics);save_checkpoint(model,best_checkpoint)
-                selected=PPO.load(best_checkpoint,device=device)
+                # A stop before the first full evaluation still exports a
+                # resumable candidate, explicitly marked as unevaluated.
+                if best_metrics is None:best_metrics=metrics
+                selected=PPO.load(best_checkpoint if best_checkpoint.exists() else last_checkpoint,device=device)
                 package['variants'][difficulty]={'id':uuid.uuid4().hex,'policy':export_policy(selected),'evaluation':best_metrics,
-                    'training':{'algorithm':'PPO','steps':model.num_timesteps,'warmStart':'resume' if resume else 'extreme' if base_checkpoint else 'none','device':device,'traffic':env_config['traffic']}}
+                    'training':{'algorithm':'PPO','steps':model.num_timesteps,'warmStart':'resume' if resume else 'extreme' if base_checkpoint else 'none','initialization':'checkpoint' if resume or base_checkpoint else 'forward-driving-v1','device':device,'traffic':env_config['traffic'],**sizes,'numEnvs':env.num_envs,'workers':len(env.batches)}}
                 file=run_dir/f'track-{track_id}.kartai.json';temporary=file.with_suffix('.tmp.json');temporary.write_text(json.dumps(package,separators=(',',':')),encoding='utf-8');os.replace(temporary,file)
                 if difficulty=='extreme':base_checkpoint=best_checkpoint
                 packages=[p for p in packages if p['trackId']!=track_id]+[{'trackId':track_id,'name':package['name'],'variants':list(package['variants']),'file':str(file),'evaluation':best_metrics}]
                 emit(status='running',phase='checkpoint-saved',packages=packages,evaluation=best_metrics,completedSteps=completed_total)
-            finally:env.close()
+            finally:hardware.close();env.close()
         if control.cancelled.is_set():break
-    return {'status':'cancelled' if control.cancelled.is_set() else 'complete','phase':'finished','packages':packages,'completedSteps':completed_total,'totalSteps':total_budget,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:]}
+    return {'status':'cancelled' if control.cancelled.is_set() else 'complete','phase':'finished','packages':packages,'completedSteps':completed_total,'totalSteps':total_budget,'attempts':control.attempts,'device':device,'logs':logs[-20:],'history':history[-200:],'performance':last_performance,'hardware':last_hardware}
 
 def benchmark_official(config,callback,control):
     torch,PPO,BaseCallback,OfficialVecEnv=_dependencies()
-    torch.set_num_threads(2);results=[]
-    for device in ['cpu','cuda']:
-        if not control.check():break
-        if device=='cuda' and not torch.cuda.is_available():continue
-        env=OfficialVecEnv({**config,'trackId':0,'numEnvs':max(1,min(32,int(config.get('numEnvs',8)))),'episodeSeconds':10})
-        try:
-            model=PPO('MlpPolicy',env,device=device,n_steps=64,batch_size=64,n_epochs=3,policy_kwargs={'net_arch':{'pi':[128,128],'vf':[128,128]}},verbose=0)
-            start=time.monotonic()
-            class Preview(BaseCallback):
-                def _on_step(self):
-                    if not control.check():return False
-                    if self.n_calls%20==0:callback({'status':'running','phase':'benchmark','device':device,'completedSteps':self.num_timesteps,'track':env.metadata['tracks'][0],'preview':env.snapshot(control.batch)})
-                    return True
-            model.learn(total_timesteps=2048,callback=Preview())
-            if device=='cuda':torch.cuda.synchronize()
-            elapsed=time.monotonic()-start
-            results.append({'device':device,'steps':model.num_timesteps,'seconds':elapsed,'stepsPerSecond':model.num_timesteps/elapsed})
-        finally:env.close()
-    best=max(results,key=lambda r:r['stepsPerSecond'])['device'] if results else None
-    return {'status':'cancelled' if control.cancelled.is_set() else 'complete','phase':'benchmark-finished','benchmark':results,'recommendedDevice':best,'packages':[]}
+    torch.set_num_threads(2);results=[];hardware=HardwareSampler().start()
+    profiles=[(16,4,256),(64,8,1024),(128,8,2048)]
+    devices=['cpu']+(['cuda'] if torch.cuda.is_available() else [])
+    target=max(2048,min(65536,int(config.get('benchmarkSteps',8192))))
+    total_budget=sum(max(target,cars*128) for cars,_,_ in profiles)*len(devices);completed=0
+    try:
+        for cars,workers,batch in profiles:
+            for device in devices:
+                if not control.check():break
+                cfg={**config,'trackId':0,'mode':'mixed','numEnvs':cars,'workers':workers,'horizon':128,'batchSize':batch,'episodeSeconds':10}
+                sizes=learning_parameters(cfg,cars)
+                callback({'status':'running','phase':'benchmark-initializing','device':device,'completedSteps':completed,'totalSteps':total_budget,'benchmarkProfile':{'numEnvs':cars,'workers':workers,**sizes}})
+                env=OfficialVecEnv(cfg)
+                try:
+                    model=new_driving_policy(torch,PPO,env,device,sizes)
+                    class Preview(BaseCallback):
+                        def __init__(self,measured,timer=None):super().__init__();self.measured=measured;self.timer=timer;self.last=0
+                        def _on_rollout_start(self):
+                            if self.timer:self.timer.begin_rollout()
+                        def _on_rollout_end(self):
+                            if self.timer:self.timer.end_rollout()
+                        def _on_training_end(self):
+                            if self.timer:self.timer.finish()
+                        def _on_step(self):
+                            if not control.check():return False
+                            now=time.monotonic()
+                            if now-self.last>=.75:
+                                self.last=now;callback({'status':'running','phase':'benchmark-measuring' if self.measured else 'benchmark-warmup',
+                                    'device':device,'completedSteps':completed+(self.num_timesteps if self.measured else 0),'totalSteps':total_budget,
+                                    'track':env.metadata['tracks'][0],'preview':env.snapshot(control.batch),'hardware':hardware.snapshot(device),
+                                    'trainingSettings':{'numEnvs':cars,'workers':len(env.batches),**sizes},
+                                    'performance':self.timer.snapshot(self.num_timesteps) if self.timer else None})
+                            return True
+                    # Exclude cold CUDA kernels and model construction from throughput.
+                    model.learn(total_timesteps=cars*sizes['horizon'],callback=Preview(False))
+                    if not control.check():break
+                    if device=='cuda':torch.cuda.synchronize();torch.cuda.reset_peak_memory_stats()
+                    start=time.monotonic();timer=PhaseTimer()
+                    model.learn(total_timesteps=max(target,sizes['rolloutSize']),callback=Preview(True,timer))
+                    if device=='cuda':torch.cuda.synchronize()
+                    elapsed=time.monotonic()-start;completed+=model.num_timesteps
+                    result={'device':device,'numEnvs':cars,'workers':len(env.batches),**sizes,'steps':model.num_timesteps,'seconds':elapsed,
+                        'stepsPerSecond':model.num_timesteps/elapsed,'timing':timer.snapshot(model.num_timesteps),'hardware':hardware.summary(start,device)}
+                    results.append(result)
+                    callback({'benchmark':results,'completedSteps':completed,'hardware':result['hardware'],'performance':result['timing']})
+                finally:
+                    env.close()
+                    if 'model' in locals():del model
+                    if device=='cuda':torch.cuda.empty_cache()
+            if control.cancelled.is_set():break
+    finally:hardware.close()
+    preference=config.get('device','auto')
+    fastest=max(results,key=lambda r:r['stepsPerSecond']) if results else None
+    recommendation=benchmark_choice(results,preference)
+    report={'status':'cancelled' if control.cancelled.is_set() else 'complete','phase':'benchmark-finished','completedSteps':completed,'totalSteps':completed,
+        'benchmark':results,'recommendedDevice':recommendation['device'] if recommendation else None,'recommendedConfig':recommendation,
+        'fastestOverall':{k:fastest[k] for k in ['device','numEnvs','workers','batchSize','stepsPerSecond']} if fastest else None,'packages':[]}
+    if not control.cancelled.is_set():
+        directory=ROOT/'ml_training/runs/official';directory.mkdir(parents=True,exist_ok=True)
+        (directory/'hardware-profile.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+    return report
 
 def read_replays(run_dir,control,cohort='early',track_id=None):
     path=Path(run_dir)/'attempts.jsonl.gz'

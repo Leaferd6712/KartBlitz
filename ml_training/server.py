@@ -80,7 +80,9 @@ def run_official_job(job_id: str, config: dict[str, Any]) -> None:
     try:
         from .official_train import train_official, benchmark_official
         def update(fields):
-            with LOCK: JOBS[job_id].update(fields)
+            with LOCK:
+                if OFFICIAL_CONTROLS[job_id].cancelled.is_set() and fields.get('status')=='running':fields={**fields,'status':'stopping'}
+                JOBS[job_id].update(fields)
         result=benchmark_official(config,update,OFFICIAL_CONTROLS[job_id]) if config.get('benchmarkOnly') else train_official(config,update,OFFICIAL_CONTROLS[job_id],ROOT/'ml_training/runs/official'/job_id)
         update(result)
     except Exception as exc:
@@ -194,19 +196,25 @@ class Handler(BaseHTTPRequestHandler):
                         if len(resume)!=32 or not all(c in '0123456789abcdef' for c in resume):raise ValueError('Invalid resume job id')
                         config['resumeRun']=str(ROOT/'ml_training/runs/official'/resume)
                     else:config.pop('resumeRun',None)
-                    job_id=uuid.uuid4().hex;job={'id':job_id,'official':True,'status':'queued','completedSteps':0,'attempts':0,'logs':['Official training queued']}
+                    job_id=uuid.uuid4().hex;job={'id':job_id,'official':True,'kind':'benchmark' if config.get('benchmarkOnly') else 'training','status':'queued','completedSteps':0,'attempts':0,'logs':['Official job queued']}
                     with LOCK:JOBS[job_id]=job;OFFICIAL_CONTROLS[job_id]=TrainingControl()
                     threading.Thread(target=run_official_job,args=(job_id,config),daemon=True).start();self._json(202,job);return
                 parts=path.split('/');job_id=parts[4]
                 control=OFFICIAL_CONTROLS.get(job_id)
                 if control is None:raise ValueError('Training job not found')
                 action=config.get('action')
-                if action=='pause':control.running.clear();JOBS[job_id]['status']='paused'
-                elif action=='resume':control.running.set();JOBS[job_id]['status']='running'
-                elif action=='stop':control.cancelled.set();control.running.set();JOBS[job_id]['status']='stopping'
-                elif action=='batch':control.batch=max(0,int(config.get('batch',0)))
-                else:raise ValueError('Unknown training control')
-                self._json(200,{'ok':True});return
+                if action not in ['pause','resume','stop','batch']:raise ValueError('Unknown training control')
+                with LOCK:
+                    status=JOBS[job_id]['status']
+                    already_finished=status in ['complete','cancelled','failed']
+                    if not already_finished:
+                        if status=='stopping' and action in ['pause','resume']:raise ValueError('Job is stopping; wait for its checkpoint to be saved')
+                        if action=='pause':control.running.clear();JOBS[job_id]['status']='paused'
+                        elif action=='resume':control.running.set();JOBS[job_id]['status']='running'
+                        elif action=='stop':control.cancelled.set();control.running.set();JOBS[job_id]['status']='stopping'
+                        elif action=='batch':control.batch=max(0,int(config.get('batch',0)))
+                    result={'ok':True,'status':JOBS[job_id]['status'],'alreadyFinished':already_finished}
+                self._json(200,result);return
             except Exception as exc:self._json(400,{'error':str(exc)});return
         if urlparse(self.path).path != "/api/jobs": self._json(404, {"error": "Not found"}); return
         if not self._authorized(): self._json(401, {"error": "Incorrect trainer pairing code"}); return

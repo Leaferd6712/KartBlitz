@@ -26,3 +26,5 @@ Reviewed 30 October 2026. This is research from original project repositories, a
 - Benchmark CPU and CUDA: SB3 explicitly notes that small PPO MLP workloads can suit CPU execution. GPU usage alone is not a throughput or quality metric.
 
 The engineering checks are physics parity, Python/browser actor-output parity, real training/checkpoint resume, and measured browser races. The performance checks are completion, representative lap times, comparable human pace, contact and recovery. Training return alone does not certify a model.
+
+Implementation update, 31 October 2026: at the user's request, environment version 2 uses standing starts just behind each track's real S/F gate for all training and evaluation attempts. Random-start practice and evaluation are no longer enabled. The actual game checkpoint/lap clock controls completion, and RL off-track penalties cover every physics tick including the stricter limit boundary. This supersedes the original randomized-start engineering choice; it does not change the research findings above.
