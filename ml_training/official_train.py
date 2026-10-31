@@ -355,11 +355,12 @@ def benchmark_official(config,callback,control):
         (directory/'hardware-profile.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     return report
 
-def read_replays(run_dir,control,cohort='early',track_id=None):
+def read_replays(run_dir,control,cohort='early',track_id=None,limit=1000):
+    limit=max(1,min(1000,int(limit)))
     path=Path(run_dir)/'attempts.jsonl.gz'
     if not path.exists():return []
     if cohort not in ['early','middle','final']:raise ValueError('Unknown replay cohort')
-    records=deque(maxlen=1000)
+    records=deque(maxlen=limit)
     index=Path(run_dir)/'attempt-index.jsonl'
     def include(row):
         if track_id is not None and row['trackId']!=int(track_id):return False
@@ -370,11 +371,11 @@ def read_replays(run_dir,control,cohort='early',track_id=None):
         # decoded without holding up collectors or loading an entire long run.
         entries=index.read_text(encoding='utf-8').splitlines() if index.exists() else None
     if entries is not None:
-        selected=deque(maxlen=1000)
+        selected=deque(maxlen=limit)
         for line in entries:
             entry=json.loads(line)
             if include(entry):selected.append(entry)
-            if cohort!='final' and len(selected)==1000:break
+            if cohort!='final' and len(selected)==limit:break
         with path.open('rb') as source:
             for entry in selected:
                 source.seek(entry['offset']);records.append(json.loads(gzip.decompress(source.read(entry['bytes']))))
@@ -383,7 +384,7 @@ def read_replays(run_dir,control,cohort='early',track_id=None):
             for line in source:
                 row=json.loads(line)
                 if include(row):records.append(row)
-                if cohort!='final' and len(records)==1000:break
+                if cohort!='final' and len(records)==limit:break
     for row in records:
         points=row['points'];stride=max(1,math.ceil(len(points)/240));sampled=points[::stride]
         if points and sampled[-1] is not points[-1]:sampled.append(points[-1])

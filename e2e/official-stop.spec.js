@@ -45,3 +45,14 @@ test('a failed stop request freezes playback but does not claim training has sto
 test('losing the polling connection freezes the last preview instead of simulating progress',async({page})=>{
   const state=await setup(page);state.failPoll=true;await expect(page.locator('#om-view-status')).toContainText('Connection lost');await expectFrozen(page);
 });
+
+test('live camera finishes the whole recorded lap before advancing to a newer attempt',async({page})=>{
+  await setup(page);
+  // Start with 101, then make a newer full lap available while it plays.
+  let latest=101;
+  await page.route('**/replays?**',async route=>{const p={x:0,y:0,a:0,speed:100};await route.fulfill({json:{attempts:[{attempt:latest,finished:true,mode:'ai',points:[{...p,t:0},{...p,x:100,t:14}]}]}});});
+  await expect(page.locator('#om-car-status')).toContainText('recorded attempt 101',{timeout:15000});latest=102;
+  await page.waitForTimeout(9000);
+  await expect(page.locator('#om-car-status')).toContainText('recorded attempt 101');
+  await expect(page.locator('#om-car-status')).toContainText('recorded attempt 102',{timeout:15000});
+});

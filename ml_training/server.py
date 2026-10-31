@@ -146,7 +146,7 @@ class Handler(BaseHTTPRequestHandler):
                 from urllib.parse import parse_qs
                 from .official_train import read_replays
                 query=parse_qs(urlparse(self.path).query)
-                try:self._json(200,{'attempts':read_replays(ROOT/'ml_training/runs/official'/job_id,OFFICIAL_CONTROLS[job_id],query.get('cohort',['early'])[0],query.get('trackId',[None])[0])})
+                try:self._json(200,{'attempts':read_replays(ROOT/'ml_training/runs/official'/job_id,OFFICIAL_CONTROLS[job_id],query.get('cohort',['early'])[0],query.get('trackId',[None])[0],query.get('limit',[1000])[0])})
                 except (ValueError,KeyError) as exc:self._json(400,{'error':str(exc)})
                 return
             self._json(404,{'error':'Not found'});return

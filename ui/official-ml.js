@@ -4,8 +4,9 @@ const root=document.createElement('main');root.id='official-ml';document.body.ap
 window.showScreen?.('official-ml');
 root.innerHTML=`<section id="om-lock" class="om-card"><h1>Official ML for AI</h1><p>Local training for AI Race and One Lap Shootout.</p><form id="om-unlock"><label>Password<input id="om-password" type="password" autocomplete="off" required></label><button class="om-primary">Unlock</button><p id="om-lock-error" role="alert"></p></form></section><div id="om-dashboard" hidden></div>`;
 const $=id=>document.getElementById('om-'+id);
-let jobId='',capturedJob='',job=null,track=null,liveTrack=null,replays=[],selected=0,mode='live',playTime=0,playing=true,previous=0,lastDraw=0,lastEpisode=null,pollTimer=null,replayCache=null,liveClip=null,clipTime=0,clipWall=0,replayRequest=0,loadingReplays=false;
+let jobId='',capturedJob='',job=null,track=null,liveTrack=null,replays=[],selected=0,mode='live',playTime=0,playing=true,previous=0,lastDraw=0,lastEpisode=null,pollTimer=null,replayCache=null,liveClip=null,clipTime=0,replayRequest=0,loadingReplays=false;
 let appliedBenchmark='';
+let cameraNext=null,cameraFetch=false,cameraFetchedAt=-Infinity,cameraRequest=0;
 let previewFrozen=true,previewReason='Waiting for actual car positions.',connectionLost=false,stopRequested=false,stopAcknowledged=false,pauseRequested=false,lastFrozenRender='';
 function stopPlayback(){playing=false;if($('play'))$('play').textContent='Play replay';}
 const terminal=status=>['complete','cancelled','failed'].includes(status);
@@ -59,7 +60,7 @@ function open(){
   $('window').onclick=()=>window.open(location.href,'KartBlitzOfficialTraining','width=1400,height=950');
   $('shutdown').onclick=safe(async()=>{stopRequested=true;stopPlayback();updatePreviewState();await api('shutdown',{});message('Shutdown requested. Trainer is saving; preview stopped.');clearTimeout(pollTimer);});
   $('batch').onchange=safe(()=>control('batch',{batch:Number($('batch').value)}));
-  $('car').onchange=()=>{selected=Number($('car').value);lastEpisode=null;liveClip=null;};
+  $('car').onchange=()=>{selected=Number($('car').value);lastEpisode=null;liveClip=null;cameraNext=null;cameraRequest++;};
   $('view').onchange=safe(async()=>{mode=$('view').value;selected=0;playTime=0;await loadReplays();});
   $('refresh').onclick=safe(loadReplays);$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'Pause replay':'Play replay';};
   $('time').oninput=()=>{playTime=Number($('time').value);};
@@ -67,9 +68,9 @@ function open(){
   $('import').onchange=safe(async()=>{const file=$('import').files[0];if(file)await install(JSON.parse(await file.text()));});
   updateInstalled();requestAnimationFrame(draw);if($('code').value)connect().catch(e=>message(e.message));
 }
-async function connect(){const s=await api('status');connectionLost=false;$('device').textContent=`${s.deviceName} · ${s.torchVersion||'No PyTorch'} · ${s.ready?'Ready':'Install dependencies first'} · CUDA ${s.cudaAvailable?'available':'unavailable'}`;if(!s.cudaAvailable&&$('device-choice').value==='cuda')$('device-choice').value='cpu';sessionStorage.setItem('official-trainer-code',$('code').value);localStorage.setItem('official-trainer-code',$('code').value);message('Trainer status loaded.');if(jobId)await poll();}
+async function connect(){const s=await api('status');connectionLost=false;$('device').textContent=`${s.deviceName} · ${s.torchVersion||'No PyTorch'} · ${s.ready?'Ready':'Install dependencies first'} · CUDA ${s.cudaAvailable?'available':'unavailable'}`;if(!s.cudaAvailable&&$('device-choice').value==='cuda')$('device-choice').value='cpu';sessionStorage.setItem('official-trainer-code',$('code').value);localStorage.setItem('official-trainer-code',$('code').value);message('Trainer status loaded.');if(!jobId)jobId=library.knownJobs().find(j=>j.url===$('url').value.replace(/\/$/,''))?.id||'';if(jobId)await poll();}
 async function start(benchmarkOnly){
-  freezePreview('Starting a new job…');stopRequested=false;stopAcknowledged=false;pauseRequested=false;
+  cameraNext=null;cameraRequest++;cameraFetchedAt=-Infinity;freezePreview('Starting a new job…');stopRequested=false;stopAcknowledged=false;pauseRequested=false;
   const demonstrations=[];for(const file of $('demos').files)demonstrations.push(JSON.parse(await file.text()));
   const d=$('difficulties').value;
   const config={format:'kartblitz-official-job-v1',benchmarkOnly,budgetMode:$('budget').value,durationSeconds:Number($('hours').value)*3600,runName:$('run-name').value.trim(),trackIds:$('track').value==='all'?[0,1,2,3,4,5,6,7]:[Number($('track').value)],totalSteps:Number($('steps').value),numEnvs:Number($('envs').value),workers:Number($('workers').value),horizon:Number($('horizon').value),batchSize:Number($('batch-size').value),device:$('device-choice').value,allDifficulties:d==='all',difficulty:d==='all'?'extreme':d,traffic:Number($('traffic').value),demonstrations,...($('resume').value.trim()?{resumeJobId:$('resume').value.trim()}:{})};
@@ -91,6 +92,17 @@ async function control(action,extra={}){
     updatePreviewState();if(action!=='batch')await poll();
   }catch(error){if(action==='stop'){connectionLost=true;updatePreviewState();message('STOP NOT CONFIRMED: '+error.message);}else message(error.message);}
 }
+async function fetchCameraAttempt(){
+  if(cameraFetch||performance.now()-cameraFetchedAt<10000||!jobId||mode!=='live'||terminal(job?.status))return;
+  const request=++cameraRequest,id=jobId,trackId=liveTrack?.id??0;cameraFetch=true;cameraFetchedAt=performance.now();
+  try{const response=await api(`jobs/${id}/replays?cohort=final&trackId=${trackId}&limit=8`);
+    if(request!==cameraRequest||id!==jobId||trackId!==liveTrack?.id)return;
+    const rows=(response.attempts||[]).filter(r=>r.points?.length>1&&r.attempt>(liveClip?.attempt||0));
+    const row=rows.filter(r=>r.finished).at(-1)||rows.at(-1);
+    if(row)cameraNext={...row,track:trackId,points:row.points,complete:true};
+  }catch{/* The main status poll reports connectivity; retain the current camera frame. */}
+  finally{cameraFetch=false;}
+}
 async function poll(){
   clearTimeout(pollTimer);if(!jobId)return;
   try{
@@ -111,7 +123,7 @@ async function poll(){
         appliedBenchmark=jobId;message(`Calibration complete. Applied ${c.device} settings for the selected device preference. `+(job.fastestOverall?`Fastest overall: ${job.fastestOverall.device}, ${job.fastestOverall.stepsPerSecond.toFixed(0)} steps/s. `:'')+'These measure compute speed, not driving quality.');
       }
     }
-    renderPerformance();
+    renderPerformance();if(mode==='live'&&(!liveClip||clipTime>=(liveClip.points.at(-1)?.t||0)-5)&&!cameraNext)fetchCameraAttempt();
     if(job.preview){options($('batch'),job.preview.batchCount,i=>`Batch ${i}`,Number($('batch').value));if(mode==='live')options($('car'),job.preview.environments.length,i=>`Car ${i}`,selected);}
     renderPackages();chart();
     if(['complete','cancelled'].includes(job.status)&&job.packages?.length&&capturedJob!==jobId){await library.captureFinishedJob({...job,id:jobId},track=>api(`jobs/${jobId}/model?trackId=${track}`));capturedJob=jobId;message((stopRequested?'Stop confirmed. ':'')+'Training weights saved to AI Models as inactive candidates. Your selected driver has not changed.');}
@@ -156,12 +168,19 @@ function draw(now){requestAnimationFrame(draw);if(now-lastDraw<1000/30)return;la
   let cars=[],pose=null,details='';
   if(mode==='live'){
     const rows=job?.preview?.environments||[];const row=rows[selected]||rows[0];cars=rows.map(r=>r.car);pose=row?.car;
-    if(row){const key=`${jobId}:${job.preview.batch}:${row.environment}:${row.episode}`;if(lastEpisode!==key){window.KartBlitzReplayScene.clear();lastEpisode=key;}
-      ctx.strokeStyle='#73c8ff';ctx.lineWidth=1.5;ctx.beginPath();row.path.forEach((p,i)=>i?ctx.lineTo(x(p),y(p)):ctx.moveTo(x(p),y(p)));ctx.stroke();
-      if(!liveClip||liveClip.track!==track.id||liveClip.batch!==job.preview.batch||liveClip.selected!==selected||(!previewFrozen&&(clipTime>=liveClip.points.at(-1).t||clipWall>8))){liveClip={...row,track:track.id,batch:job.preview.batch,selected,points:row.path};clipTime=row.path[0]?.t||0;clipWall=0;}
-      if(!previewFrozen){clipTime+=dt;clipWall+=dt;}pose=poseAt(liveClip.points,clipTime)||row.car;
-      details=`Car ${row.environment} · sampled attempt ${liveClip.episode} · ${liveClip.mode} · camera ${clipTime.toFixed(1)} s · batch reward ${row.reward.toFixed(1)}`;}
-    $('view-status').textContent=previewFrozen?previewReason:`${cars.length} live environments from batch ${job?.preview?.batch??0}. Updates are sampled; training runs faster than playback.`;
+    if(row){
+      const changed=!liveClip||liveClip.track!==track.id||liveClip.batch!==job.preview.batch||liveClip.selected!==selected;
+      const ended=liveClip&&clipTime>=liveClip.points.at(-1).t;
+      if(changed||(!previewFrozen&&cameraNext&&(ended||!liveClip.complete))){
+        liveClip=cameraNext?.track===track.id?{...cameraNext,batch:job.preview.batch,selected}:{...row,track:track.id,batch:job.preview.batch,selected,points:row.path};
+        cameraNext=null;clipTime=liveClip.points[0]?.t||0;window.KartBlitzReplayScene.clear();
+      }
+      if(!previewFrozen)clipTime=Math.min(clipTime+dt,liveClip.points.at(-1).t);
+      pose=poseAt(liveClip.points,clipTime)||row.car;cars[selected]=pose;
+      ctx.strokeStyle='#ffe17c';ctx.lineWidth=1.5;ctx.beginPath();liveClip.points.forEach((p,i)=>i?ctx.lineTo(x(p),y(p)):ctx.moveTo(x(p),y(p)));ctx.stroke();
+      details=liveClip.complete?`Car ${row.environment} camera · recorded attempt ${liveClip.attempt} · ${liveClip.mode} · ${liveClip.finished?'full lap':'failed / timed out'} · camera ${clipTime.toFixed(1)} s / ${liveClip.points.at(-1).t.toFixed(1)} s`:`Car ${row.environment} · sampled attempt ${liveClip.episode} · camera ${clipTime.toFixed(1)} s · waiting for a complete recorded attempt`;
+    }
+    $('view-status').textContent=previewFrozen?previewReason:`${cars.length} live environments from batch ${job?.preview?.batch??0}. Camera replays a completed attempt from start to end before switching; other dots show current positions.`;
     if(previewFrozen)details+=' · PREVIEW STOPPED';
   }else{
     if(playing)playTime+=dt*Number($('speed').value);const max=Number($('time').max);if(playTime>max)playTime=0;$('time').value=playTime;
