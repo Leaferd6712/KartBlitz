@@ -7045,7 +7045,7 @@ function makeRaceAIInput(track, difficulty, aiIndex, mode) {
   if(wanted && (mode==='ai'||mode==='shootout') && pack?.variants[difficulty] && pack.trackFingerprint===official.trackFingerprint(track)) {
     const learned=official.makeController(track,pack,difficulty,{mode,getOpponents:()=>race?.karts||[]});
     let kart=null,lastPitLap=0;
-    return {set(k){kart=k;learned.set(k);},fn(dt){
+    return {set(k){kart=k;learned.set(k);k._officialPolicyState=learned.state;},fn(dt){
       if(mode==='ai' && kart && !['qualifying','quali-turn'].includes(race?.phase)) {
         const strategy=getAiPitStrategyId(aiIndex,difficulty,kart.totalLaps||3);
         kart.aiPitPlan=strategy;
@@ -15449,6 +15449,7 @@ window.KartBlitzTrackEditor = (function(){
     if (!m) return;
     m.classList.toggle('open', !!show);
     m.setAttribute('aria-hidden', show ? 'false' : 'true');
+    m.inert = !show;
     if (show) {
       const inp = $('te-pass-input');
       const err = $('te-pass-err');
@@ -15462,6 +15463,7 @@ window.KartBlitzTrackEditor = (function(){
     if (!el) return;
     el.classList.toggle('open', !!show);
     el.setAttribute('aria-hidden', show ? 'false' : 'true');
+    el.inert = !show;
     if (show) buildPicker();
   }
 
@@ -15479,6 +15481,7 @@ window.KartBlitzTrackEditor = (function(){
     if (!el) return;
     el.classList.toggle('open', !!show);
     el.setAttribute('aria-hidden', show ? 'false' : 'true');
+    el.inert = !show;
     _open = !!show;
     if (show) {
       try {

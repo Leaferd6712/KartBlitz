@@ -70,6 +70,9 @@ http://127.0.0.1:8766/index.html?tool=official-ml
 http://127.0.0.1:8766/index.html?tool=official-ml
 
 - **[AI Models](https://leaferd6712.github.io/KartBlitz/ui/ai-models.html)** — choose Legacy AI or a named RL model independently on each track card; compare measured lap completion and lap times. Earlier versions are retained. Uses the same `KartBlitzPass` gate.
+- **[Local campaign dashboard](http://127.0.0.1:8766/ui/campaign.html)** — adaptive parallel training slots and full-lap viewers. Start with `npm run official:campaign`; see the [campaign instructions and fixed deadline](docs/autonomous-campaign.md). Requires the local trainer on this laptop.
+- **[V2 battery and DRS training](docs/energy-v2.md)** — separate, opt-in multi-lap energy experiments. The current campaign remains V1; V2 refuses to start while it is running.
+- **[Racing lines and corner timing](https://leaferd6712.github.io/KartBlitz/ui/racing-lines.html)** — replay reference/driven lines, overlapping corner windows and adjacent lap splits. Local: [open inspector](http://127.0.0.1:8766/ui/racing-lines.html).
 
 - **[Open ML Lab](https://leaferd6712.github.io/KartBlitz/index.html?tool=ml)** — lessons, reward experiments, training configuration, checkpoint replays, model import/export and model races. No menu opt-in is needed. Leaving a lab race returns to the lab; Back opens the normal game.
 - **Verified leaderboard examples** — in ML Lab → Build, choose a demonstration circuit and **Load verified laps**, then **Use for ML**. Record your own clean lap and export demonstrations from the same panel. Normal leaderboards retain **Race Ghost**.

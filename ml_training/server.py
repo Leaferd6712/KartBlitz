@@ -40,6 +40,10 @@ def saved_official_models() -> list[dict[str, Any]]:
     for file in directory.glob('*/track-*.kartai.json'):
         job_id=file.parent.name
         if len(job_id)!=32 or not all(c in '0123456789abcdef' for c in job_id):continue
+        try:
+            spec=json.loads((file.parent/'campaign-spec.json').read_text(encoding='utf-8')) if (file.parent/'campaign-spec.json').exists() else {}
+            if spec.get('config',{}).get('testOnly'):continue
+        except (OSError,ValueError):continue
         with LOCK:active=JOBS.get(job_id,{}).get('status') in ['queued','running','paused','stopping']
         if active:continue
         try:
@@ -47,7 +51,7 @@ def saved_official_models() -> list[dict[str, Any]]:
             with LOCK:cached=MODEL_CATALOG_CACHE.get(key)
             if cached and cached[0]==version:models.append(cached[1]);continue
             track_id=int(file.name.split('-')[1].split('.')[0]);data=saved_official_model(job_id,track_id);pack=data['package']
-            if pack.get('format')!='kartblitz-official-track-v1' or not pack.get('trackFingerprint'):continue
+            if pack.get('format') not in ['kartblitz-official-track-v1','kartblitz-official-track-v2'] or not pack.get('trackFingerprint'):continue
             row={'id':data['id'],'jobId':job_id,'trackId':track_id,'name':pack.get('name'),'createdAt':pack.get('createdAt'),
                 'physicsHash':pack.get('physicsHash'),'variants':list(pack.get('variants',{}))}
             with LOCK:
@@ -124,13 +128,21 @@ class Handler(BaseHTTPRequestHandler):
             import importlib.util
             status=torch_status()
             status.update({'ready':all(importlib.util.find_spec(name) for name in ['torch','gymnasium','stable_baselines3']),
+                'campaignSupported':True,
                 'capabilities':['actual-game-physics','per-track','five-difficulties','live-batches','checkpoint-resume'],
                 'trackCount':8,'defaultTrack':0,'apiVersion':1})
             self._json(200,status);return
+        if path=='/api/official/campaign':
+            if not self._authorized():self._json(401,{'error':'Incorrect trainer pairing code'});return
+            from .campaign import read_json,CURRENT
+            self._json(200,read_json(CURRENT/'status.json',{'phase':'not-started','active':[],'activeCount':0}));return
         if path.startswith('/api/official/jobs/'):
             if not self._authorized():self._json(401,{'error':'Incorrect trainer pairing code'});return
             parts=path.split('/');job_id=parts[4]
             with LOCK:job=dict(JOBS[job_id]) if job_id in JOBS else None
+            if not job and len(job_id)==32 and all(c in '0123456789abcdef' for c in job_id):
+                from .campaign import read_json
+                job=read_json(ROOT/'ml_training/runs/official'/job_id/'campaign-status.json')
             if not job:self._json(404,{'error':'Training job not found'});return
             if len(parts)==5:self._json(200,job);return
             if parts[5]=='model':
@@ -146,7 +158,8 @@ class Handler(BaseHTTPRequestHandler):
                 from urllib.parse import parse_qs
                 from .official_train import read_replays
                 query=parse_qs(urlparse(self.path).query)
-                try:self._json(200,{'attempts':read_replays(ROOT/'ml_training/runs/official'/job_id,OFFICIAL_CONTROLS[job_id],query.get('cohort',['early'])[0],query.get('trackId',[None])[0],query.get('limit',[1000])[0])})
+                from .official_train import TrainingControl
+                try:self._json(200,{'attempts':read_replays(ROOT/'ml_training/runs/official'/job_id,OFFICIAL_CONTROLS.get(job_id) or TrainingControl(),query.get('cohort',['early'])[0],query.get('trackId',[None])[0],query.get('limit',[1000])[0])})
                 except (ValueError,KeyError) as exc:self._json(400,{'error':str(exc)})
                 return
             self._json(404,{'error':'Not found'});return
@@ -178,7 +191,13 @@ class Handler(BaseHTTPRequestHandler):
                 length=int(self.headers.get('Content-Length','0'))
                 if length<=0 or length>MAX_JOB_BYTES:raise ValueError('Job request must be between 1 byte and 10 MB')
                 config=json.loads(self.rfile.read(length))
+                if path=='/api/official/campaign/control':
+                    from .campaign import write_json,CURRENT
+                    if config.get('action') not in ['run','pause','stop']:raise ValueError('Choose run, pause or stop')
+                    write_json(CURRENT/'control.json',{'action':config['action']});self._json(200,{'ok':True});return
                 if path=='/api/official/shutdown':
+                    from .campaign import write_json,CURRENT
+                    if (CURRENT/'state.json').exists():write_json(CURRENT/'control.json',{'action':'stop'})
                     for control in OFFICIAL_CONTROLS.values():control.cancelled.set();control.running.set()
                     def shutdown():
                         import time
@@ -187,6 +206,14 @@ class Handler(BaseHTTPRequestHandler):
                         self.server.shutdown()
                     threading.Thread(target=shutdown,daemon=True).start();self._json(200,{'ok':True});return
                 if path=='/api/official/jobs':
+                    from .campaign import read_json,CURRENT
+                    import psutil
+                    campaign=read_json(CURRENT/'state.json',{})
+                    if campaign.get('phase') not in [None,'finished','deadline-stopped','manager-failed']:
+                        try:
+                            owner=psutil.Process(campaign['managerPid'])
+                            if owner.is_running() and abs(owner.create_time()-campaign['managerCreated'])<.1:raise ValueError('The autonomous campaign owns the training slots. Use its dashboard to pause or stop it first.')
+                        except psutil.NoSuchProcess:pass
                     from .official_train import TrainingControl
                     if config.get('format')!='kartblitz-official-job-v1':raise ValueError('Unsupported official job format')
                     with LOCK:

@@ -1,0 +1,30 @@
+import {test,expect,gotoGame} from './fixtures/game.js';
+import {gzipSync} from 'node:zlib';
+import {buildProfile} from '../sim/racing-line.mjs';
+import {officialTracks} from '../ml_training/official-worker-v2.mjs';
+import {rollout} from '../scripts/build-racing-line.mjs';
+
+test('reference and recorded lines share fixed gates, show full/partial windows, and play the game camera',async({page},testInfo)=>{
+  const profile=buildProfile(officialTracks[0]),record=rollout(profile,{raceLaps:2,pace:.42});
+  expect(record.result.finished).toBe(true);
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await gotoGame(page,{path:'/ui/racing-lines.html'});
+  await page.locator('#rl-password').fill('KartBlitzPass');await page.locator('#rl-unlock button').click();
+  await expect(page.locator('#rl-map')).toBeVisible();
+  await page.locator('#rl-profile').setInputFiles({name:'reference-profile.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(profile))});
+  await expect(page.locator('#rl-status')).toContainText('Loaded frozen profile');
+  const archive=Buffer.concat([gzipSync(JSON.stringify(record)+'\n'),gzipSync(JSON.stringify({...record,arm:'Comparison'})+'\n')]);
+  await page.locator('#rl-files').setInputFiles({name:'attempts.jsonl.gz',mimeType:'application/gzip',buffer:archive});
+  await expect(page.locator('#rl-status')).toContainText('Loaded 2 attempts');
+  await expect(page.locator('#rl-windows')).toContainText('Partial');await expect(page.locator('#rl-windows')).toContainText('Valid');
+  await page.locator('#rl-compare').selectOption('1');await expect(page.locator('#rl-windows')).toContainText('0.000 s');
+  await expect(page.locator('#rl-splits tr')).not.toHaveCount(0);
+  await page.locator('#rl-windows button').filter({hasText:'C2 / 1'}).click();await expect(page.locator('#rl-play')).toHaveText('Pause replay');
+  await expect(page.locator('#rl-clock')).not.toHaveText('0.00 s');
+  await page.locator('#rl-play').click();
+  await page.screenshot({path:testInfo.outputPath('corner-timing.png'),fullPage:true});
+  const estimated=structuredClone(record);delete estimated.result.miniSectors;
+  await page.locator('#rl-files').setInputFiles({name:'older-poses.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(estimated))});
+  await page.locator('#rl-attempt').selectOption('2');await expect(page.locator('#rl-resolution')).toContainText('Estimated from 20 Hz');
+  expect(errors).toEqual([]);
+});

@@ -1,4 +1,4 @@
-import * as official from '../sim/official-policy.mjs';
+import * as official from '../sim/official-runtime.mjs';
 import * as library from '../sim/ai-model-library.mjs';
 const root=document.createElement('main');root.id='ai-models';document.body.appendChild(root);window.showScreen?.('ai-models');
 root.innerHTML=`<section id="am-lock" class="am-card"><h1>AI Models</h1><p>Keep Current AI and review trained candidates before switching.</p><form id="am-unlock"><label>Password<input id="am-password" type="password" required autocomplete="off"></label><button>Unlock</button><p id="am-error" role="alert"></p></form></section><div id="am-body" hidden></div>`;
@@ -13,7 +13,7 @@ function download(pack){const url=URL.createObjectURL(new Blob([JSON.stringify(p
 async function api(path){const response=await fetch($('url').value.replace(/\/$/,'')+'/api/official/'+path,{headers:{'X-KartBlitz-Key':$('code').value}});const body=await response.json();if(!response.ok)throw Error(body.error||`Trainer ${response.status}`);return body;}
 $('unlock').onsubmit=e=>{e.preventDefault();if(!window.unlockOfficialML($('password').value)){$('error').textContent='Incorrect password';return;}$('lock').hidden=true;$('body').hidden=false;open().catch(e=>message(e.message));};
 async function open(){
-  $('body').innerHTML=`<div class="am-row"><div style="flex:1"><h1>AI Models</h1><p>Training adds candidates here. You choose when to change the driver.</p></div><a href="index.html?tool=official-ml">Training window</a><a href="index.html">Open game</a></div>
+  $('body').innerHTML=`<div class="am-row"><div style="flex:1"><h1>AI Models</h1><p>Training adds candidates here. You choose when to change the driver.</p></div><a href="index.html?tool=official-ml">Training window</a><a href="ui/racing-lines.html">Racing lines & corner timing</a><a href="index.html">Open game</a></div>
   <section id="am-current" class="am-card"><h2>Current AI · built-in controller</h2><p id="am-active"></p><p>The original racing-line, braking, overtaking and pit-strategy controller remains in the game. It has no RL weight file to overwrite. All five existing difficulties stay available.</p><button id="am-use-current">Use Current AI</button><details><summary>Inspect the actual Current AI driving algorithm</summary><pre id="am-source"></pre></details></section>
   <section class="am-card"><h2>Receive completed training files</h2><div class="am-row"><label>Local trainer URL<input id="am-url" value="http://127.0.0.1:8766"></label><label>Pairing code<input id="am-code" autocomplete="off"></label><button id="am-connect">Connect and sync</button></div><div class="am-row" style="margin-top:12px"><label>Watch a training job ID (optional)<input id="am-job" placeholder="Useful for a run started in an older training window"></label><button id="am-watch">Watch this run</button><label>Import candidate file<input id="am-import" type="file" accept=".json,.kartai" multiple></label></div><p id="am-sync" class="am-subtle">Completed runs started in the updated training window are received automatically. Imports also remain candidates until you choose Use this model.</p></section>
   <p id="am-message" role="status"></p><section><div class="am-row"><h2>Choose AI per track</h2><label>Compare difficulty<select id="am-difficulty"><option value="extreme">Extreme</option><option value="hard">Hard</option><option value="medium">Medium</option><option value="easy">Easy</option><option value="ultraeasy">Ultra easy</option></select></label></div><p>Lap completion measures how many evaluation attempts finished a valid lap. It is not a prediction of race wins or human pace. Compare the same difficulty and conditions; a small test sample gives limited evidence.</p><div id="am-tracks" class="am-track-grid"></div></section><details id="am-archive"><summary>Model files and full evaluation details</summary><section><div class="am-row"><h2>Saved RL candidates</h2><label>Track filter<select id="am-filter"><option value="all">All tracks</option></select></label></div><div id="am-candidates"></div></section></details>
@@ -64,7 +64,7 @@ async function render(){
     const pack=row.package,track=window.KartBlitzReplayScene.getTrack(pack.trackId),check=library.compatibility(pack,track),installed=official.packages.get(pack.trackId);
     const isInstalled=installed&&await library.candidateId(installed)===row.id;
     const card=document.createElement('article');card.className='am-card'+(library.usesTrainedTrack(pack.trackId)&&isInstalled?' am-active':'');card.dataset.candidate=row.id;
-    const title=document.createElement('h2');title.textContent=pack.name;card.append(title);
+    const title=document.createElement('h2');title.textContent=official.displayName(pack);card.append(title);
     const status=document.createElement('span');status.className='am-tag';status.textContent=library.usesTrainedTrack(pack.trackId)&&isInstalled?'ACTIVE FOR THIS TRACK':isInstalled?'INSTALLED · Current AI selected':'CANDIDATE · inactive';card.append(status);
     const info=document.createElement('p');info.textContent=`${track?.name||`Track ${pack.trackId}`} · ${Object.keys(pack.variants).join(', ')} · version ${row.id.slice(0,10)} · ${new Date(row.receivedAt).toLocaleString()}`;card.append(info);
     for(const [difficulty,model] of Object.entries(pack.variants)){const p=document.createElement('p');p.className='am-subtle';p.textContent=`${difficulty}: ${(model.training?.steps||0).toLocaleString()} training steps · evaluation ${model.evaluation?.cancelled?'incomplete (stopped)':model.evaluation?`${Math.round(model.evaluation.finishRate*100)}% completed · median ${model.evaluation.medianLapTime?.toFixed(2)||'—'} s`:'not provided'}`;card.append(p);}
@@ -80,6 +80,10 @@ function evaluationText(pack,difficulty){
   const model=pack.variants[difficulty],e=model?.evaluation;
   if(!model)return `${difficulty} not trained · available: ${Object.keys(pack.variants).join(', ')}`;
   if(!e||e.cancelled||!Number.isFinite(e.finishRate))return 'Lap completion not evaluated';
+  if(official.generation(pack)===2){
+    const ai=e.perMode?.ai,solo=e.perMode?.shootout,seconds=v=>Number.isFinite(v)?v.toFixed(2)+' s':'unavailable';
+    return `${ai?Math.round(ai.finishRate*100)+'% race completion':'Race completion unavailable'} · Shootout ${seconds(solo?.medianSecondsPerLap)} · race ${seconds(ai?.medianSecondsPerLap)} per lap`;
+  }
   const count=Array.isArray(e.episodes)?e.episodes.length:0;
   return `${Math.round(e.finishRate*100)}% lap completion · ${count?`${count} test laps`:'sample count unavailable'} · median ${Number.isFinite(e.medianLapTime)?e.medianLapTime.toFixed(2)+' s':'unavailable'}`;
 }
@@ -91,12 +95,12 @@ async function renderTracks(version){
     const card=document.createElement('article');card.className='am-card am-track-card';card.dataset.track=id;
     const h=document.createElement('h2');h.textContent=track?.name||`Track ${id}`;card.append(h);
     const label=document.createElement('label');label.textContent='Driver for this track';const select=document.createElement('select');select.dataset.trackModel=id;select.add(new Option('Legacy AI · built-in controller','legacy'));
-    for(const row of models){const option=new Option(`${row.package.name} [${row.id.slice(0,6)}] · ${evaluationText(row.package,difficulty)}`,row.id);option.disabled=!library.compatibility(row.package,track).ok;select.add(option);}
+    for(const row of models){const option=new Option(`${official.displayName(row.package)} [${row.id.slice(0,6)}] · ${evaluationText(row.package,difficulty)}`,row.id);option.disabled=!library.compatibility(row.package,track).ok;select.add(option);}
     select.value=active?(choices[id]&&choices[id]!=='installed'?choices[id]:installedId):'legacy';if(select.selectedIndex<0)select.value='legacy';
     label.append(select);card.append(label);
     const status=document.createElement('p');status.className='am-subtle';status.textContent=select.value==='legacy'?'Legacy AI selected. RL files are kept.':'Selected for new AI Race / Shootout races. Untrained difficulties use Legacy AI.';card.append(status);
     const list=document.createElement('ul');list.className='am-comparison';
-    for(const row of models){const li=document.createElement('li'),name=document.createElement('strong');name.textContent=row.package.name+' ['+row.id.slice(0,6)+']';li.append(name,document.createElement('br'),document.createTextNode(evaluationText(row.package,difficulty)));
+    for(const row of models){const li=document.createElement('li'),name=document.createElement('strong');name.textContent=official.displayName(row.package)+' ['+row.id.slice(0,6)+']';li.append(name,document.createElement('br'),document.createTextNode(evaluationText(row.package,difficulty)));
       const training=row.package.variants[difficulty]?.training;const info=document.createElement('small');info.textContent=` · opponents ${training?.traffic??'unknown'} · environment ${row.package.environmentVersion??'unknown'}`;li.append(info);list.append(li);}
     if(!models.length){const p=document.createElement('p');p.className='am-subtle';p.textContent='No RL models saved for this track yet.';card.append(p);}else card.append(list);
     select.onchange=safe(async()=>{select.disabled=true;message('Saving track selection…');try{if(select.value==='legacy')library.useLegacyForTrack(id);else{const row=models.find(r=>r.id===select.value);const task=(async()=>{await library.saveCandidate(row.package,{kind:'selected'});await library.activateCandidate(row.id,track);})();window.KartBlitzOfficialReady=task.catch(()=>{});await task;}await render();message(`${track?.name||'Track'} selection saved. Start a new race to use it.`);}finally{select.disabled=false;}});

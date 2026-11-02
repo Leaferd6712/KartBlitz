@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VISUAL_ONLY = ['updateEngine','stopEngine','playLap','playFinish','playCollision','spawnSpark','spawnSmoke','spawnDust','maybeSpawnSpeedSpray','beep','getPaintColor','kartVisPose','persistTrialPbGhost','autoSaveLapToLeaderboard'];
-export function buildOfficialCore() {
+export function buildOfficialCore({checkOnly=false}={}) {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const script = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).find(s => s.includes('class Kart {'));
   if (!script) throw new Error('Offline Kart source was not found');
@@ -63,8 +63,13 @@ export function buildOfficialCore() {
       setHoldBindings(){BINDINGS.p1.ersMode=BINDINGS.p2.ersMode='hold';BINDINGS.p1.drsMode=BINDINGS.p2.drsMode='hold';}
     };`;
   const output = `// Generated from index.html by scripts/build-official-core.mjs.\nexport const PHYSICS_HASH=${JSON.stringify(hash)};\nexport function createOfficialGame(options={}){\nconst host={time:0,random:Math.random,_raceWeather:'dry',...options};\nreturn new Function('host',${JSON.stringify(factory)})(host);\n}\n`;
-  fs.writeFileSync(path.join(root, 'sim/official-game.mjs'), output);
-  fs.writeFileSync(path.join(root, 'sim/official-contract.mjs'), `// Generated physics compatibility contract.\nexport const PHYSICS_HASH=${JSON.stringify(hash)};\nexport const OBSERVATION_VERSION=1;\n`);
+  function writeIfChanged(file,value){
+    if(fs.existsSync(file)&&fs.readFileSync(file,'utf8')===value)return;
+    if(checkOnly)throw new Error('Official core differs; refusing to rewrite a live training dependency.');
+    fs.writeFileSync(file,value);
+  }
+  writeIfChanged(path.join(root, 'sim/official-game.mjs'), output);
+  writeIfChanged(path.join(root, 'sim/official-contract.mjs'), `// Generated physics compatibility contract.\nexport const PHYSICS_HASH=${JSON.stringify(hash)};\nexport const OBSERVATION_VERSION=1;\n`);
   return { hash, declarations: selected.size, bytes: output.length };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) console.log(buildOfficialCore());

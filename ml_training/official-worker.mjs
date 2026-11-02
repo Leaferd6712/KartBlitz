@@ -13,7 +13,7 @@ const core=createOfficialGame({OnlineSim:sandbox.OnlineSim});core.setHoldBinding
 let envs=[],config={};
 const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
-function pose(k){return {id:k.id,x:k.x,y:k.y,a:k.angle,speed:k.speed,offTrack:k.isOffTrack,ersCharge:k.ersCharge};}
+function pose(k){return {id:k.id,x:k.x,y:k.y,a:k.angle,speed:k.speed,offTrack:k.isOffTrack,ersCharge:k.ersCharge,ersActive:!!k.ersActive,drsActive:!!k.drsActive,drsAvailable:!!k.drsAvailable,drsInZone:!!k.drsInZone};}
 export const ENVIRONMENT_VERSION=3;
 export function startLineSpawn(track){
   const sf=track.cpLines[0],n=track.spline.length;
@@ -25,11 +25,21 @@ export function startLineSpawn(track){
   const index=geometry({x,y,angle:Math.atan2(ty,tx)},track,{}).index;
   return {x,y,a:Math.atan2(ty,tx),index,tx,ty,distanceBehind:30};
 }
+export function opponentSpawn(tr,start,back,lane){
+  const target=((tr.cum[tr.cpLines[0].idx]-30-back)%tr.totalLen+tr.totalLen)%tr.totalLen;
+  let i=1;while(i<tr.cum.length&&tr.cum[i]<target)i++;
+  const a=tr.spline[i-1],b=tr.spline[i%tr.spline.length],lo=tr.cum[i-1],hi=i<tr.cum.length?tr.cum[i]:tr.totalLen;
+  const f=(target-lo)/Math.max(.001,hi-lo),angle=Math.atan2(b.y-a.y,b.x-a.x);
+  return {x:a.x+(b.x-a.x)*f-Math.sin(angle)*lane,y:a.y+(b.y-a.y)*f+Math.cos(angle)*lane,a:angle};
+}
 export function isPenalizedOffTrack(kart){return !!(kart.isOffTrack||kart._isCompletelyOff);}
 export class Environment {
   constructor(index,configuration={}){this.config=configuration;this.index=index;this.random=rng((this.config.seed||1)+index*997);this.episode=0;this.reset();}
   reset(options={}){
     this.episode++;this.mode=options.mode||(this.config.mode==='mixed'?(this.random()<.5?'ai':'shootout'):(this.config.mode||'ai'));
+    if(this.config.racecraft&&this.config.mode==='mixed'&&!options.mode)this.mode=this.random()<.25?'shootout':'ai';
+    this.scenario=this.mode==='shootout'?'solo':this.config.scenario||(!this.config.racecraft?'solo':['solo','passing','passing','defending','recovery'][Math.floor(this.random()*5)]);
+    this.defenseLost=false;this.recoveryHit=null;this.recoveryTime=null;this.recoveryInjected=false;this.defenseSequence=0;this.lastDefense=null;this.passes=0;this.defended=0;this.encounterTime=0;this.passEvents=new Set();
     this.track=core.tracks[this.config.trackId||0];this.state={};this.time=0;this.steps=0;this.rewardTotal=0;this.progress=0;this.stuck=0;this.offSteps=0;this.contacts=0;this.trajectory=[];this.lastContact=false;this.lastReward={};this.lastAction=null;
     core.setClock(0);
     const tr=this.track,start=startLineSpawn(tr),{index}=start;
@@ -40,28 +50,32 @@ export class Environment {
     if(this.mode==='shootout')core.applyShootoutBoost(k);
     // Observable dynamics vary during learning; fixed evaluation uses exact stock mode settings.
     if(!options.fixed&&this.config.randomization!==false){const power=.9+this.random()*.25;k.maxSpeed*=power;k.baseMaxSpeed=k.maxSpeed;k.accel*=power;k._baseAccel=k.accel;k.turnRate*=.92+this.random()*.16;k.baseTurnRate=k.turnRate;k.grip*=.92+this.random()*.16;k._baseGrip=k.grip;}
-    k.speed=0;this.kart=k;this.input={steer:0,throttle:0,brake:0,ers:false,drs:false};
+    k.speed=0;if(options.energy!==undefined)k.ersCharge=Math.max(0,Math.min(1,options.energy));this.kart=k;this.input={steer:0,throttle:0,brake:0,ers:false,drs:false};
     this.opponents=[];
-    if(this.mode==='ai'&&this.config.traffic){for(let j=0;j<this.config.traffic;j++){
-      const back=(Math.floor(j/2)+1)*(tr.gridLayout?.rowGap||55),lane=(j%2?-1:1)*(tr.gridLayout?.laneGap||30);
-      const other=new core.Kart(j+2,start.x-start.tx*back-start.ty*lane,start.y-start.ty*back+start.tx*lane,start.a,'#ff9955','#663311',()=>other._input);
+    const traffic=this.config.racecraft?(this.scenario==='solo'?0:1+Math.floor(this.random()*3)):this.config.traffic;
+    if(this.mode==='ai'&&traffic){for(let j=0;j<traffic;j++){
+      let back=(Math.floor(j/2)+1)*(tr.gridLayout?.rowGap||55),lane=(j%2?-1:1)*(tr.gridLayout?.laneGap||30);
+      if(this.config.racecraft){if(this.scenario==='passing')back=-(100+j*90);if(this.scenario==='defending')back=65+j*65;if(this.scenario==='recovery'){back=45+j*60;lane=(j%2?-1:1)*15;}}
+      const spawn=opponentSpawn(tr,start,back,lane);
+      const other=new core.Kart(j+2,spawn.x,spawn.y,spawn.a,'#ff9955','#663311',()=>other._input);
       other.isAI=true;other._officialML=true;other.totalLaps=Infinity;other.lapStart=null;other._nearestSplineIdx=geometry(other,tr,{}).index;other.drsAvailable=true;
-      core.applyStockPerformanceToKart(other);core.applyWeatherToKart(other,'dry','med');other._state={};other._pace=.5+this.random()*.45;other._input=this.input;this.opponents.push(other);
+      core.applyStockPerformanceToKart(other);core.applyWeatherToKart(other,'dry','med');other._state={};other._pace=this.scenario==='defending'?1:this.scenario==='passing'?.5+this.random()*.3:.5+this.random()*.45;other._initialAhead=this.scenario==='passing';other._input=this.input;this.opponents.push(other);
     }}
     this.world={mode:this.mode,weather:'dry',track:tr,karts:[k,...this.opponents],collisionMode:'collision',_nextFinishOrder:1};
     this.context={mode:this.mode,difficulty:this.config.difficulty||'extreme',opponents:this.opponents};
     this.lastG=geometry(k,tr,this.state);this.firstPosition={x:k.x,y:k.y};
     this.record();return observe(k,tr,this.state,this.context);
   }
-  record(){const k=this.kart;this.trajectory.push({t:this.time,x:k.x,y:k.y,a:k.angle,speed:k.speed,offTrack:isPenalizedOffTrack(k),strictOffTrack:!!k._isCompletelyOff,cornerCut:!!k._cornerCutLatched,
-    position:this.lastG?.index??0,progress:this.progress/this.track.totalLen,checkpoint:k.lapStart===null?0:k.nextCp%this.track.cpLines.length,lapStarted:k.lapStart!==null,contacts:this.contacts,
-    reward:this.rewardTotal,rewardComponents:this.lastReward||{},action:{...this.input},rawAction:this.lastAction||null,tyreWear:k.tyreWear,tyreTemp:k.tyreTemp,ersCharge:k.ersCharge});}
+  record(){const k=this.kart;if(this.state.defense&&this.state.defense!==this.lastDefense){this.defenseSequence++;this.lastDefense=this.state.defense;}this.trajectory.push({opponents:this.opponents?.map(pose)||[],t:this.time,x:k.x,y:k.y,a:k.angle,speed:k.speed,offTrack:isPenalizedOffTrack(k),strictOffTrack:!!k._isCompletelyOff,cornerCut:!!k._cornerCutLatched,
+    lateral:this.lastG?.lateral??0,defenseEncounter:this.state.defense?this.defenseSequence:0,defenseUsed:!!this.state.defense?.used,defenseLane:this.state.defense?.lane??null,position:this.lastG?.index??0,progress:this.progress/this.track.totalLen,checkpoint:k.lapStart===null?0:k.nextCp%this.track.cpLines.length,lapStarted:k.lapStart!==null,contacts:this.contacts,
+    reward:this.rewardTotal,rewardComponents:this.lastReward||{},action:{...this.input},rawAction:this.lastAction||null,tyreWear:k.tyreWear,tyreTemp:k.tyreTemp,ersCharge:k.ersCharge,ersActive:!!k.ersActive,ersPower:k._ersPower||0,drsActive:!!k.drsActive,drsAvailable:!!k.drsAvailable,drsInZone:!!k.drsInZone,lapTime:k.finished?k.lapTimes.at(-1):k.lapStart===null?null:(this.time*1000-k.lapStart)/1000});}
   step(action){
     this.lastAction=action;
     const old={x:this.kart.x,y:this.kart.y,steer:this.state.steer||0};this.input=actionToInput(action,this.kart,this.track,this.state,this.context);
     let delta=0,rewardedDelta=0,offTicks=0,newContact=false,contactCount=this.kart._officialContactCount||0;
     for(let sub=0;sub<3;sub++){
       this.time+=1/60;core.setClock(this.time*1000);core.setWorld(this.world);core.setRandom(this.random);
+      if(this.config.racecraft&&this.scenario==='recovery'&&!this.recoveryInjected&&this.time>=4&&this.opponents.length){const o=this.opponents[0];o.x=this.kart.x+Math.cos(this.kart.angle)*18;o.y=this.kart.y+Math.sin(this.kart.angle)*18;o.speed=this.kart.speed*.5;this.recoveryInjected=true;}
       const px=this.kart.x,py=this.kart.y;this.kart.update(1/60,this.track,this.world.karts);
       for(const other of this.opponents){other._input=actionToInput(teacher(other,this.track,other._state,other._pace),other,this.track,other._state,{mode:'shootout'});other.update(1/60,this.track,this.world.karts);}
       const g=geometry(this.kart,this.track,this.state);let d=g.progress-this.lastG.progress;
@@ -74,10 +88,22 @@ export class Environment {
       this.lastG=g;this.progress+=d;this.offSteps+=+off;
       newContact ||= (this.kart._officialContactCount||0)>contactCount;
     }
+    if(newContact&&this.recoveryHit===null)this.recoveryHit=this.time;
+    if(this.recoveryHit!==null&&this.recoveryTime===null&&this.time-this.recoveryHit>.5&&this.kart.speed>50&&delta>.5&&!isPenalizedOffTrack(this.kart))this.recoveryTime=this.time-this.recoveryHit;
     this.steps++;if(this.kart.speed<12||delta<.5)this.stuck+=.05;else this.stuck=Math.max(0,this.stuck-.1);this.state.stuckSeconds=this.stuck;
     if(newContact&&!this.lastContact)this.contacts++;this.lastContact=newContact;
     const pace=PACE[this.config.difficulty]||1,target=this.kart.maxSpeed*pace;
-    const components={progress:rewardedDelta/10,time:-.03,offTrack:-offTicks/3,contact:newContact?-1:0,
+    let raceReward=0;
+    if(this.config.racecraft&&this.mode==='ai'){
+      for(const other of this.opponents){const og=geometry(other,this.track,other._raceGeometry||(other._raceGeometry={}));let gap=og.progress-this.lastG.progress;if(gap>this.track.totalLen/2)gap-=this.track.totalLen;if(gap<-this.track.totalLen/2)gap+=this.track.totalLen;
+        if(other._initialAhead&&gap<-50&&!this.passEvents.has(other.id)&&this.kart.speed>50){this.passEvents.add(other.id);this.passes++;raceReward+=3;}
+        if(this.scenario==='defending'&&gap>50)this.defenseLost=true;
+        if(this.scenario==='defending'&&gap<-350&&this.encounterTime>=1&&!this.defended&&!this.defenseLost&&this.kart.speed>50){this.defended=1;raceReward+=2;}
+        if(this.scenario==='defending'&&gap<0&&gap>-350&&this.kart.speed>50)this.encounterTime+=.05/this.opponents.length;
+      }
+      if(!this.defended&&!this.defenseLost&&this.encounterTime>=5){this.defended=1;raceReward+=2;}
+    }
+    const components={racecraft:raceReward,progress:rewardedDelta/10,time:-.03,offTrack:-offTicks/3,contact:newContact?-(this.config.racecraft?6:1):0,
       smoothness:-Math.abs(this.input.steer-old.steer)*.03,pace:pace<1?-(Math.max(0,this.kart.speed/Math.max(1,target)-1)**2)*5:0,finish:0};
     const completed=this.kart.finished&&this.kart.lapTimes.length>0;
     const validLap=completed&&!this.kart._ghostLapInvalid&&(this.kart._ghostOffTrackAcc||0)<1.5;
@@ -88,7 +114,7 @@ export class Environment {
     const reward=Object.values(components).reduce((a,b)=>a+b,0);this.rewardTotal+=reward;
     this.lastReward=components;this.record();
     const obs=observe(this.kart,this.track,this.state,this.context),done=finished||failed||truncated;
-    const info={finished,validLap,lapTime:finished?this.kart.lapTimes[0]:null,completedLapTime:completed?this.kart.lapTimes[0]:null,offTrackRate:this.offSteps/(this.steps*3),offTrackSeconds:this.offSteps/60,contacts:this.contacts,mode:this.mode,rewardComponents:components,progress:this.progress/this.track.totalLen,episodeId:this.episode};
+    const info={recoveryTime:this.recoveryTime,recoveryInjected:this.recoveryInjected,environment:this.index,scenario:this.scenario,passes:this.passes,defended:this.defenseLost?0:this.defended,defensiveCorrections:this.state.defensiveCorrections||0,finished,validLap,lapTime:finished?this.kart.lapTimes[0]:null,completedLapTime:completed?this.kart.lapTimes[0]:null,offTrackRate:this.offSteps/(this.steps*3),offTrackSeconds:this.offSteps/60,contacts:this.contacts,mode:this.mode,rewardComponents:components,progress:this.progress/this.track.totalLen,episodeId:this.episode};
     return {observation:obs,reward,terminated:finished||failed,truncated:truncated&&!finished&&!failed,info,done};
   }
   snapshot(){return {environment:this.index,episode:this.episode,mode:this.mode,time:this.time,start:this.start,lapStarted:this.kart.lapStart!==null,car:{...pose(this.kart),offTrack:isPenalizedOffTrack(this.kart)},opponents:this.opponents.map(pose),reward:this.rewardTotal,progress:this.progress/this.track.totalLen,path:this.trajectory.slice(-500).map(p=>({t:p.t,x:p.x,y:p.y,a:p.a,speed:p.speed,offTrack:p.offTrack}))};}
@@ -97,8 +123,9 @@ export const officialTracks=core.tracks;
 export async function runWorker(){
 const rl=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
 for await(const line of rl){try{const request=JSON.parse(line);let result;
-  if(request.command==='init'){config=request.config||{};envs=Array.from({length:Math.max(1,Math.min(128,request.count||1))},(_,i)=>new Environment(i,config));result={observations:envs.map(e=>e.reset()),physicsHash:PHYSICS_HASH,environmentVersion:ENVIRONMENT_VERSION,startMode:'start-finish-standing',observationNames:OBSERVATION_NAMES,tracks:core.tracks.map(t=>({id:t.id,name:t.name,fingerprint:trackFingerprint(t),start:startLineSpawn(t),length:t.totalLen,width:t.trackWidth,spline:t.spline,cpLines:t.cpLines,cum:t.cum}))};}
+  if(request.command==='init'){config=request.config||{};envs=Array.from({length:Math.max(1,Math.min(128,request.count||1))},(_,i)=>new Environment(i,config));result={observations:envs.map(e=>e.reset()),physicsHash:PHYSICS_HASH,environmentVersion:config.racecraft?4:ENVIRONMENT_VERSION,startMode:'start-finish-standing',observationNames:OBSERVATION_NAMES,tracks:core.tracks.map(t=>({id:t.id,name:t.name,fingerprint:trackFingerprint(t),start:startLineSpawn(t),length:t.totalLen,width:t.trackWidth,spline:t.spline,cpLines:t.cpLines,cum:t.cum}))};}
   else if(request.command==='step'){result={results:envs.map((e,i)=>{const r=e.step(request.actions[i]);if(r.done){r.info.terminal_observation=r.observation;r.info['TimeLimit.truncated']=r.truncated;r.info.trajectory=e.trajectory;r.info.episode={r:e.rewardTotal,l:e.steps};r.observation=e.reset();}return r;})};}
+  else if(request.command==='partials')result={episodes:envs.filter(e=>e.time>0).map(e=>({interrupted:true,environment:e.index,mode:e.mode,scenario:e.scenario,finished:false,validLap:false,lapTime:null,progress:e.progress/e.track.totalLen,contacts:e.contacts,offTrackRate:e.offSteps/Math.max(1,e.steps*3),trajectory:e.trajectory}))};
   else if(request.command==='snapshot')result={environments:envs.map(e=>e.snapshot())};
   else if(request.command==='reset')result={observations:envs.map(e=>e.reset(request.options||{}))};
   else if(request.command==='teacher')result={actions:envs.map(e=>teacher(e.kart,e.track,{},PACE[config.difficulty]||1))};

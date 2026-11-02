@@ -64,8 +64,8 @@ class OfficialVecEnv(VecEnv):
     def reset(self):
         for batch in self.batches: batch.send({'command':'reset'})
         return self._observations([obs for b in self.batches for obs in b.receive()['observations']])
-    def fixed_reset(self, mode='ai'):
-        for batch in self.batches: batch.send({'command':'reset','options':{'fixed':True,'mode':mode}})
+    def fixed_reset(self, mode='ai',**options):
+        for batch in self.batches: batch.send({'command':'reset','options':{'fixed':True,'mode':mode,**options}})
         return self._observations([obs for b in self.batches for obs in b.receive()['observations']])
     def step_async(self, actions):
         actions=np.asarray(actions,dtype=np.float32)
@@ -75,7 +75,10 @@ class OfficialVecEnv(VecEnv):
         for batch in self.batches:
             batch.send({'command':'step','actions':np.asarray(actions[offset:offset+batch.count]).tolist()});offset+=batch.count
     def step_wait(self):
-        rows=[row for batch in self.batches for row in batch.receive()['results']]
+        rows=[]
+        for batch_id,batch in enumerate(self.batches):
+            for row in batch.receive()['results']:
+                row['info']['workerBatch']=batch_id;rows.append(row)
         infos=[]
         for row in rows:
             info=row['info']
@@ -90,6 +93,11 @@ class OfficialVecEnv(VecEnv):
         rewards=np.asarray([r['reward'] for r in rows],dtype=np.float32)
         if not np.isfinite(rewards).all():raise RuntimeError('Simulator returned invalid rewards; training stopped before updating weights')
         return observations,rewards,np.asarray([r['done'] for r in rows],dtype=bool),infos
+    def archive_partials(self):
+        if not self.on_episode:return
+        for batch_id,batch in enumerate(self.batches):
+            for info in batch.call({'command':'partials'})['episodes']:
+                info['workerBatch']=batch_id;self.on_episode(info)
     def snapshot(self, batch=0):
         index=max(0,min(len(self.batches)-1,int(batch)))
         return {'batch':index,'batchCount':len(self.batches),**self.batches[index].call({'command':'snapshot'})}

@@ -1,5 +1,5 @@
 /** Candidate storage is deliberately separate from the game's installed policies. */
-import * as official from './official-policy.mjs';
+import * as official from './official-runtime.mjs';
 export const DRIVER_KEY='kartblitz_official_driver';
 export const CHANGE_KEY='kartblitz_ai_library_changed';
 export const TRACK_CHOICES_KEY='kartblitz_official_track_choices';
