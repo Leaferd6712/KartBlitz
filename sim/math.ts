@@ -43,6 +43,15 @@ export function distToSeg(px: number, py: number, ax: number, ay: number, bx: nu
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
+/** Distance to the continuous road segment, including gaps between sparse spline samples. */
+export function splineSegmentDistance(spl: Vec2[], idx: number, x: number, y: number): number {
+  const n = spl.length;
+  if (!n) return Infinity;
+  const i = ((idx % n) + n) % n;
+  const a = spl[i], b = spl[(i + 1) % n];
+  return distToSeg(x, y, a.x, a.y, b.x, b.y);
+}
+
 export function linesCross(
   ax: number, ay: number, bx: number, by: number,
   cx: number, cy: number, dx: number, dy: number

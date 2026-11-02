@@ -5,7 +5,7 @@ import {
   isWetWeather,
   normalizeWeatherId,
 } from "./constants";
-import { linesCross, splineTangent, localSplineCurvature, applyCornerCutSlowdown, type Vec2 } from "./math";
+import { linesCross, distToSeg, splineTangent, splineSegmentDistance, localSplineCurvature, applyCornerCutSlowdown, type Vec2 } from "./math";
 import { seedTyreTemp, updateTyres } from "./tyres";
 import { computeBaseStats, defaultUpgrades, sanitizeUpgrades, type UpgradeStats } from "./upgrades";
 import { resolveKartCollisions } from "./collision";
@@ -37,6 +37,9 @@ export type BakedTrack = {
   drsZones: DrsZone[];
   gridSlots?: { x: number; y: number; a: number }[];
   surface?: { offTrackMult?: number };
+  geometryVersion?: number;
+  layoutRevision?: string;
+  pitLane?: { path: Vec2[]; width: number; entryPt?: Vec2; garagePos?: Vec2; exitPos?: Vec2 };
 };
 
 export function emptyInput(): SimInput {
@@ -192,16 +195,29 @@ export class SimKart {
     const curIdx = this._nearestSplineIdx || 0;
     let bestDist = Infinity;
     let bestIdx = curIdx;
+    let roadDistance = splineSegmentDistance(spl, curIdx - 9, this.x, this.y);
     for (let d = -8; d <= 80; d++) {
       const idx = ((curIdx + d) % n + n) % n;
       const dist = Math.hypot(this.x - spl[idx].x, this.y - spl[idx].y);
+      roadDistance = Math.min(roadDistance, splineSegmentDistance(spl, idx, this.x, this.y));
       if (dist < bestDist) {
         bestDist = dist;
         bestIdx = idx;
       }
     }
     this._nearestSplineIdx = bestIdx;
-    return bestDist < hw;
+    return roadDistance < hw || this.onPitLane(td);
+  }
+
+  onPitLane(track: BakedTrack): boolean {
+    const lane=track.pitLane;
+    if(!lane?.path?.length)return false;
+    const hw=(lane.width||60)/2+28;
+    for(let i=0;i<lane.path.length-1;i++){
+      const a=lane.path[i],b=lane.path[i+1];
+      if(distToSeg(this.x,this.y,a.x,a.y,b.x,b.y)<hw)return true;
+    }
+    return false;
   }
 
   inDrsZone(td: BakedTrack): boolean {
@@ -218,8 +234,11 @@ export class SimKart {
   handleOffTrackPenalty(dt: number, track: BakedTrack) {
     if (this.finished) return;
     const strictHw = track.trackWidth / 2 + 18;
-    const nearP = track.spline[this._nearestSplineIdx || 0];
-    this._isCompletelyOff = Math.hypot(this.x - nearP.x, this.y - nearP.y) >= strictHw;
+    const nearIdx = this._nearestSplineIdx || 0;
+    const roadDistance = Math.min(
+      splineSegmentDistance(track.spline, nearIdx - 1, this.x, this.y),
+      splineSegmentDistance(track.spline, nearIdx, this.x, this.y));
+    this._isCompletelyOff = !this.onPitLane(track) && roadDistance >= strictHw;
 
     // Soft off-track near a bend: speed snap + hold drag (facing unchanged)
     if (this.isOffTrack || this._isCompletelyOff) {

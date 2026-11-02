@@ -97,6 +97,21 @@ const sandbox = loadOnline();
 const Sim = sandbox.OnlineSim;
 const Codec = sandbox.OnlineCodec;
 
+// Road limits follow the continuous segment, even when authored nodes are far apart.
+{
+  const sparseTrack = { trackWidth: 100, spline: [
+    { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }
+  ] };
+  for (const [y, softOff, strictOff] of [[0, false, false], [75, false, true], [120, true, true]]) {
+    const kart = new Sim.SimKart({ id: 0, x: 500, y, angle: 0, weather: 'dry' });
+    kart._nearestSplineIdx = 0;
+    kart.isOffTrack = !kart.onTrack(sparseTrack);
+    kart.handleOffTrackPenalty(1 / 60, sparseTrack);
+    assert.equal(kart.isOffTrack, softOff, `sparse straight: soft limit at y=${y}`);
+    assert.equal(kart._isCompletelyOff, strictOff, `sparse straight: strict limit at y=${y}`);
+  }
+}
+
 assert.strictEqual(Sim.ONLINE_PROTOCOL, 5, "sim protocol bumped for penalty HUD fields");
 assert.strictEqual(Codec.NET_VERSION, 5);
 

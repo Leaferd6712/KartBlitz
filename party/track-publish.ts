@@ -9,7 +9,7 @@ const fields = new Set(['id', 'name', 'difficulty', 'diffClass', 'diffLetter', '
   'lapDistance', 'coinMult', 'grassColor', 'grassColor2', 'trackColor', 'borderColor', 'lineColor', 'accentColor',
   'bgColor', 'waypoints', 'racingLine', 'startPos', 'startAngle', 'pitPos', 'pitLane', 'cpFracs', 'drsFracs',
   'surface', 'sfGateHalfWidth', 'aiFriendly', 'locked', 'unlockCost', 'treeColor', 'treeColor2', 'standRoof',
-  'standConcrete', 'seatPalette', 'crowdColors', 'aiBrakeLookaheadScale']);
+  'standConcrete', 'seatPalette', 'crowdColors', 'aiBrakeLookaheadScale', 'geometryVersion', 'widthReference', 'widthScale', 'layoutRevision']);
 
 function finite(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
@@ -37,7 +37,10 @@ export function validatePublishedTrack(value: any): Record<string, unknown> & { 
     || typeof value.name !== 'string' || !value.name.trim() || value.name.length > 80
     || !['EASY', 'MEDIUM', 'HARD', 'EXTREME'].includes(value.difficulty)
     || !points(value.waypoints, 4) || value.racingLine !== undefined && !points(value.racingLine, 3)
-    || !finite(value.trackWidth, 40, 400) || !Number.isInteger(value.laps) || !finite(value.laps, 1, 100)
+    || !finite(value.trackWidth, 40, 2048) || !Number.isInteger(value.laps) || !finite(value.laps, 1, 100)
+    || value.geometryVersion !== undefined && ![1,2].includes(value.geometryVersion)
+    || value.widthReference !== undefined && !finite(value.widthReference,40,2048)
+    || value.widthScale !== undefined && !finite(value.widthScale,1,10)
     || !finite(value.targetLap, 1, 3600) || !finite(value.coinMult, 0, 100)
     || !point(value.startPos) || !finite(value.startAngle, -360, 360)
     || !point(value.pitPos) || !value.pitLane || !points(value.pitLane.path, 2)

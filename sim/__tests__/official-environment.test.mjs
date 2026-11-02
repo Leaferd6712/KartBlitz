@@ -22,6 +22,48 @@ for(const track of officialTracks)for(const mode of ['ai','shootout']){
 }
 console.log('All eight tracks / both modes reset at rest behind the actual S/F gate; crossing starts, not finishes, the lap.');
 
+// A car halfway between distant spline samples is still on the continuous road.
+// This caught false grass penalties on Amber Highway's expanded long straight.
+{
+  const track = {...officialTracks[6], trackWidth:100, pitLane:null, spline:[
+    {x:0,y:0},{x:1000,y:0},{x:1000,y:1000},{x:0,y:1000}
+  ],cum:[0,1000,2000,3000],totalLen:4000,drsZones:[],cpLines:[
+    {idx:0,x1:0,y1:-100,x2:0,y2:100,cx:0,cy:0},
+    {idx:1,x1:900,y1:0,x2:1100,y2:0,cx:1000,cy:0},
+    {idx:2,x1:900,y1:1000,x2:1100,y2:1000,cx:1000,cy:1000}
+  ]};
+  // Retain a large sample count for the controller's forward search window,
+  // but leave the first straight as one deliberately sparse 1000-unit segment.
+  track.spline=[{x:0,y:0},{x:1000,y:0},
+    ...Array.from({length:32},(_,i)=>({x:1000,y:(i+1)*1000/32})),
+    ...Array.from({length:32},(_,i)=>({x:1000-(i+1)*1000/32,y:1000})),
+    ...Array.from({length:31},(_,i)=>({x:0,y:1000-(i+1)*1000/32}))];
+  track.cum=[0];for(let i=1;i<track.spline.length;i++)track.cum.push(track.cum.at(-1)+Math.hypot(track.spline[i].x-track.spline[i-1].x,track.spline[i].y-track.spline[i-1].y));
+  const gaps = track.spline.map((a, i) => {
+    const b = track.spline[(i + 1) % track.spline.length];
+    return { i, a, b, length: Math.hypot(b.x - a.x, b.y - a.y) };
+  }).sort((a, b) => b.length - a.length);
+  const gap = gaps[0], nx = -(gap.b.y - gap.a.y) / gap.length, ny = (gap.b.x - gap.a.x) / gap.length;
+  assert(gap.length > 2 * (track.trackWidth / 2 + 55), 'Regression must exercise sparse road samples');
+  for (const offset of [0, track.trackWidth / 2 + 70]) {
+    const e = new Environment(0, { trackId: 6, mode: 'ai', randomization: false });
+    e.track=track;e.world.track=track;
+    const k = e.kart;
+    k.x = (gap.a.x + gap.b.x) / 2 + nx * offset;
+    k.y = (gap.a.y + gap.b.y) / 2 + ny * offset;
+    k._nearestSplineIdx = gap.i; k.speed = 0;
+    e.state.nearest = gap.i; e.lastG = geometry(k, track, e.state);
+    const result = e.step([0, -1, -1, -1, -1]);
+    assert.equal(k.isOffTrack, offset !== 0, 'Soft road limit uses segments, not isolated samples');
+    assert.equal(k._isCompletelyOff, offset !== 0, 'Strict road limit uses segments, not isolated samples');
+    if (offset === 0) {
+      assert.equal(result.info.offTrackSeconds, 0);
+      assert.equal(k._ghostOffTrackAcc, 0, 'A centreline lap must not become invalid between samples');
+    }
+  }
+}
+console.log('Sparse straight midpoints remain on-road; genuine road-edge departures still receive penalties.');
+
 for(const mode of ['ai','shootout']){
   const e=new Environment(0,{trackId:0,mode,randomization:false,episodeSeconds:400});let result;
   for(let i=0;i<8000;i++){result=e.step(teacher(e.kart,e.track,{},.42));if(result.done)break;}

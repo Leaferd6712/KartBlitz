@@ -130,10 +130,19 @@ async function exportTrack(page) {
 async function openPitEditor(page) {
   await page.addInitScript(() => {
     window.pitHandlePositions = {};
+    window.backgroundTrackNodePositions = {};
+    const clear = CanvasRenderingContext2D.prototype.clearRect;
+    CanvasRenderingContext2D.prototype.clearRect = function(...args) {
+      if (this.canvas.id === 'te-canvas') window.backgroundTrackNodePositions = {};
+      return clear.apply(this, args);
+    };
     const original = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function(text, x, y, ...rest) {
       if (this.canvas.id === 'te-canvas' && /^PIT (ENTRY|BOX|EXIT)$/.test(text)) {
         window.pitHandlePositions[text] = { x: x - 12, y: y + 12 };
+      }
+      if (this.canvas.id === 'te-canvas' && /^T\d+$/.test(text)) {
+        window.backgroundTrackNodePositions[text] = { x: x - 9, y: y + 9 };
       }
       return original.call(this, text, x, y, ...rest);
     };
@@ -179,8 +188,9 @@ test('pit entry, box and exit drag, undo, edit coordinates and survive apply/exp
   }
   const edited = await exportTrack(page);
   const project = await page.evaluate(() => JSON.parse(localStorage.getItem('kartblitz_track_editor_project')));
-  expect(Math.round(project.meta.pitLane.garagePos.x)).toBe(edited.pitLane.garagePos.x);
-  expect(Math.round(project.meta.pitLane.garagePos.y)).toBe(edited.pitLane.garagePos.y);
+  const coord = n => edited.geometryVersion === 2 ? Math.round(n*1000)/1000 : Math.round(n);
+  expect(coord(project.meta.pitLane.garagePos.x)).toBe(edited.pitLane.garagePos.x);
+  expect(coord(project.meta.pitLane.garagePos.y)).toBe(edited.pitLane.garagePos.y);
   await page.locator('#te-btnApplyGame').click();
   const applied = await page.evaluate(() => ({ pitPos: TRACKS[0].pitPos, pitLane: TRACKS[0].pitLane }));
   expect(applied.pitPos).toEqual(edited.pitLane.garagePos);
@@ -192,6 +202,27 @@ test('pit entry, box and exit drag, undo, edit coordinates and survive apply/exp
   await expect(page.locator('#te-stMsg')).toContainText('Project loaded');
   expect((await exportTrack(page)).pitLane).toEqual(edited.pitLane);
   expect(errors).toEqual([]);
+});
+
+test('track nodes remain visible while editing pits and Track restores their editing controls', async ({ page }) => {
+  await openPitEditor(page);
+  const original = await exportTrack(page);
+  await page.locator('#te-btnPitBox').click();
+  await expect(page.locator('#te-btnLayerPit')).toHaveClass('active');
+  const positions = await page.evaluate(() => window.backgroundTrackNodePositions);
+  expect(Object.keys(positions)).toHaveLength(original.waypoints.length);
+  expect((await exportTrack(page)).waypoints).toEqual(original.waypoints);
+  await page.locator('#te-togNodes').uncheck();
+  expect(await page.evaluate(() => Object.keys(window.backgroundTrackNodePositions))).toHaveLength(0);
+  await page.locator('#te-togNodes').check();
+  await page.locator('#te-btnLayerTrack').click();
+  await expect(page.locator('#te-btnLayerTrack')).toHaveClass('active');
+  const canvas = await page.locator('#te-canvas').boundingBox();
+  await page.mouse.click(canvas.x + positions.T5.x, canvas.y + positions.T5.y);
+  await expect(page.locator('#te-selInfo')).toContainText('Track node #5');
+  await page.locator('#te-inpX').fill(String(original.waypoints[5].x + 25));
+  await page.locator('#te-btnApplyXY').click();
+  expect((await exportTrack(page)).waypoints[5].x).toBe(original.waypoints[5].x + 25);
 });
 
 test('imported pit spots retain their role when the box is not the middle node', async ({ page }) => {
