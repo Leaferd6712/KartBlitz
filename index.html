@@ -1870,6 +1870,12 @@ body::after{
 #screen-te-editor .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1e3a36;color:var(--accent);font-size:11px;}
 #screen-te-editor .te-apply-row{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
 #screen-te-editor .te-apply-row button{background:#1e3a36;border-color:#3dd6c6;color:#3dd6c6;font-weight:600;}
+#screen-te-editor #te-btnPublishGame{background:#543c12;border-color:#f5b942;color:#ffe3a3;}
+#screen-te-editor .te-save-warning{border:1px solid #b98429;border-radius:6px;background:#302712;padding:10px;color:#ffe3a3;font-size:12px;line-height:1.5;margin-bottom:12px;}
+#screen-te-editor .te-save-warning p{margin:6px 0;}
+#screen-te-editor #te-publishStatus{white-space:pre-wrap;overflow-wrap:anywhere;}
+#screen-te-editor #te-publishStatus a{color:#8ce7df;}
+#screen-te-editor button:disabled{opacity:.6;cursor:default;}
 
 </style>
 <link rel="stylesheet" href="ui/game-ui.css?v=20261030"><link rel="stylesheet" href="ui/experience.css?v=20261030">
@@ -2432,10 +2438,11 @@ body::after{
   <div class="app">
     <header class="topbar">
       <h1>KARTBLITZ TRACK EDITOR</h1>
-      <span class="hint">Edit live tracks in this file. Apply to race-test · Copy/Download to paste into TRACKS permanently.</span>
+      <span class="hint">Draft autosaves on this device. Apply to preview · Save to Actual Game to publish for everyone.</span>
       <span class="pill" id="te-nodeCountPill">0 nodes</span>
       <div class="te-apply-row">
         <button type="button" id="te-btnApplyGame" title="Apply to live TRACKS">Apply to Game</button>
+        <button type="button" id="te-btnPublishGame" title="Publish this track for everyone after confirming the warning">Save to Actual Game</button>
         <button type="button" id="te-btnBackPicker">Tracks</button>
         <button type="button" id="te-btnCloseEditor">Close</button>
       </div>
@@ -2467,6 +2474,13 @@ body::after{
   </div>
 
   <aside class="side">
+    <div class="te-save-warning" role="note" aria-label="Saving and publishing warning">
+      <strong>⚠ Saving affects everyone</strong>
+      <p>Draft autosave stays in this browser. <strong>Apply to Game</strong> is a temporary preview.</p>
+      <p><strong>Save to Actual Game</strong> saves a versioned backup and starts publication. The update becomes live after deployment finishes.</p>
+      <p>Track and AI line changes can affect lap times. Saved records and target times are not recalculated, and AI models are not retrained automatically.</p>
+      <div id="te-publishStatus" role="status" aria-live="polite">Ready to publish after confirmation.</div>
+    </div>
     <h2>Selected Node</h2>
     <div class="note" id="te-selInfo">None selected</div>
     <div class="row">
@@ -2572,7 +2586,7 @@ body::after{
     <textarea id="te-exportArea" readonly></textarea>
 
     <h2>Project</h2>
-    <div class="note">Saves editor project files (.kbtrack.json). Use <strong>Apply to Game</strong> to race-test; Copy/Download to paste into TRACKS for a permanent source save.</div>
+    <div class="note">Save Project downloads a backup (.kbtrack.json). Drafts autosave on this device. Use Save to Actual Game above to publish for everyone.</div>
     <div class="btn-row">
       <button type="button" id="te-btnSaveProj">Save Project</button>
       <button type="button" id="te-btnLoadProj">Load Project</button>
@@ -15408,6 +15422,8 @@ window.KartBlitzTrackEditor = (function(){
   let _editIndex = null; // null = new track
   let _bound = false;
   let _exportTimer = null;
+  let _publishPending = false;
+  let _published = false;
   const api = {
     isOpen() { return _open; },
     isUnlocked() {
@@ -15805,6 +15821,63 @@ window.KartBlitzTrackEditor = (function(){
     if (typeof showScreen === 'function') showScreen('menu');
   }
 
+  async function publishToGame() {
+    if (_publishPending || _published) return;
+    const status = $('te-publishStatus');
+    const sourceSha = document.querySelector('meta[name="kartblitz-source-sha"]')?.content;
+    if (!sourceSha) {
+      status.textContent = '⚠ Open the latest published website to save for everyone. Local previews can still export and save project backups.';
+      return;
+    }
+    if (state.waypoints.length < 4) {
+      status.textContent = '⚠ At least 4 track waypoints are required before publishing.';
+      return;
+    }
+    const track = buildTrackObjectFromEditor();
+    if (!confirm('⚠ SAVE TO THE ACTUAL GAME FOR EVERYONE?\n\nTrack: ' + track.name +
+      '\n\nThis replaces the published track after deployment finishes. Lap times and AI driving may change.\n' +
+      'Saved records and target lap times will not be recalculated. AI training must be re-evaluated or rerun separately.\n\n' +
+      'The previous version remains in version history for recovery.\n\nSave and start publishing?')) return;
+    autosave();
+    _publishPending = true;
+    const button = $('te-btnPublishGame');
+    button.disabled = true;
+    button.textContent = 'Saving…';
+    status.textContent = 'Saving to the actual game. Keep this page open until the save is confirmed.';
+    try {
+      let password = '';
+      try { password = sessionStorage.getItem(PW_KEY) || ''; } catch (e) {}
+      const response = await fetch(adminApiBase() + '/api/admin/tracks/publish', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password },
+        body: JSON.stringify({ confirmed: true, sourceSha, track })
+      });
+      let result;
+      try { result = await response.json(); } catch (e) {
+        throw new Error('Publishing is unavailable on this server. Your browser draft and project exports are still available.');
+      }
+      if (!response.ok || result.ok !== true || !/^[a-f0-9]{40}$/.test(result.commit || '')) {
+        throw new Error(result.error || 'The game did not confirm a saved version. Your browser draft is preserved.');
+      }
+      _published = true;
+      button.textContent = 'Saved — deployment queued';
+      status.textContent = '✓ Saved to the game source. Deployment is queued; this is not live yet. Reload after deployment finishes to edit again.\n';
+      const history = document.createElement('a');
+      history.href = 'https://github.com/Leaferd6712/KartBlitz/commit/' + result.commit;
+      history.target = '_blank'; history.rel = 'noopener'; history.textContent = 'View saved change / previous version';
+      status.append(history, document.createElement('br'));
+      const deployment = document.createElement('a');
+      deployment.href = 'https://github.com/Leaferd6712/KartBlitz/actions';
+      deployment.target = '_blank'; deployment.rel = 'noopener'; deployment.textContent = 'Check deployment progress';
+      status.append(deployment);
+    } catch (error) {
+      status.textContent = '⚠ ' + error.message;
+      button.textContent = 'Save to Actual Game';
+    } finally {
+      _publishPending = false;
+      button.disabled = _published;
+    }
+  }
+
   async function requestOpen() {
     if (typeof window.pauseMenuCarStage === 'function') window.pauseMenuCarStage();
     let saved = '';
@@ -15860,6 +15933,8 @@ window.KartBlitzTrackEditor = (function(){
     // Wire apply / nav (editor-specific controls)
     const btnApply = $('te-btnApplyGame');
     if (btnApply) btnApply.onclick = () => applyToGame();
+    const btnPublish = $('te-btnPublishGame');
+    if (btnPublish) btnPublish.onclick = () => publishToGame();
     const btnBack = $('te-btnBackPicker');
     if (btnBack) btnBack.onclick = () => { showEditor(false); showPicker(true); };
     const btnClose = $('te-btnCloseEditor');
@@ -17382,6 +17457,7 @@ state.snap = !!(document.getElementById('te-togSnap') && document.getElementById
   readMetaFromForm = function() {
     const m = _origReadMeta();
     if (_editIndex != null && TRACKS[_editIndex]) m.id = TRACKS[_editIndex].id;
+    else m.id = TRACKS.length;
     return m;
   };
 

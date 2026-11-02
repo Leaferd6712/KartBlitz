@@ -15,6 +15,17 @@ const cases=evaluationCases(options.includes('--smoke')).filter(c=>!shootoutOnly
 const browser=await chromium.launch({headless:true,args:['--disable-gpu']});
 try{
   const page=await browser.newPage();await page.route('https://**/*',route=>route.abort());
+  if(options.includes('--offline-assets')){
+    // Native game code in Chromium, with local files fulfilled directly. No
+    // trainer service or localhost listener is needed for an isolated check.
+    const root=path.resolve('.'),types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.woff2':'font/woff2'};
+    await page.route(new URL(baseUrl).origin+'/**',async route=>{
+      const url=new URL(route.request().url());let file;
+      try{file=path.resolve(root,'.'+decodeURIComponent(url.pathname));}catch{return route.fulfill({status:400,body:'Invalid asset path'});}
+      if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile())return route.fulfill({status:404,body:'Asset not found'});
+      return route.fulfill({status:200,contentType:types[path.extname(file)]||'application/octet-stream',body:fs.readFileSync(file)});
+    });
+  }
   await page.addInitScript(()=>{window.CrazyGames={SDK:{init:async()=>{},game:{loadingStart(){},loadingStop(){},gameplayStart(){},gameplayStop(){},happytime(){},addSettingsChangeListener(){}},data:{get:async()=>null,set:async()=>{}}}};});
   await page.goto(new URL('/index.html?tool=official-ml',baseUrl).href);
   await page.waitForFunction(()=>typeof Race==='function'&&!!window.KartBlitzOfficial);

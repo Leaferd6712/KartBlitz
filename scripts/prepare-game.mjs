@@ -1,8 +1,11 @@
 import { mkdir, cp, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { buildOfficialCore } from './build-official-core.mjs';
+import { exportTrackBakes } from './export-track-bakes.mjs';
 buildOfficialCore({checkOnly:process.argv.includes('--keep-live-core')});
+exportTrackBakes();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(root, process.argv[2] || 'dist/game');
 const outputs = new Set(['dist/game','desktop/game','public'].map(relative=>path.resolve(root,relative)));
@@ -24,6 +27,11 @@ if (process.argv.includes('--web')) {
 }
 for(const file of files) { await mkdir(path.dirname(path.join(output,file)),{recursive:true}); await cp(path.join(root,file),path.join(output,file)); }
 const html = await readFile(path.join(output,'index.html'),'utf8');
+// Match GitHub's content blob SHA exactly, including the source file's newlines.
+// The publisher rejects stale pages instead of overwriting a newer game source.
+const sourceBytes = await readFile(path.join(root, 'index.html'));
+const sourceSha = createHash('sha1').update(`blob ${sourceBytes.length}\0`).update(sourceBytes).digest('hex');
+await writeFile(path.join(output, 'index.html'), html.replace('</head>', `<meta name="kartblitz-source-sha" content="${sourceSha}">\n</head>`));
 for(const resource of [...html.matchAll(/(?:src|href)="([^"#]+)"/g)].map(m=>m[1].split(/[?#]/)[0]).filter(f=>f&&!/^(https?:|data:)/.test(f))) {
   if(resource.endsWith('.js')||resource.endsWith('.css')||resource.endsWith('.svg')) await readFile(path.join(output,resource));
 }

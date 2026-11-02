@@ -15,6 +15,7 @@ import { saveArchivedLap, listArchivedLaps, readArchivedLap, MAX_LAP_ARCHIVE_BYT
 import { ONLINE_PROTOCOL, TRACK_BAKE_VERSION } from "../sim/constants";
 import { LEADERBOARD_RULES_VERSION } from "../sim/trial-run";
 import { listTrackIds } from "../sim/tracks";
+import { handleTrackPublish } from './track-publish';
 
 export { KartBlitzRoom, LobbyDirectory };
 export type { Env };
@@ -42,6 +43,9 @@ export default {
     }
 
     const url = new URL(request.url);
+    if (url.pathname === '/api/admin/tracks/publish') {
+      return withCors(await handleTrackPublish(request, env));
+    }
     if (url.pathname === '/api/lap-recordings') {
       if (!env.LEADERBOARD_DB) return withCors(Response.json({ error: 'leaderboard_unconfigured' }, { status: 503 }));
       if (request.method !== 'POST') return withCors(Response.json({ error: 'method_not_allowed' }, { status: 405 }));

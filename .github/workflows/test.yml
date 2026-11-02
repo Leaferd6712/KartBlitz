@@ -41,6 +41,9 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+      - name: Track publishing authorization, conflicts and source updates
+        run: npm run test:track-publish
+
       - name: Simulation tests
         run: npm run test:sim
 

@@ -1,3 +1,6 @@
 # Copy to .dev.vars for local wrangler dev (not committed).
 # Production: use `npx wrangler secret put LEADERBOARD_ADMIN_PASSWORD` instead.
 LEADERBOARD_ADMIN_PASSWORD=kartblitz-admin
+# Optional global track publishing: fine-grained token, only KartBlitz, Contents read/write.
+# Production: npx wrangler secret put TRACK_PUBLISH_GITHUB_TOKEN
+# TRACK_PUBLISH_GITHUB_TOKEN=your-token

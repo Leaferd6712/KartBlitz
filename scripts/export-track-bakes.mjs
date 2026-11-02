@@ -6,7 +6,9 @@
  */
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
+import vm from 'node:vm';
+import { trackSourceRanges } from '../sim/track-source.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -39,7 +41,7 @@ function buildSpline(wps, steps = 28) {
   return pts;
 }
 
-function bakeTrack(raw) {
+export function bakeTrack(raw) {
   const wps = raw.waypoints || [];
   if (wps.length < 4) return null;
   const spline = buildSpline(wps, 28).map((p) => ({
@@ -110,65 +112,22 @@ function bakeTrack(raw) {
   };
 }
 
-function extractTracks(html) {
-  // Pull each track object that has id + waypoints — lightweight regex scan
-  const tracks = [];
-  const re = /\{\s*id\s*:\s*(\d+)[\s\S]*?waypoints\s*:\s*\[([\s\S]*?)\]\s*,/g;
-  let m;
-  while ((m = re.exec(html))) {
-    const id = parseInt(m[1], 10);
-    const wpBody = m[2];
-    const waypoints = [];
-    const ptRe = /\{\s*x\s*:\s*(-?[\d.]+)\s*,\s*y\s*:\s*(-?[\d.]+)/g;
-    let pm;
-    while ((pm = ptRe.exec(wpBody))) {
-      waypoints.push({ x: parseFloat(pm[1]), y: parseFloat(pm[2]) });
-    }
-    if (waypoints.length < 4) continue;
+export function extractTracks(html) {
+  const { arrayStart, arrayEnd } = trackSourceRanges(html);
+  // Trusted repository data only; both authored JS literals and editor JSON work.
+  return vm.runInNewContext('(' + html.slice(arrayStart, arrayEnd + 1) + ')', {}, { timeout: 1000 });
+}
 
-    // Find startPos / trackWidth near this id block (search forward limited)
-    const chunk = html.slice(m.index, m.index + 8000);
-    const sp = chunk.match(/startPos\s*:\s*\{\s*x\s*:\s*(-?[\d.]+)\s*,\s*y\s*:\s*(-?[\d.]+)/);
-    const sa = chunk.match(/startAngle\s*:\s*(-?[\d.]+)/);
-    const tw = chunk.match(/trackWidth\s*:\s*(\d+)/);
-    const cp = chunk.match(/cpFracs\s*:\s*\[([^\]]+)\]/);
-    const drs = chunk.match(/drsFracs\s*:\s*\[([\s\S]*?)\]/);
-    const surf = chunk.match(/surface\s*:\s*\{\s*offTrackMult\s*:\s*([\d.]+)/);
-    let cpFracs = [0, 0.25, 0.5, 0.75];
-    if (cp) {
-      cpFracs = cp[1].split(",").map((s) => parseFloat(s.trim())).filter((n) => Number.isFinite(n));
-    }
-    let drsFracs = [];
-    if (drs) {
-      const pairRe = /\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]/g;
-      let dm;
-      while ((dm = pairRe.exec(drs[1]))) {
-        drsFracs.push([parseFloat(dm[1]), parseFloat(dm[2])]);
-      }
-    }
-    const offTrackMult = surf ? parseFloat(surf[1]) : 1;
-    tracks.push({
-      id,
-      waypoints,
-      startPos: sp ? { x: parseFloat(sp[1]), y: parseFloat(sp[2]) } : waypoints[0],
-      startAngle: sa ? parseFloat(sa[1]) : 0,
-      trackWidth: tw ? parseInt(tw[1], 10) : 160,
-      cpFracs,
-      drsFracs,
-      surface: { offTrackMult: Number.isFinite(offTrackMult) ? offTrackMult : 1 },
-    });
+export function exportTrackBakes() {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  const rawTracks = extractTracks(html);
+  const out = { version: 2, tracks: {} };
+  for (const raw of rawTracks) {
+    const baked = bakeTrack(raw);
+    if (baked) out.tracks[String(raw.id)] = baked;
   }
-  return tracks;
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, JSON.stringify(out));
+  console.log("Wrote", Object.keys(out.tracks).length, "tracks to", outPath);
 }
-
-const html = fs.readFileSync(htmlPath, "utf8");
-const rawTracks = extractTracks(html);
-const out = { version: 2, tracks: {} };
-for (const raw of rawTracks) {
-  const baked = bakeTrack(raw);
-  if (baked) out.tracks[String(raw.id)] = baked;
-}
-
-fs.mkdirSync(path.dirname(outPath), { recursive: true });
-fs.writeFileSync(outPath, JSON.stringify(out));
-console.log("Wrote", Object.keys(out.tracks).length, "tracks to", outPath);
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) exportTrackBakes();

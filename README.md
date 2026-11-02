@@ -83,6 +83,7 @@ http://127.0.0.1:8766/index.html?tool=official-ml
 
 - **[Open Admin Station](https://leaferd6712.github.io/KartBlitz/leaderboard-admin.html)** — password-protected editing of Time Trial/Versus lap times, online wins and player entries; deletion and random test entries.
 - **[Open Track Editor](https://leaferd6712.github.io/KartBlitz/index.html?admin=track)** — password-protected track creation, layouts, AI lines, checkpoints, pits, speed zones, target lap times and import/export. Also available from Admin Station.
+  **Save to Actual Game** publishes for everyone after confirmation; requires the one-time [publishing setup](docs/track-publishing.md). Draft autosave stays in your browser.
 - **[Open Patch Notes Editor](https://leaferd6712.github.io/KartBlitz/patch-notes-editor.html)** — edit, preview and export patch notes after admin login. Players can still read **What's new** in the game.
 - **[Legacy standalone Track Editor](https://leaferd6712.github.io/KartBlitz/Old%20Track%20Editor/track-editor.html)** · [legacy editor guide](Old%20Track%20Editor/TRACK-EDITOR.md) — retained for older projects; exports must be applied manually.
 
