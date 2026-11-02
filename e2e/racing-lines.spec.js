@@ -2,7 +2,7 @@ import {test,expect,gotoGame} from './fixtures/game.js';
 import {gzipSync} from 'node:zlib';
 import {buildProfile} from '../sim/racing-line.mjs';
 import {officialTracks} from '../ml_training/official-worker-v2.mjs';
-import {rollout} from '../scripts/build-racing-line.mjs';
+import {rollout} from '../scripts/ai-training/build-racing-line.mjs';
 
 test('reference and recorded lines share fixed gates, show full/partial windows, and play the game camera',async({page},testInfo)=>{
   const profile=buildProfile(officialTracks[0]),record=rollout(profile,{raceLaps:2,pace:.42});

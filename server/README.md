@@ -15,4 +15,4 @@ cloudflared tunnel --url http://localhost:8787
 
 Or run `start-leaderboard.bat`.
 
-See root [`deploy.md`](../deploy.md) section **C** for legacy local usage and section **B** for the cloud leaderboard setup.
+See root [`docs/development/hosting-and-deployment.md`](../docs/development/hosting-and-deployment.md) section **C** for legacy local usage and section **B** for the cloud leaderboard setup.

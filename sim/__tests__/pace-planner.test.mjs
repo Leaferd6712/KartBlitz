@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {officialTracks, Environment} from '../../ml_training/official-worker-v2.mjs';
-import {drive, search} from '../../scripts/pace-rnd.mjs';
+import {drive, search} from '../../scripts/ai-training/pace-rnd.mjs';
 import {makePlan, initialParameters, parameterBounds, nextPopulation, randomSource, schedule, cleanFinish, compareTrials, speedEnvelope, plannedAction} from '../pace-planner.mjs';
 import {validateProfile} from '../racing-line.mjs';
 import {PHYSICS_HASH} from '../official-policy.mjs';

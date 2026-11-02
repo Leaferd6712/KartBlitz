@@ -10,7 +10,7 @@ on:
       - "sim/*.ts"
       - "sim/tracks/**"
       - "sim/track-source.mjs"
-      - "scripts/export-track-bakes.mjs"
+      - "scripts/build/export-track-bakes.mjs"
       - "wrangler.jsonc"
       - "package.json"
       - "package-lock.json"

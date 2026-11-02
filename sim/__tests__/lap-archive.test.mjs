@@ -5,7 +5,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { PlayerLapRecorder } from '../lap-recorder.mjs';
 import { unpackLeaderboardGhost } from '../pb-ghost.mjs';
-import { exportRecordings } from '../../scripts/export-lap-recordings.mjs';
+import { exportRecordings } from '../../scripts/leaderboards/export-lap-recordings.mjs';
 
 const bundle = await build({ entryPoints: ['party/lap-archive.ts'], bundle: true, platform: 'node', format: 'esm', write: false });
 const Archive = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));

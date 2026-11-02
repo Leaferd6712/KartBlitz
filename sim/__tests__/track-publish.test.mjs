@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
 import { trackSourceRanges, replaceTrackSource } from '../track-source.mjs';
-import { extractTracks, bakeTrack } from '../../scripts/export-track-bakes.mjs';
+import { extractTracks, bakeTrack } from '../../scripts/build/export-track-bakes.mjs';
 
 const bundle = await build({ entryPoints: ['party/track-publish.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
 const { handleTrackPublish, validatePublishedTrack } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));

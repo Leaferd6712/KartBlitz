@@ -10,7 +10,7 @@ from .official_train import ROOT
 class Coach:
     def __init__(self, plan):
         flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-        self.process = subprocess.Popen(['node', 'scripts/pace-coach.mjs', str(plan)], cwd=ROOT,
+        self.process = subprocess.Popen(['node', 'scripts/ai-training/pace-coach.mjs', str(plan)], cwd=ROOT,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', creationflags=flags)
 
     def call(self, value):

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {officialTracks,Environment,referenceAction} from '../../ml_training/official-worker-v2.mjs';
 import {buildProfile,validateProfile,SectorTracker,matchedWindow,styleScore} from '../racing-line.mjs';
 import {PHYSICS_HASH,geometry} from '../official-policy.mjs';
-import {refine} from '../../scripts/build-racing-line.mjs';
+import {refine} from '../../scripts/ai-training/build-racing-line.mjs';
 for(const track of officialTracks){
   const p=buildProfile(track),q=buildProfile(track,Object.fromEntries(p.corners.map(c=>[c.id,{entryScale:.4,apexScale:.5,exitScale:.7,apexShift:.1}])));
   assert(p.corners.length>0);assert(validateProfile(p,track,PHYSICS_HASH));assert.equal(p.timingHash,q.timingHash);assert.notEqual(p.profileHash,q.profileHash);

@@ -209,7 +209,7 @@ def main():
     signal.signal(signal.SIGINT,stop);signal.signal(signal.SIGTERM,stop)
     import subprocess
     profile_path=Path(args.line_profile).resolve() if args.line_profile else directory/'reference-profile.json'
-    if not args.line_profile:subprocess.run(['node','scripts/build-racing-line.mjs','--track',str(args.track),'--difficulty',args.difficulty,'--output',str(profile_path)],cwd=ROOT,check=True,timeout=900)
+    if not args.line_profile:subprocess.run(['node','scripts/ai-training/build-racing-line.mjs','--track',str(args.track),'--difficulty',args.difficulty,'--output',str(profile_path)],cwd=ROOT,check=True,timeout=900)
     profile=json.loads(profile_path.read_text())
     if not profile.get('calibration',{}).get('complete') or profile['calibration'].get('smoke'):parser.error('Reference must pass full real-physics calibration; inspect its calibration recordings.')
     configs=[];results=[]
@@ -223,7 +223,7 @@ def main():
     winner=choose_result(results);unguided=choose_result([r for r in results if not r[0]['variants'][args.difficulty]['training']['lineGuidance']]);write_json(directory/'comparison.json',{'configs':configs,'winnerGamma':winner[0]['variants'][args.difficulty]['training']['gamma'],'winnerGuided':winner[0]['variants'][args.difficulty]['training']['lineGuidance'],'reports':[r[1] for r in results]})
     # Native comparison is mandatory for promotion. Its reports/recordings never auto-activate.
     import subprocess
-    command=['node','scripts/energy-browser-check.mjs',str(winner[2]/f'track-{args.track}.kartai.json'),args.difficulty,str(directory/'native.json'),'--profile',str(profile_path),'--unguided',str(unguided[2]/f'track-{args.track}.kartai.json')]
+    command=['node','scripts/ai-training/energy-browser-check.mjs',str(winner[2]/f'track-{args.track}.kartai.json'),args.difficulty,str(directory/'native.json'),'--profile',str(profile_path),'--unguided',str(unguided[2]/f'track-{args.track}.kartai.json')]
     if args.v1_package:command.extend(['--v1',args.v1_package])
     subprocess.run(command,cwd=ROOT,check=True,timeout=900)
     native=json.loads((directory/'native.json').read_text());approved=native.get('approved',False) and not winner[1]['cancelled']

@@ -1,0 +1,383 @@
+{
+  "purpose": "Old-to-new locations for repository organisation; runtime URLs and training archives remain in place.",
+  "moves": [
+    {
+      "old": "Improvements.txt",
+      "new": "docs/planning/improvement-notes.txt",
+      "originalSha256": "6b2b1360eee73964fab82b882dde599077fefa1f80b95f468cbbe21f966dcb6f",
+      "currentSha256": "6b2b1360eee73964fab82b882dde599077fefa1f80b95f468cbbe21f966dcb6f"
+    },
+    {
+      "old": "UI Inspiration/3de2e9321e182b772bb8e3dc3bcc4727.webp",
+      "new": "design/reference-images/ui-reference-01.webp",
+      "originalSha256": "182d879eda0d42e57f45cca5c537957f17fefc372a6c7c0452ac461198cdf4e4",
+      "currentSha256": "182d879eda0d42e57f45cca5c537957f17fefc372a6c7c0452ac461198cdf4e4"
+    },
+    {
+      "old": "UI Inspiration/4eecf9d81c491f939a96cc32657c6393.webp",
+      "new": "design/reference-images/ui-reference-02.webp",
+      "originalSha256": "8eb114c8c71515d710611593cf121f11f7ae92b519f937b041510e6c0afdd644",
+      "currentSha256": "8eb114c8c71515d710611593cf121f11f7ae92b519f937b041510e6c0afdd644"
+    },
+    {
+      "old": "UI Inspiration/797b200bda1657532d6c1bdef3e9bb2c.webp",
+      "new": "design/reference-images/ui-reference-03.webp",
+      "originalSha256": "ab936abe423ee8cfc6a362637a8aa33085dce8001026e5b2dfe72558ee611308",
+      "currentSha256": "ab936abe423ee8cfc6a362637a8aa33085dce8001026e5b2dfe72558ee611308"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053341-30827_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-07.jpg",
+      "originalSha256": "746bab778876022bc6589178b051d7d8aea5699fcf48a179506a28aa14c2c091",
+      "currentSha256": "746bab778876022bc6589178b051d7d8aea5699fcf48a179506a28aa14c2c091"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053341-45558_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-08.jpg",
+      "originalSha256": "58a340bfb71175494d8d8d4dfd87651e498c05c461db200fe5d52bd6be2498bc",
+      "currentSha256": "58a340bfb71175494d8d8d4dfd87651e498c05c461db200fe5d52bd6be2498bc"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053341-96409.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-09.jpg",
+      "originalSha256": "d4c17eabea42b15588ba31a1b6fcc0b87dccf21d51185bd6034479fd9c2a33df",
+      "currentSha256": "d4c17eabea42b15588ba31a1b6fcc0b87dccf21d51185bd6034479fd9c2a33df"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053342-43126_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-10.jpg",
+      "originalSha256": "3e0d39fbba2ba9bf2c98a89a41414f88d57889671a7d5e40f8ba3bab3ed46e92",
+      "currentSha256": "3e0d39fbba2ba9bf2c98a89a41414f88d57889671a7d5e40f8ba3bab3ed46e92"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053342-85400.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-11.jpg",
+      "originalSha256": "1b8b24141a0534673bc817f25e7dd3a546ec1fb3b18c72c06503663da27606f5",
+      "currentSha256": "1b8b24141a0534673bc817f25e7dd3a546ec1fb3b18c72c06503663da27606f5"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053342-9564.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-12.jpg",
+      "originalSha256": "5d5cc04eec4ff4ccaea55457b17e24230f0f40a4c03b0c5d5afa17970b142aab",
+      "currentSha256": "5d5cc04eec4ff4ccaea55457b17e24230f0f40a4c03b0c5d5afa17970b142aab"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053343-29686.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-13.jpg",
+      "originalSha256": "2c87d91673be4c6af056874316228f34a56317bbc6b4e4672f6fe7b49c011334",
+      "currentSha256": "2c87d91673be4c6af056874316228f34a56317bbc6b4e4672f6fe7b49c011334"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053344-24706_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-14.jpg",
+      "originalSha256": "cd58aec2ee2827bd61a60a81b9bf9302122af0c73feeb7f20c43617dbe47059e",
+      "currentSha256": "cd58aec2ee2827bd61a60a81b9bf9302122af0c73feeb7f20c43617dbe47059e"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053344-66999_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-15.jpg",
+      "originalSha256": "52771f0c7e1c7036f222bb7fa59ccd8fef87dfe6dc8da954657005e5cb612576",
+      "currentSha256": "52771f0c7e1c7036f222bb7fa59ccd8fef87dfe6dc8da954657005e5cb612576"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053346-82775_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-16.jpg",
+      "originalSha256": "aad0ba0d431297610b24f2cad73eaa7e07a6116f64c13ec2ebf1052fa52a1d26",
+      "currentSha256": "aad0ba0d431297610b24f2cad73eaa7e07a6116f64c13ec2ebf1052fa52a1d26"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053346-99687_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-17.jpg",
+      "originalSha256": "7cf15d7f587acabf0c6b3aadfb849b8afcab5452fe60e471e37476d89f9796f0",
+      "currentSha256": "7cf15d7f587acabf0c6b3aadfb849b8afcab5452fe60e471e37476d89f9796f0"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053347-48981.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-18.jpg",
+      "originalSha256": "4cd37e76a177cef93378a9636e01c0d94c2c8ad24f9ff3e60aa4768d9de46f6c",
+      "currentSha256": "4cd37e76a177cef93378a9636e01c0d94c2c8ad24f9ff3e60aa4768d9de46f6c"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053349-2569_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-19.jpg",
+      "originalSha256": "ee68d46f5d8469b14892cc5544e092f225c6a0ee773252847af4947200f789da",
+      "currentSha256": "ee68d46f5d8469b14892cc5544e092f225c6a0ee773252847af4947200f789da"
+    },
+    {
+      "old": "UI Inspiration/Warped-Kart-Racers06252023-053349-75497_thumb.jpg",
+      "new": "design/reference-images/warped-kart-racers-reference-20.jpg",
+      "originalSha256": "c797beaa88ac688d7836167c5879060c6c7dc509647b143e1705654570babafd",
+      "currentSha256": "c797beaa88ac688d7836167c5879060c6c7dc509647b143e1705654570babafd"
+    },
+    {
+      "old": "UI Inspiration/a8fd1f82fb90a78859a8fc6287bec610.webp",
+      "new": "design/reference-images/ui-reference-04.webp",
+      "originalSha256": "a96e7e23e4c86cc9067463481b7993e8f8c48b09558c7f3d2444bfd3863c3db5",
+      "currentSha256": "a96e7e23e4c86cc9067463481b7993e8f8c48b09558c7f3d2444bfd3863c3db5"
+    },
+    {
+      "old": "UI Inspiration/bb7934f548d07d27aa1137fe000bbcbe.webp",
+      "new": "design/reference-images/ui-reference-05.webp",
+      "originalSha256": "38be6683a989903c23d60cc904e559f10de8f0857825dcf71c47b926c9d53668",
+      "currentSha256": "38be6683a989903c23d60cc904e559f10de8f0857825dcf71c47b926c9d53668"
+    },
+    {
+      "old": "UI Inspiration/links.txt",
+      "new": "design/reference-images/reference-links.txt",
+      "originalSha256": "57df681d95bb68993cac41410f4d784b7c3a20bc8c537142f60fdbe111dc64a5",
+      "currentSha256": "57df681d95bb68993cac41410f4d784b7c3a20bc8c537142f60fdbe111dc64a5"
+    },
+    {
+      "old": "debug.log",
+      "new": "logs/debug.log",
+      "originalSha256": "c2293d9c7368da4f780c82a7e77cddc13a973dc84edc812b6f6d58d62d984244",
+      "currentSha256": "c2293d9c7368da4f780c82a7e77cddc13a973dc84edc812b6f6d58d62d984244"
+    },
+    {
+      "old": "deploy.md",
+      "new": "docs/development/hosting-and-deployment.md",
+      "originalSha256": "8a61672f9a474a942e1bd8ab08babd2c86203de62dff2fc2ca07e12ca0da8322",
+      "currentSha256": "eca83075ab5d0b759014d3885f751e058037c6ce021823377d043736e182f758"
+    },
+    {
+      "old": "docs/README.md",
+      "new": "docs/planning/website-notes.txt",
+      "originalSha256": "3128fec7d1af29a65ec78d63e00f1462f8d91a4de9f72e55e5e79055a1465814",
+      "currentSha256": "3128fec7d1af29a65ec78d63e00f1462f8d91a4de9f72e55e5e79055a1465814"
+    },
+    {
+      "old": "docs/activities.md",
+      "new": "docs/development/activities.md",
+      "originalSha256": "b81797a7ec73091623fccaef5ecebf6adbe800528694b6d6b008f264a4fec08c",
+      "currentSha256": "cc5f86212b29b669c312e8df04883be9c237b3ca4bf5488886356566f2993516"
+    },
+    {
+      "old": "docs/autonomous-campaign.md",
+      "new": "docs/ai-training/autonomous-campaign.md",
+      "originalSha256": "2ef949b2453e25e03ba9f8f844c31f11f094a24c756434decf47cd949313102b",
+      "currentSha256": "2ef949b2453e25e03ba9f8f844c31f11f094a24c756434decf47cd949313102b"
+    },
+    {
+      "old": "docs/desktop.md",
+      "new": "docs/development/desktop.md",
+      "originalSha256": "18798b5464cfbc92ab2f2e1899927e44e93660cb6b51a909febacdd26165ab17",
+      "currentSha256": "221801beb6eccf5dd6059429d6dfec5ed8e85e330d4788df442198f0aa4e60c9"
+    },
+    {
+      "old": "docs/development.md",
+      "new": "docs/development/development.md",
+      "originalSha256": "f2f55e3b630dfbea66824dd61d3510f1a3fd1e23bf31532b274382483fa872ae",
+      "currentSha256": "901845f9fa94b00bcea2562371e9c91c86462330007a05ce349cae6413352007"
+    },
+    {
+      "old": "docs/energy-v2.md",
+      "new": "docs/ai-training/energy-v2.md",
+      "originalSha256": "135a53b7101066361738731404fe84bdbe89854047f6a152518e442d3feea8d5",
+      "currentSha256": "40f8e4e8a74de17085d38829e231e01275cf4a0d7067e86aad9c04d6cb301698"
+    },
+    {
+      "old": "docs/improvements.md",
+      "new": "docs/planning/improvements.md",
+      "originalSha256": "b02b2f91b94ffdcf0e5cbdcb0e822786c4827a7f75bec24e8e3e9be9da5327e9",
+      "currentSha256": "b02b2f91b94ffdcf0e5cbdcb0e822786c4827a7f75bec24e8e3e9be9da5327e9"
+    },
+    {
+      "old": "docs/official-ml-research.md",
+      "new": "docs/ai-training/official-ml-research.md",
+      "originalSha256": "0a7486cdbd2c9125f0531f666599e234b13e9999cc8202ef79ea2b456aa44086",
+      "currentSha256": "0a7486cdbd2c9125f0531f666599e234b13e9999cc8202ef79ea2b456aa44086"
+    },
+    {
+      "old": "docs/official-ml.md",
+      "new": "docs/ai-training/official-ml.md",
+      "originalSha256": "df74bbcac13306d0f36ad34c1731834346d768d1ed4890a24a9f79ffc151fee9",
+      "currentSha256": "df74bbcac13306d0f36ad34c1731834346d768d1ed4890a24a9f79ffc151fee9"
+    },
+    {
+      "old": "docs/online-mode-fixes.md",
+      "new": "docs/multiplayer/online-mode-fixes.md",
+      "originalSha256": "04ae7ce2644217a07eeaee13dd69de796a77e6e08551e20be06fa67727dd3ce3",
+      "currentSha256": "8561ca0471038af492cc88555c52fe4e70cd32872b9054651c4b05684594481f"
+    },
+    {
+      "old": "docs/online-reconnect.md",
+      "new": "docs/multiplayer/online-reconnect.md",
+      "originalSha256": "e6ab2b51c1e4456000ce883c49372c602c8c0a9432d44df638ecc27b203f0bc5",
+      "currentSha256": "e6ab2b51c1e4456000ce883c49372c602c8c0a9432d44df638ecc27b203f0bc5"
+    },
+    {
+      "old": "docs/pace-rnd.md",
+      "new": "docs/ai-training/pace-rnd.md",
+      "originalSha256": "079e7b3a152d570eafa194da08f03b3b90bf5fca6809b5c18978ba2e83b60e84",
+      "currentSha256": "079e7b3a152d570eafa194da08f03b3b90bf5fca6809b5c18978ba2e83b60e84"
+    },
+    {
+      "old": "docs/race-rnd-findings.md",
+      "new": "docs/ai-training/race-rnd-findings.md",
+      "originalSha256": "b2f12dde8137c2f2ac272a2a123374b43d051a8ff2d9ca21128bc55939efac02",
+      "currentSha256": "b2f12dde8137c2f2ac272a2a123374b43d051a8ff2d9ca21128bc55939efac02"
+    },
+    {
+      "old": "docs/tools.md",
+      "new": "docs/development/tools.md",
+      "originalSha256": "f40e67dbcf7f36c17d3d996827d3d47608ceaf6a66ed14a871b5d6d4b9f819ce",
+      "currentSha256": "dcd0bcb3ab1815ae673ce979e3253cfe0b036b8440bcc033e7efef998273b2d9"
+    },
+    {
+      "old": "docs/track-publishing.md",
+      "new": "docs/track-editing/track-publishing.md",
+      "originalSha256": "858bf09fdab26b5afc4e7815316e061d2230712786cc5808fd454234d73f8d47",
+      "currentSha256": "858bf09fdab26b5afc4e7815316e061d2230712786cc5808fd454234d73f8d47"
+    },
+    {
+      "old": "scripts/backup-leaderboard.mjs",
+      "new": "scripts/leaderboards/backup-leaderboard.mjs",
+      "originalSha256": "a9ae40d4a0679a4088acb5be71d1c57782bd2987ddc664ff23d57f7a8cd45565",
+      "currentSha256": "441db0c43bc58ddeb7d7bcf08ef009a29eb51f7b6d13eba058e5dcadbb024b47"
+    },
+    {
+      "old": "scripts/build-racing-line.mjs",
+      "new": "scripts/ai-training/build-racing-line.mjs",
+      "originalSha256": "3ef8098df1e34357e2688709b38fc25f1a2ff0f53b5acc06fb6c8ef02c2712e8",
+      "currentSha256": "65d86923f0f48cafceca02a38ae6403ab2b85eebd6f1a44a5988eae9a03241a4"
+    },
+    {
+      "old": "scripts/capture-screenshots.mjs",
+      "new": "scripts/development/capture-screenshots.mjs",
+      "originalSha256": "48032328091bf6c2950887b3ed1aacea66ce5816c0bb2d3d089b36429574c781",
+      "currentSha256": "4ed05a1b6bd904edd4c91a3be239a303d931b9a4454f9558de3c76eb928bc837"
+    },
+    {
+      "old": "scripts/develop-pace.mjs",
+      "new": "scripts/ai-training/develop-pace.mjs",
+      "originalSha256": "d5af5c0ec31ca137aec065230b347bc9ee56379058a276e259c0398e609844b5",
+      "currentSha256": "71a7d47a65095c22fdda5ca733ef8731974f88c310a74ee5acd12824ab8e86d8"
+    },
+    {
+      "old": "scripts/distill-pace.mjs",
+      "new": "scripts/ai-training/distill-pace.mjs",
+      "originalSha256": "2b4ebced5ea08a57a9f022394f942097543ad7069c1179908c07696c230809f7",
+      "currentSha256": "2b4ebced5ea08a57a9f022394f942097543ad7069c1179908c07696c230809f7"
+    },
+    {
+      "old": "scripts/e2e-static-server.mjs",
+      "new": "scripts/development/e2e-static-server.mjs",
+      "originalSha256": "e2fa04a56f6268bca75ce91a5cf9fc4f9e6d3a1262933dab568c857ee6cc3dcc",
+      "currentSha256": "89760f258a96fb2470e89e2d8771f665918f1ce34c02a811adf5b569752313d2"
+    },
+    {
+      "old": "scripts/energy-browser-check.mjs",
+      "new": "scripts/ai-training/energy-browser-check.mjs",
+      "originalSha256": "5cb9ea5bb1357cad1d12636216840dacaafc22ea143f4a61f0c8988ca870df86",
+      "currentSha256": "4bfd900bd4544693456ede9c054b77ae039930d5c0916e4a213b7d59f4085c51"
+    },
+    {
+      "old": "scripts/export-lap-recordings.mjs",
+      "new": "scripts/leaderboards/export-lap-recordings.mjs",
+      "originalSha256": "976947b41bc0486e03908c99c55e25aea4faef1a5682b291ac3fafe3be8fce1d",
+      "currentSha256": "976947b41bc0486e03908c99c55e25aea4faef1a5682b291ac3fafe3be8fce1d"
+    },
+    {
+      "old": "scripts/export-track-bakes.mjs",
+      "new": "scripts/build/export-track-bakes.mjs",
+      "originalSha256": "6c472bb6a0717df671a4dcc955662bd5e3d73c13ebc681f89d0c75fcc20bac59",
+      "currentSha256": "f0d9e81e36e96cf6e0857450a48971cc091aff81188355542a107290d0b3b8a8"
+    },
+    {
+      "old": "scripts/pace-coach.mjs",
+      "new": "scripts/ai-training/pace-coach.mjs",
+      "originalSha256": "822527e8d566cd0e4c01addf5eb6a01331ccd6375a18e5335da94ea3d5541d29",
+      "currentSha256": "eb23f7eb4b294babb611a23961d0131852f5693ca830e148d1dc1fc7d4f26fd5"
+    },
+    {
+      "old": "scripts/pace-rnd.mjs",
+      "new": "scripts/ai-training/pace-rnd.mjs",
+      "originalSha256": "7226a1f9984e4c1ee6e808e1e0c211227d1bdc6242fa2329d04d81b575969570",
+      "currentSha256": "f9b8db06ffda6bbf7d6d8d8caa7bc954859c08451fdc3440e270596f1f1e4752"
+    },
+    {
+      "old": "scripts/prepare-game.mjs",
+      "new": "scripts/build/prepare-game.mjs",
+      "originalSha256": "2d0f5d340eed0a6709b085dfdb0a4386ae937e55f63036ae668235783fb6e3e6",
+      "currentSha256": "3f1cb0cb2013d53a4784c57e1ea99197bb888b76af62fd61ad65d4cc19edcfae"
+    },
+    {
+      "old": "scripts/race-rnd.mjs",
+      "new": "scripts/ai-training/race-rnd.mjs",
+      "originalSha256": "01ec10d6204889358c57deb4715f78852f2107f4e7ef60f27ebcd64a977c91de",
+      "currentSha256": "988dd0eab430dddc324534ae115a59092effb4a2cc2f438a48643f2dff55840b"
+    },
+    {
+      "old": "scripts/refine-policy.mjs",
+      "new": "scripts/ai-training/refine-policy.mjs",
+      "originalSha256": "897af9af2cef5f24a6c28602dbca7a2fda5f2eca196363adeb2dad25fa22ecfa",
+      "currentSha256": "ea3d0dd8ea501b28623807e3ef5c67d4ed5341d700068488c51115d8e987b53e"
+    },
+    {
+      "old": "scripts/release-checksums.mjs",
+      "new": "scripts/release/release-checksums.mjs",
+      "originalSha256": "e0ecdc6f92561cb8d644dc14bfa69bc769a7c9c759c9af9a7ca27ec00da43ea3",
+      "currentSha256": "e0ecdc6f92561cb8d644dc14bfa69bc769a7c9c759c9af9a7ca27ec00da43ea3"
+    },
+    {
+      "old": "scripts/rl-train.mjs",
+      "new": "scripts/ai-training/rl-train.mjs",
+      "originalSha256": "f5ed81d61d48e272bab1fbfb9c4f82dcbe0e987208983cc59e8d85a2584ce04d",
+      "currentSha256": "1bc588226abe9c0588f349871838491c2c59050826d9bf00e56c1155e41ea61a"
+    },
+    {
+      "old": "scripts/seed-online-wins.mjs",
+      "new": "scripts/leaderboards/seed-online-wins.mjs",
+      "originalSha256": "a1fd8488e83530c3099633e091ab5207bcfe79cb57d2e187aa755b868f72238d",
+      "currentSha256": "b25331754c4e0065277ea6cccf96c74cd436a74bab9f47ca0871f012a63a0272"
+    },
+    {
+      "old": "scripts/seed-policy.mjs",
+      "new": "scripts/ai-training/seed-policy.mjs",
+      "originalSha256": "b4fb06e4c4d59c3942ed09eff1fec2b1bdc2a94063f90c9697e2d25485bb0b53",
+      "currentSha256": "b4fb06e4c4d59c3942ed09eff1fec2b1bdc2a94063f90c9697e2d25485bb0b53"
+    },
+    {
+      "old": "scripts/test-energy.mjs",
+      "new": "scripts/testing/test-energy.mjs",
+      "originalSha256": "30854917913c8bb687c3336eca6be3221df8b0376159c4d08bbcdff12f97c974",
+      "currentSha256": "30854917913c8bb687c3336eca6be3221df8b0376159c4d08bbcdff12f97c974"
+    },
+    {
+      "old": "scripts/test-native-isolation.mjs",
+      "new": "scripts/testing/test-native-isolation.mjs",
+      "originalSha256": "b8ebe59a7c445705f66e8b023d5643cf64f3239f0702aa1e987362e6a750b238",
+      "currentSha256": "42459266d8dddda9ac28f8a55bfa26bdeccfd35b0af52e6e312bd29287ff2a69"
+    },
+    {
+      "old": "scripts/test-official.mjs",
+      "new": "scripts/testing/test-official.mjs",
+      "originalSha256": "107307960606eb2f4dcdd1968965cfe1aaf60fa2c899bd286b17049a326512c3",
+      "currentSha256": "107307960606eb2f4dcdd1968965cfe1aaf60fa2c899bd286b17049a326512c3"
+    },
+    {
+      "old": "scripts/test-pace.mjs",
+      "new": "scripts/testing/test-pace.mjs",
+      "originalSha256": "6537bfed8a3044a6016b5102bd55aaab93a765892154a7685b60758ce23efb36",
+      "currentSha256": "6537bfed8a3044a6016b5102bd55aaab93a765892154a7685b60758ce23efb36"
+    },
+    {
+      "old": "scripts/train-energy.mjs",
+      "new": "scripts/ai-training/train-energy.mjs",
+      "originalSha256": "936d8a6d3e9600990d9038531735898e0165459b1f927686991754671823203a",
+      "currentSha256": "936d8a6d3e9600990d9038531735898e0165459b1f927686991754671823203a"
+    },
+    {
+      "old": "scripts/vendor-client.mjs",
+      "new": "scripts/build/vendor-client.mjs",
+      "originalSha256": "09506fdaef23da241e0a25eaa56922bc47db59e50b02d006d5d96fb290e6b61c",
+      "currentSha256": "1fdd3fa3ccbb2a9c136289fa285c9bb0f202421b54a5485ada171d326be29905"
+    },
+    {
+      "old": "scripts/verify-runtime.mjs",
+      "new": "scripts/build/verify-runtime.mjs",
+      "originalSha256": "044c71b65c25b62692eb53e80ae3414788a7d1a0c93bd1c4ee21a28f7c0db119",
+      "currentSha256": "e48afeb7d922911c5cdd0db0dbd34fdff70ce51692901308b0093f87e1aabed2"
+    }
+  ]
+}

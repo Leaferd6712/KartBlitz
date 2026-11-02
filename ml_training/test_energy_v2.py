@@ -38,7 +38,7 @@ class EnergyTests(unittest.TestCase):
                 self.assertFalse(campaign_is_live())
             import os
             state.write_text(json.dumps({'managerPid':os.getpid(),'managerCreated':psutil.Process().create_time()}))
-            result=subprocess.run(['node',str(ROOT/'scripts/train-energy.mjs'),'--track','0','--seconds','60'],cwd=folder,capture_output=True,text=True)
+            result=subprocess.run(['node',str(ROOT/'scripts/ai-training/train-energy.mjs'),'--track','0','--seconds','60'],cwd=folder,capture_output=True,text=True)
             self.assertEqual(result.returncode,2);self.assertIn('V2 was not started',result.stderr)
     def test_vector_contract_partial_archive_and_resets(self):
         rows=[];env=EnergyVecEnv({'trackId':0,'numEnvs':2,'workers':1,'raceLaps':3,'mode':'ai','episodeSeconds':.09},rows.append)

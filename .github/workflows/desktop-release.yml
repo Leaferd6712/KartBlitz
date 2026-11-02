@@ -26,7 +26,7 @@ jobs:
         env:
           KARTBLITZ_PACKAGED_EXE: ${{ github.workspace }}\dist\windows\win-unpacked\KartBlitz.exe
           KARTBLITZ_TEST_USER_DATA: ${{ runner.temp }}\kartblitz-packaged-smoke
-      - run: node scripts/release-checksums.mjs
+      - run: node scripts/release/release-checksums.mjs
       - run: npm run test:portable
       - uses: actions/upload-artifact@v4
         with:

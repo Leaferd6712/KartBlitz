@@ -18,7 +18,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'node scripts/e2e-static-server.mjs',
+    command: 'node scripts/development/e2e-static-server.mjs',
     url: `http://${host}:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 15_000,

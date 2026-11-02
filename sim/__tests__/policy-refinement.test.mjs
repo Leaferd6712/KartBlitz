@@ -3,7 +3,7 @@ import {upgradeSeed, adjustPolicy, compilePolicy, compareSuites, IDENTITY} from 
 import * as v1 from '../official-policy.mjs';
 import * as v2 from '../official-policy-v2.mjs';
 import {officialTracks} from '../../ml_training/official-worker-v2.mjs';
-import {refineNetwork} from '../../scripts/refine-policy.mjs';
+import {refineNetwork} from '../../scripts/ai-training/refine-policy.mjs';
 
 const policy = {activation: 'tanh', output: 'clipped-linear', layers: [
   {kernel: Array.from({length: 5}, (_, r) => v1.OBSERVATION_NAMES.map((_, c) => Math.sin(c + r) * .03)), bias: [0, .2, -.8, .1, .8]}

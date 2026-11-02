@@ -11,6 +11,8 @@ A browser kart racer for a quick race, a friendly rivalry, or one more lap chasi
 
 ## Play KartBlitz
 
+**Looking for a file? [Open the repository file guide](FILE-GUIDE.md).**
+
 ### In your browser · Available now
 
 **[Launch the game →](https://leaferd6712.github.io/KartBlitz/)**
@@ -21,7 +23,7 @@ Choose **Quick Race** for an easy, one-lap race with three opponents. New to the
 
 A standalone **64-bit Windows executable** can be built from this repository. Run it without an installer; the game and its browser engine are included, so solo and local modes work offline. Progress is saved separately for your Windows user.
 
-**[Check GitHub Releases](https://github.com/Leaferd6712/KartBlitz/releases)** · [Build it yourself](docs/desktop.md)
+**[Check GitHub Releases](https://github.com/Leaferd6712/KartBlitz/releases)** · [Build it yourself](docs/development/desktop.md)
 
 There is no published Windows download yet. The release page will carry the portable `.exe` and its checksum when a build is published. Current builds are unsigned.
 
@@ -63,41 +65,41 @@ Open these tools directly from here. The player menus contain racing, garage, le
 
 ### ML Lab & training
 
-- **[AI pace R&D: one-command experiments and recordings](docs/pace-rnd.md)** — current-physics line/speed search, corrective imitation, neural refinement and exact PPO handoff. Run `npm run official:develop -- --track 0 --seconds 300`. Experimental models require validation and manual activation.
-  [Race R&D findings and next experiments](docs/race-rnd-findings.md) cover native transfer, frozen-teacher rehearsal and protecting Shootout pace.
+- **[AI pace R&D: one-command experiments and recordings](docs/ai-training/pace-rnd.md)** — current-physics line/speed search, corrective imitation, neural refinement and exact PPO handoff. Run `npm run official:develop -- --track 0 --seconds 300`. Experimental models require validation and manual activation.
+  [Race R&D findings and next experiments](docs/ai-training/race-rnd-findings.md) cover native transfer, frozen-teacher rehearsal and protecting Shootout pace.
 
-- **[Official ML for AI](https://leaferd6712.github.io/KartBlitz/index.html?tool=official-ml)** — password `KartBlitzPass`; actual-game local RL, live batch/game camera, saved attempt overlays, per-track difficulty packages. **[Start here](docs/official-ml.md)** · [five-project research](docs/official-ml-research.md). Run `npm run official:start` locally after setup.
+- **[Official ML for AI](https://leaferd6712.github.io/KartBlitz/index.html?tool=official-ml)** — password `KartBlitzPass`; actual-game local RL, live batch/game camera, saved attempt overlays, per-track difficulty packages. **[Start here](docs/ai-training/official-ml.md)** · [five-project research](docs/ai-training/official-ml-research.md). Run `npm run official:start` locally after setup.
 
 http://127.0.0.1:8766/index.html?tool=official-ml 
 
 http://127.0.0.1:8766/index.html?tool=official-ml
 
 - **[AI Models](https://leaferd6712.github.io/KartBlitz/ui/ai-models.html)** — choose Legacy AI or a named RL model independently on each track card; compare measured lap completion and lap times. Earlier versions are retained. Uses the same `KartBlitzPass` gate.
-- **[Local campaign dashboard](http://127.0.0.1:8766/ui/campaign.html)** — adaptive parallel training slots and full-lap viewers. Start with `npm run official:campaign`; see the [campaign instructions and fixed deadline](docs/autonomous-campaign.md). Requires the local trainer on this laptop.
-- **[V2 battery and DRS training](docs/energy-v2.md)** — separate, opt-in multi-lap energy experiments. The current campaign remains V1; V2 refuses to start while it is running.
+- **[Local campaign dashboard](http://127.0.0.1:8766/ui/campaign.html)** — adaptive parallel training slots and full-lap viewers. Start with `npm run official:campaign`; see the [campaign instructions and fixed deadline](docs/ai-training/autonomous-campaign.md). Requires the local trainer on this laptop.
+- **[V2 battery and DRS training](docs/ai-training/energy-v2.md)** — separate, opt-in multi-lap energy experiments. The current campaign remains V1; V2 refuses to start while it is running.
 - **[Racing lines and corner timing](https://leaferd6712.github.io/KartBlitz/ui/racing-lines.html)** — replay reference/driven lines, overlapping corner windows and adjacent lap splits. Local: [open inspector](http://127.0.0.1:8766/ui/racing-lines.html).
 
 - **[Open ML Lab](https://leaferd6712.github.io/KartBlitz/index.html?tool=ml)** — lessons, reward experiments, training configuration, checkpoint replays, model import/export and model races. No menu opt-in is needed. Leaving a lab race returns to the lab; Back opens the normal game.
 - **Verified leaderboard examples** — in ML Lab → Build, choose a demonstration circuit and **Load verified laps**, then **Use for ML**. Record your own clean lap and export demonstrations from the same panel. Normal leaderboards retain **Race Ghost**.
 - **[Python trainer and setup](ml_training/README.md)** · [downloadable setup guide](ml_training/KartBlitz-ML-Setup.txt) — install/start commands, pairing, command-line training and model validation. The trainer ZIP is available inside ML Lab → Train.
-- **[Legacy Node AI experiment](docs/tools.md#legacy-node-ai-trainer)** — the older headless reinforcement-learning script and saved policy, separate from the current Python trainer.
+- **[Legacy Node AI experiment](docs/development/tools.md#legacy-node-ai-trainer)** — the older headless reinforcement-learning script and saved policy, separate from the current Python trainer.
 
 ### Admin & editors
 
 - **[Open Admin Station](https://leaferd6712.github.io/KartBlitz/leaderboard-admin.html)** — password-protected editing of Time Trial/Versus lap times, online wins and player entries; deletion and random test entries.
 - **[Open Track Editor](https://leaferd6712.github.io/KartBlitz/index.html?admin=track)** — password-protected track creation, layouts, AI lines, checkpoints, pits, speed zones, target lap times and import/export. Also available from Admin Station.
-  **Save to Actual Game** publishes for everyone after confirmation; requires the one-time [publishing setup](docs/track-publishing.md). Draft autosave stays in your browser.
+  **Save to Actual Game** publishes for everyone after confirmation; requires the one-time [publishing setup](docs/track-editing/track-publishing.md). Draft autosave stays in your browser.
 - **[Open Patch Notes Editor](https://leaferd6712.github.io/KartBlitz/patch-notes-editor.html)** — edit, preview and export patch notes after admin login. Players can still read **What's new** in the game.
 - **[Legacy standalone Track Editor](https://leaferd6712.github.io/KartBlitz/Old%20Track%20Editor/track-editor.html)** · [legacy editor guide](Old%20Track%20Editor/TRACK-EDITOR.md) — retained for older projects; exports must be applied manually.
 
 ### Records, diagnostics & technical guides
 
-- **[Leaderboard backups and exports](docs/tools.md#leaderboard-backups)** · [saved snapshot](backups/leaderboard.txt) · [automatic backup workflow](.github/workflows/backup-leaderboard.yml).
+- **[Leaderboard backups and exports](docs/development/tools.md#leaderboard-backups)** · [saved snapshot](backups/leaderboard.txt) · [automatic backup workflow](.github/workflows/backup-leaderboard.yml).
 - **[Leaderboard seed tools](leaderboard/README.md)** — fallback online-win data and instructions for adding test entries.
 - **[Legacy local leaderboard server](server/README.md)** — the older Python/SQLite server and Windows launcher.
-- **[Open performance diagnostics](https://leaferd6712.github.io/KartBlitz/index.html?debug=1)** · **[Open online network diagnostics](https://leaferd6712.github.io/KartBlitz/index.html?netDebug=1)** · [diagnostic controls and local servers](docs/tools.md#developer-diagnostics).
-- **[View online architecture](https://leaferd6712.github.io/KartBlitz/docs/online-mode.html)** · [position troubleshooting](docs/online-mode-fixes.md) · [reconnection design](docs/online-reconnect.md).
-- **[Development and checks](docs/development.md)** · [Windows builds and releases](docs/desktop.md) · [hosting and deployment](deploy.md) · [future activity framework](docs/activities.md). The framework currently ships racing only.
+- **[Open performance diagnostics](https://leaferd6712.github.io/KartBlitz/index.html?debug=1)** · **[Open online network diagnostics](https://leaferd6712.github.io/KartBlitz/index.html?netDebug=1)** · [diagnostic controls and local servers](docs/development/tools.md#developer-diagnostics).
+- **[View online architecture](https://leaferd6712.github.io/KartBlitz/docs/online-mode.html)** · [position troubleshooting](docs/multiplayer/online-mode-fixes.md) · [reconnection design](docs/multiplayer/online-reconnect.md).
+- **[Development and checks](docs/development/development.md)** · [Windows builds and releases](docs/development/desktop.md) · [hosting and deployment](docs/development/hosting-and-deployment.md) · [future activity framework](docs/development/activities.md). The framework currently ships racing only.
 
 ## Development & contributions
 
@@ -109,10 +111,10 @@ python -m http.server 8000
 
 The game uses **JavaScript, HTML Canvas and CSS**, with Three.js for kart previews. Browser assets and fonts are included locally. Build tools use Node.js 24; online races use Cloudflare Workers and the desktop wrapper uses Electron.
 
-- [Development, controls and checks](docs/development.md)
-- [Windows builds and release process](docs/desktop.md)
-- [Adding future activities and STEM mini-games](docs/activities.md)
-- [Browser and online deployment](deploy.md)
+- [Development, controls and checks](docs/development/development.md)
+- [Windows builds and release process](docs/development/desktop.md)
+- [Adding future activities and STEM mini-games](docs/development/activities.md)
+- [Browser and online deployment](docs/development/hosting-and-deployment.md)
 
 Found a problem? [Open an issue](https://github.com/Leaferd6712/KartBlitz/issues) with your device, browser, steps to reproduce, and a screenshot if useful. Contributions are welcome through pull requests; include the player-facing effect and how you checked it.
 

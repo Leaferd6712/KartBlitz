@@ -1,7 +1,7 @@
 import type { BakedTrack } from "./kart";
 import { TRACK_BAKE_VERSION } from "./constants";
 
-// Populated by scripts/export-track-bakes.mjs → sim/tracks/bakes.json
+// Populated by scripts/build/export-track-bakes.mjs → sim/tracks/bakes.json
 import bakesJson from "./tracks/bakes.json";
 
 type BakeFile = {
