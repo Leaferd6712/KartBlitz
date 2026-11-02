@@ -1,4 +1,5 @@
 import { test, expect, gotoGame, returningPlayerStorage } from './fixtures/game.js';
+import vm from 'node:vm';
 
 test('track editor buttons edit the AI line, undo, apply and export', async ({ page }) => {
   const errors = [];
@@ -117,4 +118,113 @@ for (const failure of [
   const draft = await page.evaluate(() => JSON.parse(localStorage.getItem('kartblitz_track_editor_project')));
   expect(draft.meta.name).toBe('DRAFT TO KEEP');
   expect(await page.evaluate(() => TRACKS[0].name)).toBe(originalName);
+});
+
+async function exportTrack(page) {
+  await page.locator('#te-exportFmt').selectOption('tracks');
+  // Selecting the same option also fires change, refreshing the export immediately.
+  const text = await page.locator('#te-exportArea').inputValue();
+  return JSON.parse(JSON.stringify(vm.runInNewContext('(' + text + ')')));
+}
+
+async function openPitEditor(page) {
+  await page.addInitScript(() => {
+    window.pitHandlePositions = {};
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function(text, x, y, ...rest) {
+      if (this.canvas.id === 'te-canvas' && /^PIT (ENTRY|BOX|EXIT)$/.test(text)) {
+        window.pitHandlePositions[text] = { x: x - 12, y: y + 12 };
+      }
+      return original.call(this, text, x, y, ...rest);
+    };
+  });
+  await gotoGame(page, { path: '/index.html?admin=track', storage: returningPlayerStorage() });
+  await page.locator('#te-pass-input').fill('e2e-admin');
+  await page.locator('#te-pass-ok').click();
+  await page.locator('.te-pick-card').first().click();
+  await expect.poll(() => page.evaluate(() => Object.keys(window.pitHandlePositions).length)).toBe(3);
+}
+
+test('pit entry, box and exit drag, undo, edit coordinates and survive apply/export/project reload', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await openPitEditor(page);
+  for (const [button, label, property] of [
+    ['te-btnPitEntry', 'PIT ENTRY', 'entryPt'],
+    ['te-btnPitBox', 'PIT BOX', 'garagePos'],
+    ['te-btnPitExit', 'PIT EXIT', 'exitPos']
+  ]) {
+    const before = (await exportTrack(page)).pitLane;
+    await page.locator('#' + button).click();
+    const handle = await page.evaluate(label => window.pitHandlePositions[label], label);
+    const canvas = await page.locator('#te-canvas').boundingBox();
+    await page.mouse.move(canvas.x + handle.x, canvas.y + handle.y);
+    await page.mouse.down();
+    await page.mouse.move(canvas.x + handle.x + 18, canvas.y + handle.y - 18, { steps: 5 });
+    await page.mouse.up();
+    const moved = (await exportTrack(page)).pitLane;
+    expect(moved[property]).not.toEqual(before[property]);
+    expect(moved.path).toContainEqual(moved[property]);
+    if (property === 'entryPt') expect(moved.path[0]).toEqual(moved.entryPt);
+    if (property === 'exitPos') expect(moved.path.at(-1)).toEqual(moved.exitPos);
+    await page.locator('#te-btnUndo').click();
+    expect((await exportTrack(page)).pitLane).toEqual(before);
+    await page.locator('#te-btnRedo').click();
+    expect((await exportTrack(page)).pitLane).toEqual(moved);
+    // Use the same coordinate fields as ordinary nodes.
+    await page.locator('#' + button).click();
+    await page.locator('#te-inpX').fill(String(moved[property].x + 10));
+    await page.locator('#te-btnApplyXY').click();
+    expect((await exportTrack(page)).pitLane[property].x).toBe(moved[property].x + 10);
+  }
+  const edited = await exportTrack(page);
+  const project = await page.evaluate(() => JSON.parse(localStorage.getItem('kartblitz_track_editor_project')));
+  expect(Math.round(project.meta.pitLane.garagePos.x)).toBe(edited.pitLane.garagePos.x);
+  expect(Math.round(project.meta.pitLane.garagePos.y)).toBe(edited.pitLane.garagePos.y);
+  await page.locator('#te-btnApplyGame').click();
+  const applied = await page.evaluate(() => ({ pitPos: TRACKS[0].pitPos, pitLane: TRACKS[0].pitLane }));
+  expect(applied.pitPos).toEqual(edited.pitLane.garagePos);
+  for (const field of ['entryPt', 'garagePos', 'exitPos']) expect(applied.pitLane[field]).toEqual(edited.pitLane[field]);
+  await page.locator('#te-btnBackPicker').click();
+  await page.locator('.te-pick-card').first().click();
+  expect((await exportTrack(page)).pitLane).toEqual(edited.pitLane);
+  await page.locator('#te-fileProject').setInputFiles({ name: 'pit-test.kbtrack.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
+  await expect(page.locator('#te-stMsg')).toContainText('Project loaded');
+  expect((await exportTrack(page)).pitLane).toEqual(edited.pitLane);
+  expect(errors).toEqual([]);
+});
+
+test('imported pit spots retain their role when the box is not the middle node', async ({ page }) => {
+  await openPitEditor(page);
+  const track = await exportTrack(page);
+  track.pitLane.garagePos = { ...track.pitLane.path[1] };
+  track.pitLane.garageAngle = .45;
+  track.pitLane.exitAngle = .25;
+  await page.locator('#te-importArea').fill(JSON.stringify(track));
+  await page.locator('#te-btnImport').click();
+  expect((await exportTrack(page)).pitLane).toEqual(track.pitLane);
+  await page.locator('#te-btnPitBox').click();
+  await expect(page.locator('#te-selInfo')).toContainText('Pit box node #1');
+  const handles = await page.evaluate(() => window.pitHandlePositions);
+  const canvas = await page.locator('#te-canvas').boundingBox();
+  // Insert a route node before the box: its index changes, its position does not.
+  await page.locator('#te-toolbar [data-tool="insert"]').click();
+  await page.mouse.click(canvas.x + (handles['PIT ENTRY'].x + handles['PIT BOX'].x) / 2,
+    canvas.y + (handles['PIT ENTRY'].y + handles['PIT BOX'].y) / 2);
+  expect((await exportTrack(page)).pitLane.garagePos).toEqual(track.pitLane.garagePos);
+  await page.locator('#te-btnPitBox').click();
+  await expect(page.locator('#te-selInfo')).toContainText('Pit box node #2');
+  await page.locator('#te-btnUndo').click();
+  expect((await exportTrack(page)).pitLane).toEqual(track.pitLane);
+  // Separate imported spots are inserted into the route so cars reach them.
+  track.pitLane.entryPt.x -= 80;
+  track.pitLane.garagePos.y += 50;
+  track.pitLane.exitPos.x += 80;
+  await page.locator('#te-importArea').fill(JSON.stringify(track));
+  await page.locator('#te-btnImport').click();
+  const imported = (await exportTrack(page)).pitLane;
+  expect(imported.path[0]).toEqual(track.pitLane.entryPt);
+  expect(imported.path.at(-1)).toEqual(track.pitLane.exitPos);
+  expect(imported.path).toContainEqual(track.pitLane.garagePos);
+  expect(imported.garagePos).toEqual(track.pitLane.garagePos);
 });

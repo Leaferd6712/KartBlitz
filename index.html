@@ -2557,7 +2557,12 @@ body::after{
       <div class="field"><label>Pit width</label><input type="number" id="te-pitWidth" value="56" min="20" step="1" /></div>
     </div>
     <div class="field"><label>Pit path JSON</label><textarea id="te-pitPath">[{"x":900,"y":5200},{"x":900,"y":5020},{"x":1600,"y":5020},{"x":2300,"y":5020},{"x":2300,"y":5200}]</textarea></div>
-    <div class="note">Or switch to the Pit layer and drag/add/insert/delete pit nodes like track waypoints.</div>
+    <div class="note">Drag the labelled PIT ENTRY, PIT BOX and PIT EXIT nodes with Select or Move. They also move the pit route. Add or insert other pit nodes to shape the lane.</div>
+    <div class="btn-row">
+      <button type="button" id="te-btnPitEntry">Pit entry</button>
+      <button type="button" id="te-btnPitBox">Pit box</button>
+      <button type="button" id="te-btnPitExit">Pit exit</button>
+    </div>
 
     <h2>Import</h2>
     <div class="note">Selecting a track fills this box with that track’s layout JSON, then loads it automatically (same as paste + Import Text).</div>
@@ -15579,9 +15584,9 @@ window.KartBlitzTrackEditor = (function(){
           path: pitRaw.map(p => ({ x: p.x, y: p.y })),
           entryPt: tr.pitLane && tr.pitLane.entryPt ? { ...tr.pitLane.entryPt } : null,
           garagePos: tr.pitLane && tr.pitLane.garagePos ? { ...tr.pitLane.garagePos } : null,
-          garageAngle: 0,
+          garageAngle: tr.pitLane?.garageAngle || 0,
           exitPos: tr.pitLane && tr.pitLane.exitPos ? { ...tr.pitLane.exitPos } : null,
-          exitAngle: 0,
+          exitAngle: tr.pitLane?.exitAngle || 0,
           width: (tr.pitLane && tr.pitLane.width) || 56
         },
         cpFracs: (tr.cpFracs || []).slice(),
@@ -15638,6 +15643,11 @@ window.KartBlitzTrackEditor = (function(){
       drsFracs: (tr.drsFracs || []).map(p => [p[0], p[1]]),
       pitLane: {
         path: pitRaw.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })),
+        entryPt: tr.pitLane?.entryPt ? { ...tr.pitLane.entryPt } : null,
+        garagePos: tr.pitLane?.garagePos ? { ...tr.pitLane.garagePos } : null,
+        garageAngle: tr.pitLane?.garageAngle || 0,
+        exitPos: tr.pitLane?.exitPos ? { ...tr.pitLane.exitPos } : null,
+        exitAngle: tr.pitLane?.exitAngle || 0,
         width: (tr.pitLane && tr.pitLane.width) || 56
       },
       surface: tr.surface ? { ...tr.surface } : { offTrackMult: 1.0, label: 'GRASS' }
@@ -15709,12 +15719,12 @@ window.KartBlitzTrackEditor = (function(){
     const pitPath = (state.pitPath && state.pitPath.length
       ? state.pitPath
       : (meta.pitLane.path || [])).map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
-    const entry = pitPath[0] || { x: meta.startPos.x, y: meta.startPos.y };
-    const exit = pitPath[pitPath.length - 1] || entry;
-    const garageIdx = Math.floor(pitPath.length / 2);
-    const garage = pitPath[garageIdx] || entry;
-    const garageAngle = pathAngleAt(pitPath, garageIdx);
-    const exitAngle = pathAngleAt(pitPath, pitPath.length - 1);
+    const roundPoint = p => ({ x: Math.round(p.x), y: Math.round(p.y) });
+    const entry = roundPoint(meta.pitLane.entryPt);
+    const exit = roundPoint(meta.pitLane.exitPos);
+    const garage = roundPoint(meta.pitLane.garagePos);
+    const garageAngle = meta.pitLane.garageAngle;
+    const exitAngle = meta.pitLane.exitAngle;
     const existing = _editIndex != null ? TRACKS[_editIndex] : null;
     const id = existing ? existing.id : meta.id;
     const pitWidth = (meta.pitLane && meta.pitLane.width) || (existing && existing.pitLane && existing.pitLane.width) || 56;
@@ -15992,6 +16002,9 @@ const state = {
   waypoints: [],
   racingLine: [],
   pitPath: [],
+  pitGarageIndex: -1,
+  pitGarageAngle: 0,
+  pitExitAngle: 0,
   editLayer: 'waypoints', // 'waypoints' | 'racingLine' | 'pitPath'
   closed: true,
   tool: 'select',
@@ -16037,7 +16050,63 @@ function setEditLayer(layer) {
   syncUI(); render();
 }
 
+function pitGarageIndex(path = state.pitPath) {
+  return state.pitGarageIndex >= 0 && state.pitGarageIndex < path.length
+    ? state.pitGarageIndex : Math.floor(path.length / 2);
+}
+
+function loadPitLandmarks(lane = {}) {
+  const path = state.pitPath;
+  const valid = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+  const same = (a, b) => a && b && Math.hypot(a.x - b.x, a.y - b.y) < .001;
+  if (valid(lane.entryPt) && !same(path[0], lane.entryPt)) path.unshift({ ...lane.entryPt });
+  if (valid(lane.exitPos) && !same(path.at(-1), lane.exitPos)) path.push({ ...lane.exitPos });
+  let garage = valid(lane.garagePos) ? path.findIndex(p => same(p, lane.garagePos)) : -1;
+  if (valid(lane.garagePos) && garage < 0) {
+    // A stop must lie on the route the cars follow. Add the box as a real node.
+    let segment = path.length - 1, distance = Infinity;
+    for (let i = 0; i < path.length - 1; i++) {
+      const d = distToSeg(lane.garagePos.x, lane.garagePos.y, path[i].x, path[i].y, path[i + 1].x, path[i + 1].y);
+      if (d < distance) { distance = d; segment = i; }
+    }
+    garage = Math.max(0, segment + 1);
+    path.splice(garage, 0, { ...lane.garagePos });
+  }
+  state.pitGarageIndex = garage >= 0 ? garage : Math.floor(path.length / 2);
+  state.pitGarageAngle = Number.isFinite(lane.garageAngle) ? lane.garageAngle : pathAngleAt(path, state.pitGarageIndex);
+  state.pitExitAngle = Number.isFinite(lane.exitAngle) ? lane.exitAngle : pathAngleAt(path, path.length - 1);
+  const el = document.getElementById('te-pitPath');
+  if (el) el.value = JSON.stringify(path);
+}
+
+function pitLandmarks() {
+  return [
+    { role: 'entry', label: 'PIT ENTRY', index: 0, color: '#22d3ee' },
+    { role: 'box', label: 'PIT BOX', index: pitGarageIndex(), color: '#fbbf24' },
+    { role: 'exit', label: 'PIT EXIT', index: state.pitPath.length - 1, color: '#f472b6' }
+  ].filter(handle => state.pitPath[handle.index]);
+}
+
+function selectPitLandmark(role) {
+  setEditLayer('pitPath');
+  setTool('move');
+  const handle = pitLandmarks().find(handle => handle.role === role);
+  if (!handle) { setMsg('Add a pit path first'); return; }
+  state.selected = new Set([handle.index]);
+  syncUI(); render();
+}
+
+function hitPitLandmark(world, radius) {
+  if (!state.showPit) return null;
+  return pitLandmarks().map(handle => ({ ...handle, distance: Math.hypot(
+    world.x - state.pitPath[handle.index].x, world.y - state.pitPath[handle.index].y) }))
+    .filter(handle => handle.distance <= radius).sort((a, b) => a.distance - b.distance)[0] || null;
+}
+
 function syncPitPathToForm() {
+  state.pitGarageIndex = pitGarageIndex();
+  state.pitGarageAngle = pathAngleAt(state.pitPath, state.pitGarageIndex);
+  state.pitExitAngle = pathAngleAt(state.pitPath, state.pitPath.length - 1);
   const el = document.getElementById('te-pitPath');
   if (el) el.value = JSON.stringify((state.pitPath || []).map(p => ({
     x: Math.round(p.x), y: Math.round(p.y)
@@ -16046,10 +16115,12 @@ function syncPitPathToForm() {
 
 function loadPitPathFromForm() {
   const el = document.getElementById('te-pitPath');
+  const garagePos = state.pitPath[pitGarageIndex()];
   let pitPath = [];
   try { pitPath = JSON.parse(el ? el.value : '[]'); } catch (e) { pitPath = []; }
   if (!Array.isArray(pitPath)) pitPath = [];
   state.pitPath = pitPath.map(p => ({ x: Number(p.x) || 0, y: Number(p.y) || 0 }));
+  loadPitLandmarks({ garagePos, garageAngle: state.pitGarageAngle, exitAngle: state.pitExitAngle });
 }
 
 function defaultProject() {
@@ -16108,6 +16179,9 @@ function captureMetaSnap() {
   const meta = readMetaFromForm();
   return {
     pitPath: clonePts(state.pitPath),
+    pitGarageIndex: pitGarageIndex(),
+    pitGarageAngle: state.pitGarageAngle,
+    pitExitAngle: state.pitExitAngle,
     cpFracs: (meta.cpFracs || []).slice(),
     startPos: meta.startPos ? { x: meta.startPos.x, y: meta.startPos.y } : { x: 0, y: 0 },
     startAngle: meta.startAngle || 0,
@@ -16120,7 +16194,10 @@ function restoreMetaSnap(m) {
   if (!m) return;
   if (m.pitPath) {
     state.pitPath = clonePts(m.pitPath);
+    state.pitGarageIndex = m.pitGarageIndex ?? Math.floor(state.pitPath.length / 2);
     syncPitPathToForm();
+    state.pitGarageAngle = m.pitGarageAngle ?? state.pitGarageAngle;
+    state.pitExitAngle = m.pitExitAngle ?? state.pitExitAngle;
   }
   const set = (id, val) => {
     const el = document.getElementById(id);
@@ -16163,7 +16240,7 @@ function undo() {
   state.closed = snap.closed;
   restoreMetaSnap(snap.meta);
   state.selected.clear();
-  syncUI(); render();
+  syncUI(); render(); autosave();
 }
 
 function redo() {
@@ -16180,7 +16257,7 @@ function redo() {
   state.closed = snap.closed;
   restoreMetaSnap(snap.meta);
   state.selected.clear();
-  syncUI(); render();
+  syncUI(); render(); autosave();
 }
 
 function loadProject(proj) {
@@ -16221,7 +16298,7 @@ function readMetaFromForm() {
   const sy = Number(get('te-startY', 5200)) || 0;
   const entry = pitPath[0] || { x: sx, y: sy };
   const exit = pitPath[pitPath.length - 1] || entry;
-  const garage = pitPath[Math.floor(pitPath.length / 2)] || entry;
+  const garage = pitPath[pitGarageIndex(pitPath)] || entry;
   const pitWidth = Number(get('te-pitWidth', 56)) || 56;
   const sfRaw = get('te-sfGateHalfWidth', '');
   const sfGateHalfWidth = (sfRaw !== '' && sfRaw != null && isFinite(Number(sfRaw)) && Number(sfRaw) > 0)
@@ -16243,8 +16320,8 @@ function readMetaFromForm() {
     pitLane: {
       path: pitPath,
       entryPt: { x: entry.x, y: entry.y },
-      garagePos: { x: garage.x, y: garage.y }, garageAngle: 0,
-      exitPos: { x: exit.x, y: exit.y }, exitAngle: 0, width: pitWidth
+      garagePos: { x: garage.x, y: garage.y }, garageAngle: state.pitGarageAngle,
+      exitPos: { x: exit.x, y: exit.y }, exitAngle: state.pitExitAngle, width: pitWidth
     },
     cpFracs, drsFracs,
     sfGateHalfWidth,
@@ -16272,6 +16349,7 @@ function applyMetaToForm(meta) {
   if (meta.drsFracs) set('te-drsFracs', meta.drsFracs.map(p => p[0] + '-' + p[1]).join('; '));
   if (meta.pitLane && meta.pitLane.path) {
     state.pitPath = meta.pitLane.path.map(p => ({ x: Number(p.x) || 0, y: Number(p.y) || 0 }));
+    loadPitLandmarks(meta.pitLane);
     set('te-pitPath', JSON.stringify(state.pitPath));
   }
   if (meta.pitLane && meta.pitLane.width != null) set('te-pitWidth', meta.pitLane.width);
@@ -16581,18 +16659,6 @@ function render() {
     drawPoly(pitPts, false);
     ctx.stroke();
     ctx.setLineDash([]);
-    const entry = pitPts[0];
-    const exit = pitPts[pitPts.length - 1];
-    const garage = pitPts[Math.floor(pitPts.length / 2)];
-    for (const [p, label] of [[entry, 'entry'], [garage, 'garage'], [exit, 'exit']]) {
-      if (!p) continue;
-      const s = worldToScreen(p.x, p.y);
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#fbbf24';
-      ctx.font = '10px sans-serif';
-      ctx.fillText(label, s.x + 6, s.y - 6);
-    }
   }
 
   // CP / DRS markers on spline
@@ -16718,6 +16784,7 @@ function render() {
     const isRL = state.editLayer === 'racingLine';
     const isPit = state.editLayer === 'pitPath';
     pts.forEach((p, i) => {
+      if (isPit && state.showPit && pitLandmarks().some(handle => handle.index === i)) return;
       const s = worldToScreen(p.x, p.y);
       const sel = state.selected.has(i);
       const brake = (!isRL && !isPit) ? normalizeBrakeTag(p.brake) : 0;
@@ -16741,6 +16808,19 @@ function render() {
       const label = isRL ? ('R' + i) : (isPit ? ('P' + i) : (brake ? (i + ':' + brake) : String(i)));
       ctx.fillText(label, s.x + 9, s.y - 9);
     });
+  }
+
+  // Pit landmarks stay visible and draggable even while another layer is active.
+  if (state.showPit) for (const handle of pitLandmarks()) {
+    const p = state.pitPath[handle.index];
+    const s = worldToScreen(p.x, p.y);
+    const selected = state.editLayer === 'pitPath' && state.selected.has(handle.index);
+    ctx.beginPath(); ctx.arc(s.x, s.y, selected ? 10 : 8, 0, Math.PI * 2);
+    ctx.fillStyle = handle.color; ctx.fill();
+    ctx.strokeStyle = selected ? '#fff' : '#0c1118'; ctx.lineWidth = selected ? 3 : 2; ctx.stroke();
+    ctx.font = 'bold 11px sans-serif'; ctx.lineWidth = 3;
+    ctx.strokeStyle = '#080c12'; ctx.strokeText(handle.label, s.x + 12, s.y - 12);
+    ctx.fillStyle = handle.color; ctx.fillText(handle.label, s.x + 12, s.y - 12);
   }
 
   // Selection box
@@ -16813,7 +16893,9 @@ function syncUI() {
   if (sel.length === 1 && pts[sel[0]]) {
     const p = pts[sel[0]];
     const brakeTxt = state.editLayer === 'waypoints' ? ` · brake ${normalizeBrakeTag(p.brake)}` : '';
-    document.getElementById('te-selInfo').textContent = `${layerLabel} node #${sel[0]}${brakeTxt}`;
+    const landmark = state.editLayer === 'pitPath' && pitLandmarks().find(handle => handle.index === sel[0]);
+    const nodeLabel = landmark ? ({ entry: 'Pit entry', box: 'Pit box', exit: 'Pit exit' })[landmark.role] : layerLabel;
+    document.getElementById('te-selInfo').textContent = `${nodeLabel} node #${sel[0]}${brakeTxt}`;
     document.getElementById('te-inpIdx').value = sel[0];
     document.getElementById('te-inpX').value = Math.round(p.x * 100) / 100;
     document.getElementById('te-inpY').value = Math.round(p.y * 100) / 100;
@@ -16847,11 +16929,16 @@ function setTool(tool) {
 
 function deleteSelected() {
   if (!state.selected.size) return;
-  pushUndo();
   const kill = new Set(state.selected);
+  if (state.editLayer === 'pitPath') {
+    for (const handle of pitLandmarks()) kill.delete(handle.index);
+    if (!kill.size) { setMsg('Drag pit entry, box or exit to move them; delete other pit nodes to reshape the lane'); return; }
+  }
+  pushUndo();
   if (state.editLayer === 'racingLine') {
     state.racingLine = state.racingLine.filter((_, i) => !kill.has(i));
   } else if (state.editLayer === 'pitPath') {
+    state.pitGarageIndex = pitGarageIndex() - [...kill].filter(i => i < pitGarageIndex()).length;
     state.pitPath = state.pitPath.filter((_, i) => !kill.has(i));
     syncPitPathToForm();
   } else {
@@ -16882,6 +16969,7 @@ function insertNodeAt(world) {
   const p = snapPt(seg.point);
   if (state.editLayer === 'waypoints') p.brake = 0;
   const pts = activePts();
+  if (state.editLayer === 'pitPath' && seg.idx < pitGarageIndex()) state.pitGarageIndex = pitGarageIndex() + 1;
   pts.splice(seg.idx + 1, 0, p);
   state.selected = new Set([seg.idx + 1]);
   if (state.editLayer === 'pitPath') syncPitPathToForm();
@@ -16947,11 +17035,20 @@ canvas.addEventListener('pointerdown', e => {
 
   // Prefer S/F / gate handles over nodes when select/move
   if (state.tool === 'select' || state.tool === 'move') {
-    const sfHit = hitSfHandle(world, hitR * 1.4);
+    const pitHit = hitPitLandmark(world, hitR);
+    const sfHit = state.editLayer === 'pitPath' && pitHit ? null : hitSfHandle(world, hitR * 1.4);
     if (sfHit) {
       pushUndo();
       state.selected.clear();
       state.dragging = { kind: sfHit.type, end: sfHit.end, last: world };
+      syncUI(); render();
+      return;
+    }
+    if (pitHit) {
+      setEditLayer('pitPath');
+      state.selected = new Set([pitHit.index]);
+      pushUndo();
+      state.dragging = { kind: 'nodes', indices: [pitHit.index], last: world };
       syncUI(); render();
       return;
     }
@@ -17063,7 +17160,7 @@ canvas.addEventListener('pointermove', e => {
 canvas.addEventListener('pointerup', e => {
   if (state.pan) { state.pan = null; return; }
   if (state.dragging) {
-    if (state.editLayer === 'pitPath' || state.dragging.kind === 'sf' || state.dragging.kind === 'gateEnd') {
+    if (state.editLayer === 'pitPath' && state.dragging.kind === 'nodes') {
       syncPitPathToForm();
     }
     state.dragging = null;
@@ -17157,6 +17254,9 @@ _teBind('te-btnDeleteSel', deleteSelected);
 _teBind('te-btnLayerTrack', () => setEditLayer('waypoints'));
 _teBind('te-btnLayerAI', () => setEditLayer('racingLine'));
 _teBind('te-btnLayerPit', () => setEditLayer('pitPath'));
+_teBind('te-btnPitEntry', () => selectPitLandmark('entry'));
+_teBind('te-btnPitBox', () => selectPitLandmark('box'));
+_teBind('te-btnPitExit', () => selectPitLandmark('exit'));
 _teBind('te-btnCopyRL', () => {
   if (state.waypoints.length < 3) { setMsg('Need track waypoints first'); return; }
   pushUndo();
@@ -17326,12 +17426,11 @@ function formatTracksObject() {
   const wps = state.waypoints.map(p => ({ x: Math.round(p.x), y: Math.round(p.y), brake: normalizeBrakeTag(p.brake) }));
   const pitPath = (state.pitPath && state.pitPath.length ? state.pitPath : meta.pitLane.path);
   const pit = pitPath.map(p => `{x:${Math.round(p.x)},y:${Math.round(p.y)}}`).join(',');
-  const entry = pitPath[0] || meta.startPos;
-  const exit = pitPath[pitPath.length - 1] || entry;
-  const garageIdx = Math.floor(pitPath.length / 2);
-  const garage = pitPath[garageIdx] || entry;
-  const garageAngle = pathAngleAt(pitPath, garageIdx);
-  const exitAngle = pathAngleAt(pitPath, pitPath.length - 1);
+  const entry = meta.pitLane.entryPt;
+  const exit = meta.pitLane.exitPos;
+  const garage = meta.pitLane.garagePos;
+  const garageAngle = meta.pitLane.garageAngle;
+  const exitAngle = meta.pitLane.exitAngle;
   const rl = state.racingLine.length >= 3
     ? `,\n  racingLine:[\n${state.racingLine.map((p, i) => `    {x:${Math.round(p.x)},y:${Math.round(p.y)}}${i < state.racingLine.length - 1 ? ',' : ''}`).join('\n')}\n  ]`
     : '';
