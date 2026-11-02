@@ -6,8 +6,6 @@
     "party:dev": "wrangler dev",
     "party:deploy": "wrangler deploy",
     "tracks:export": "node scripts/export-track-bakes.mjs",
-    "tracks:widen": "node scripts/widen-tracks.mjs",
-    "test:wide-tracks": "node sim/__tests__/wide-tracks.test.mjs",
     "test:track-publish": "node sim/__tests__/track-publish.test.mjs",
     "sim:browser": "node scripts/build-online-sim.mjs",
     "test:sim": "node sim/__tests__/parity.test.mjs",

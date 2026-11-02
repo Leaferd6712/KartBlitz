@@ -9,7 +9,6 @@ import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import vm from 'node:vm';
 import { trackSourceRanges } from '../sim/track-source.mjs';
-import { buildOfficialCore } from './build-official-core.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -120,17 +119,12 @@ export function extractTracks(html) {
 }
 
 export function exportTrackBakes() {
-  // Finalize once with the actual offline geometry code. Online races must not
-  // independently reinterpret authored widths, remaps, checkpoints or pit lanes.
-  buildOfficialCore();
-  const code=fs.readFileSync(path.join(root,'sim','official-game.mjs'),'utf8').replace(/^export /gm,'');
-  const game=vm.runInNewContext(code+'\ncreateOfficialGame();',{console},{timeout:30000});
+  const html = fs.readFileSync(htmlPath, "utf8");
+  const rawTracks = extractTracks(html);
   const out = { version: 2, tracks: {} };
-  for (const tr of game.tracks) {
-    out.tracks[String(tr.id)]={id:tr.id,geometryVersion:tr.geometryVersion||1,layoutRevision:tr.layoutRevision,
-      trackWidth:tr.trackWidth,spline:tr.spline,cum:tr.cum,totalLen:tr.totalLen,
-      startPos:tr.startPos,startAngle:tr.startAngle,cpLines:tr.cpLines,drsZones:tr.drsZones,gridSlots:tr.gridSlots,
-      surface:tr.surface,pitLane:tr.pitLane,pitSfGate:tr.pitSfGate};
+  for (const raw of rawTracks) {
+    const baked = bakeTrack(raw);
+    if (baked) out.tracks[String(raw.id)] = baked;
   }
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, JSON.stringify(out));

@@ -188,9 +188,8 @@ test('pit entry, box and exit drag, undo, edit coordinates and survive apply/exp
   }
   const edited = await exportTrack(page);
   const project = await page.evaluate(() => JSON.parse(localStorage.getItem('kartblitz_track_editor_project')));
-  const coord = n => edited.geometryVersion === 2 ? Math.round(n*1000)/1000 : Math.round(n);
-  expect(coord(project.meta.pitLane.garagePos.x)).toBe(edited.pitLane.garagePos.x);
-  expect(coord(project.meta.pitLane.garagePos.y)).toBe(edited.pitLane.garagePos.y);
+  expect(Math.round(project.meta.pitLane.garagePos.x)).toBe(edited.pitLane.garagePos.x);
+  expect(Math.round(project.meta.pitLane.garagePos.y)).toBe(edited.pitLane.garagePos.y);
   await page.locator('#te-btnApplyGame').click();
   const applied = await page.evaluate(() => ({ pitPos: TRACKS[0].pitPos, pitLane: TRACKS[0].pitLane }));
   expect(applied.pitPos).toEqual(edited.pitLane.garagePos);

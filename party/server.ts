@@ -977,7 +977,7 @@ function sanitizeTrackBake(raw: unknown): BakedTrack | null {
 
   return {
     id: typeof t.id === "number" ? t.id : 0,
-    trackWidth: Math.max(40, Math.min(2048, Number(t.trackWidth) || 160)),
+    trackWidth: Math.max(40, Math.min(400, Number(t.trackWidth) || 160)),
     spline: cleanSpline,
     cum,
     totalLen: Number(t.totalLen) || cum[cum.length - 1] || 1,

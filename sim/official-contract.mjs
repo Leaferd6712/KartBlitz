@@ -1,3 +1,3 @@
 // Generated physics compatibility contract.
-export const PHYSICS_HASH="c06a2bc4443504f734d717283bdeca8480bb338ad32e7dffa7bda4320775df60";
+export const PHYSICS_HASH="517f434be7111b1bfb2a0d0836720048c1631e33e1b29a6fa0cd3239dd6b6128";
 export const OBSERVATION_VERSION=1;
