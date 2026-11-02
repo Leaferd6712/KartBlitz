@@ -13,6 +13,20 @@ from .official_train import export_policy,save_checkpoint,ROOT,TrainingControl
 from .official_train_v2 import new_policy,warm_start,train_arm,result_rank,evaluation_cases,campaign_is_live,choose_result
 
 class EnergyTests(unittest.TestCase):
+    def test_worse_final_update_does_not_replace_the_best_measured_checkpoint(self):
+        def report(seconds):
+            row={'mode':'shootout','finished':True,'offTrackRate':0,'contacts':0,'racePosition':1,'raceTime':seconds}
+            return {'cancelled':False,'cases':[row],'summary':{'shootout':{'medianSecondsPerLap':seconds}}}
+        with tempfile.TemporaryDirectory(dir=ROOT/'ml_training/runs') as folder:
+            cfg={'trackId':0,'difficulty':'extreme','gamma':.9995,'horizon':16,'steps':32,'numEnvs':2,'workers':1,'device':'cpu','episodeSeconds':.1,'bestCheckpoint':True}
+            with patch('ml_training.official_train_v2.evaluate',side_effect=[report(25),report(30),report(25)]) as evaluate_mock:
+                pack,_=train_arm(cfg,Path(folder))
+            self.assertEqual(pack['variants']['extreme']['training']['steps'],32)
+            self.assertEqual(pack['variants']['extreme']['training']['selectedPolicyStep'],0)
+            self.assertTrue((Path(folder)/'best.zip').exists());self.assertTrue((Path(folder)/'last.zip').exists())
+            selection_cases=evaluate_mock.call_args_list[0].kwargs['cases_override']
+            final_seeds={c['seed'] for c in evaluation_cases()}
+            self.assertTrue(all(c['seed'] not in final_seeds for c in selection_cases))
     def test_guard_refuses_when_process_inspection_is_denied(self):
         import psutil
         with tempfile.TemporaryDirectory(dir=ROOT/'ml_training/runs') as folder:

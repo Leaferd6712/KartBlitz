@@ -9,9 +9,31 @@ from .official_environment_v2 import EnergyVecEnv
 from .official_train_v2 import new_policy
 from .official_train import ROOT
 from .pace_distill import load_examples, clone_actor
+from .pace_dagger import Coach, quality
+import subprocess
 
 
 class PaceDistillTests(unittest.TestCase):
+    def test_coach_labels_the_actual_visited_state_and_keeps_charge(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / 'ml_training/runs') as folder:
+            plan = Path(folder) / 'plan.json'
+            code = "import fs from 'node:fs';import {officialTracks} from './ml_training/official-worker-v2.mjs';import {makePlan,initialParameters} from './sim/pace-planner.mjs';fs.writeFileSync(process.argv[1],JSON.stringify(makePlan(officialTracks[0],initialParameters(officialTracks[0]))));"
+            subprocess.run(['node', '--input-type=module', '-e', code, str(plan)], cwd=ROOT, check=True, capture_output=True)
+            coach = Coach(plan)
+            try:
+                first = coach.call({'command': 'reset', 'case': {'mode': 'ai', 'raceLaps': 3, 'energy': .25, 'seed': 12, 'lateralOffset': 6, 'headingOffset': .025}})
+                self.assertEqual(len(first['observation']), 57); self.assertEqual(len(first['expert']), 4)
+                self.assertAlmostEqual(first['observation'][12], .25)
+                second = coach.call({'command': 'step', 'action': first['expert']})
+                self.assertFalse(second['done']); self.assertEqual(second['result']['raceLaps'], 3)
+                self.assertEqual(len(second['expert']), 4)
+                recording = coach.call({'command': 'recording'})['points']
+                self.assertGreater(recording[-1]['t'], 0); self.assertIn('drsActive', recording[-1]); self.assertIn('ersCharge', recording[-1])
+            finally:
+                coach.close()
+        bad = {'finished': False, 'validLap': False, 'offTrackRate': .1, 'contacts': 0, 'raceTime': 1}
+        good = {**bad, 'finished': True, 'validLap': True, 'offTrackRate': 0, 'raceTime': 30}
+        self.assertGreater(quality([good]), quality([bad]))
     def test_contract_quality_holdout_and_dimensions(self):
         env = EnergyVecEnv({'trackId': 0, 'numEnvs': 1, 'workers': 1})
         try:

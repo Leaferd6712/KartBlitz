@@ -63,6 +63,9 @@ Open these tools directly from here. The player menus contain racing, garage, le
 
 ### ML Lab & training
 
+- **[AI pace R&D: one-command experiments and recordings](docs/pace-rnd.md)** — current-physics line/speed search, corrective imitation, neural refinement and exact PPO handoff. Run `npm run official:develop -- --track 0 --seconds 300`. Experimental models require validation and manual activation.
+  [Race R&D findings and next experiments](docs/race-rnd-findings.md) cover native transfer, frozen-teacher rehearsal and protecting Shootout pace.
+
 - **[Official ML for AI](https://leaferd6712.github.io/KartBlitz/index.html?tool=official-ml)** — password `KartBlitzPass`; actual-game local RL, live batch/game camera, saved attempt overlays, per-track difficulty packages. **[Start here](docs/official-ml.md)** · [five-project research](docs/official-ml-research.md). Run `npm run official:start` locally after setup.
 
 http://127.0.0.1:8766/index.html?tool=official-ml 

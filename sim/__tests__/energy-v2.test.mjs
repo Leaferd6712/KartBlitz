@@ -14,6 +14,14 @@ for(const track of officialTracks){
 }
 console.log('V2: every track samples all supported race lengths and charges; Shootout stays one lap.');
 
+const worn=new Environment(0,{trackId:0,mode:'ai',raceLaps:3,randomization:false,initialTyreWearChoices:[.6]});
+const wornObs=worn.reset({energy:.5});assert.equal(wornObs[10],.6);assert.equal(worn.kart.speed,0);
+assert.equal(worn.start.distanceBehind,30);worn.step([0,1,-1,-1]);assert(worn.kart.tyreWear>=.6);
+worn.reset({fixed:true,mode:'ai',energy:.5});assert.equal(worn.kart.tyreWear,0,'Fixed evaluation is not contaminated by training wear');
+worn.reset({mode:'shootout',tyreWear:.6});assert.equal(worn.kart.tyreWear,0,'Shootout retains its actual no-wear rules');
+assert.throws(()=>new Environment(0,{trackId:0,initialTyreWearChoices:[1.1]}),/tyre wear/);
+console.log('Optional worn-tyre curriculum keeps actual S/F starts, carried wear and independent fresh evaluation.');
+
 const env=new Environment(0,{trackId:0,mode:'ai',raceLaps:3,randomization:false});env.reset({energy:.5});
 let laps=0,result,crossings=0;
 for(let i=0;i<14000;i++){

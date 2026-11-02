@@ -32,12 +32,12 @@ def campaign_is_live():
     # In a restricted process session AccessDenied is not evidence of exit.
     except (OSError,ValueError,KeyError,psutil.Error):return True
 
-def new_policy(env,config):
+def new_policy(env,config,policy_class=PPO):
     torch.set_num_threads(1)
     horizon=max(16,min(512,int(config.get('horizon',256))))
     rollout=horizon*env.num_envs;batch=min(int(config.get('batchSize',2048)),rollout)
     while rollout%batch:batch-=1
-    model=PPO('MlpPolicy',env,device=config.get('device','cpu'),learning_rate=float(config.get('learningRate',1e-4)),
+    model=policy_class('MlpPolicy',env,device=config.get('device','cpu'),learning_rate=float(config.get('learningRate',1e-4)),target_kl=config.get('targetKL'),
         n_steps=horizon,batch_size=batch,n_epochs=6,gamma=float(config['gamma']),gae_lambda=.95,ent_coef=.008,
         policy_kwargs={'net_arch':{'pi':[128,128],'vf':[128,128]},'activation_fn':torch.nn.Tanh,'log_std_init':-.5},seed=int(config.get('seed',42)),verbose=0)
     with torch.no_grad():model.policy.action_net.bias[1]=.5;model.policy.action_net.bias[2]=-2.
@@ -100,12 +100,12 @@ def choose_result(results):
     tied=[item for item in eligible if seconds(item)<=seconds(fastest)+.05 and all((a['raceTime'] or 0)<=(b['raceTime'] or 0)+.05 for a,b in zip(item[1]['cases'],fastest[1]['cases']))]
     return max(tied,key=lambda item:sum(r.get('styleScore',0) for r in item[1]['cases']))
 
-def evaluate(model,config,directory,control=None,smoke=False):
+def evaluate(model,config,directory,control=None,smoke=False,cases_override=None):
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=True);rows=[]
     def finish(cancelled):
         result={'cancelled':cancelled,'cases':rows,'summary':summarize(rows)};write_json(directory/'report.json',result);return result
     with gzip.open(directory/'attempts.jsonl.gz','wt',encoding='utf-8') as archive:
-        for case_id,case in enumerate(evaluation_cases(smoke)):
+        for case_id,case in enumerate(evaluation_cases(smoke) if cases_override is None else cases_override):
             if control and not control.check():return finish(True)
             cfg={**config,'lineGuidance':False,'numEnvs':1,'workers':1,'randomization':False,'racecraft':case['scenario']!='solo',**case}
             # mixed means sample the seeded encounter distribution, not a special NPC layout.
@@ -123,7 +123,7 @@ def evaluate(model,config,directory,control=None,smoke=False):
             finally:env.close()
     return finish(False)
 
-def train_arm(config,directory,control=None):
+def train_arm(config,directory,control=None,*,model_factory=None):
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=True);config=dict(config);control=control or TrainingControl();attempts=0
     if config.get('lineProfilePath'):config['lineProfile']=json.loads(Path(config['lineProfilePath']).read_text())
     if config.get('lineProfile'):write_json(directory/'reference-profile.json',config['lineProfile'])
@@ -139,12 +139,28 @@ def train_arm(config,directory,control=None):
     env=EnergyVecEnv({**config,'mode':'mixed','racecraft':True},record)
     if not config.get('lineProfile'):write_json(directory/'reference-profile.json',env.batches[0].call({'command':'profile'})['profile'])
     try:
-        model=new_policy(env,config)
+        model=(model_factory or new_policy)(env,config)
         if config.get('warmStart'):warm_start(model,config['warmStart'],config['trackId'],env.physics_hash)
         model.set_random_seed(int(config.get('seed',42)))
         started=control.active_time();last_save=[started];last_step=[0];seconds=config.get('seconds')
+        # Checkpoint selection uses different seeds from final held-out evaluation.
+        selection_cases=[{'mode':'shootout','raceLaps':1,'energy':charge,'scenario':'solo','seed':27411+i} for i,charge in enumerate([.25,1.])]+[
+            {'mode':'ai','raceLaps':3,'energy':.5,'scenario':scenario,'seed':38413+i} for i,scenario in enumerate(['solo','passing'])]
+        select_enabled=config.get('bestCheckpoint',float(seconds or 0)>=60 or int(config.get('steps',0))>=65536)
+        selection={'report':None,'step':None,'checkedAt':started}
+        def select_checkpoint():
+            if not select_enabled or not control.check():return
+            report=evaluate(model,config,directory/'checkpoint-selection'/str(model.num_timesteps),control,cases_override=selection_cases)
+            selection['checkedAt']=control.active_time()
+            if report['cancelled']:return
+            if selection['report'] is None or choose_result([('current',report),('best',selection['report'])])[0]=='current':
+                selection['report']=report;selection['step']=model.num_timesteps;save_checkpoint(model,directory/'best.zip')
+                write_json(directory/'checkpoint-selection.json',{'selectedStep':selection['step'],'selectionCases':selection_cases,'report':report,'note':'Selection cases are excluded from final held-out evaluation.'})
+        select_checkpoint()
         write_json(directory/'contract.json',{'modelGeneration':2,'physicsHash':env.physics_hash,'trackId':config['trackId'],'observationNames':env.metadata['observationNames'],'actionNames':env.metadata['actionNames'],'config':config})
         class Progress(BaseCallback):
+            def _on_rollout_start(self):
+                if control.active_time()-selection['checkedAt']>=float(config.get('selectionIntervalSeconds',120)):select_checkpoint()
             def _on_step(self):
                 if not control.check():return False
                 elapsed=control.active_time()-started
@@ -157,11 +173,15 @@ def train_arm(config,directory,control=None):
         finally:
             try:env.archive_partials()
             finally:save_checkpoint(model,directory/'last.zip')
+        trained_steps=model.num_timesteps
+        select_checkpoint()
+        if selection['step'] is not None:
+            model=PPO.load(directory/'best.zip',device=config.get('device','cpu'))
         pack={'format':'kartblitz-official-track-v2','modelGeneration':2,'name':f"V2 · {env.metadata['tracks'][config['trackId']]['name']} · gamma {config['gamma']}",
             'trackId':config['trackId'],'physicsHash':env.physics_hash,'trackFingerprint':env.metadata['tracks'][config['trackId']]['fingerprint'],
             'observationVersion':2,'observationCount':len(env.metadata['observationNames']),'observationNames':env.metadata['observationNames'],
             'actionCount':4,'actionNames':env.metadata['actionNames'],'decisionHz':20,'environmentVersion':6,'createdAt':int(time.time()*1000),
-            'variants':{config['difficulty']:{'id':uuid.uuid4().hex,'policy':export_policy(model),'training':{'algorithm':'PPO','gamma':config['gamma'],'steps':model.num_timesteps,'racecraft':True,'traffic':'mixed 0–3','warmStart':bool(config.get('warmStart')),
+            'variants':{config['difficulty']:{'id':uuid.uuid4().hex,'policy':export_policy(model),'training':{'algorithm':config.get('algorithm','PPO'),'gamma':config['gamma'],'steps':trained_steps,'selectedPolicyStep':model.num_timesteps,'bestCheckpointSelection':bool(select_enabled),'racecraft':True,'traffic':'mixed 0–3','warmStart':bool(config.get('warmStart')),
                 'lineGuidance':config.get('lineGuidance',True),'rewardVersion':'v2-line-1','profileHash':env.metadata.get('profileHash')}}}}
         pack['name']+=' · '+('guided' if config.get('lineGuidance',True) else 'unguided')
         write_json(directory/f"track-{config['trackId']}.kartai.json",pack)
@@ -170,7 +190,7 @@ def train_arm(config,directory,control=None):
     pack['variants'][config['difficulty']]['evaluation']={'cancelled':report['cancelled'],'finishRate':sum(r['finished'] for r in report['cases'])/max(1,len(report['cases'])),
         'medianLapTime':report['summary']['shootout']['medianSecondsPerLap'],'perMode':report['summary'],'episodes':report['cases']}
     write_json(directory/f"track-{config['trackId']}.kartai.json",pack)
-    write_json(directory/'status.json',{'phase':'saved','steps':model.num_timesteps,'attempts':attempts,'elapsedSeconds':control.active_time()-started})
+    write_json(directory/'status.json',{'phase':'saved','steps':trained_steps,'selectedPolicyStep':model.num_timesteps,'attempts':attempts,'elapsedSeconds':control.active_time()-started})
     return pack,report
 
 def main():

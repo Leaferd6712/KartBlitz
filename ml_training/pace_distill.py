@@ -4,6 +4,7 @@ import argparse
 import gzip
 import json
 import time
+import copy
 from pathlib import Path
 import numpy as np
 import torch
@@ -116,11 +117,15 @@ def main():
     parser.add_argument('--seconds', type=float, default=60)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--warm-start', type=Path)
+    parser.add_argument('--coach-plan', type=Path, help='Enable corrective imitation with a matching real-physics planner')
+    parser.add_argument('--dagger-rounds', type=int, default=3)
     args = parser.parse_args()
     if campaign_is_live():
         parser.error('V1 manager is still alive or cannot be inspected. No policy fitting was started.')
     if not 1 <= args.epochs <= 2000 or not 1 <= args.seconds <= 1800:
         parser.error('Use 1–2000 epochs and 1–1800 seconds for this bounded R&D fit')
+    if not 0 <= args.dagger_rounds <= 5:
+        parser.error('Use 0–5 corrective imitation rounds')
     if args.output.exists():
         parser.error('Choose a new output directory; existing runs remain untouched')
     with gzip.open(args.data, 'rt', encoding='utf-8') as stream:
@@ -136,7 +141,26 @@ def main():
         if args.warm_start:
             warm_start(model, args.warm_start, track_id, env.physics_hash)
         args.output.mkdir(parents=True)
-        fit = clone_actor(model, observations, actions, epochs=args.epochs, seconds=args.seconds, seed=args.seed)
+        rounds = args.dagger_rounds if args.coach_plan else 0
+        fit = clone_actor(model, observations, actions, epochs=args.epochs, seconds=args.seconds / (rounds + 1), seed=args.seed)
+        corrections = []
+        if rounds:
+            from .pace_dagger import collect, quality
+            modes = sorted(set((e['mode'], e['raceLaps']) for e in data['episodes']))
+            cases = [{'mode': mode, 'raceLaps': laps, 'energy': charge, 'seed': args.seed + 200,
+                'lateralOffset': 0, 'headingOffset': 0} for mode, laps in modes for charge in [.25, .5, 1.]]
+            scored, _, _ = collect(model, args.coach_plan, cases, args.output / 'selection-initial.jsonl.gz')
+            best_quality, best_state = quality(scored), copy.deepcopy(model.policy.state_dict())
+            for round_id in range(rounds):
+                beta = [.5, .2, 0., 0., 0.][round_id]
+                _, extra_obs, extra_actions = collect(model, args.coach_plan, cases, args.output / f'corrections-{round_id}.jsonl.gz', beta=beta, seed=args.seed + round_id, labels=True)
+                observations = np.concatenate([observations, extra_obs]); actions = np.concatenate([actions, extra_actions])
+                updated = clone_actor(model, observations, actions, epochs=max(80, args.epochs // 2), seconds=args.seconds / (rounds + 1), seed=args.seed + round_id + 1)
+                scored, _, _ = collect(model, args.coach_plan, cases, args.output / f'selection-{round_id}.jsonl.gz')
+                if quality(scored) > best_quality:
+                    best_quality, best_state = quality(scored), copy.deepcopy(model.policy.state_dict())
+                corrections.append({'round': round_id, 'beta': beta, 'fit': updated, 'addedSamples': len(extra_obs), 'selectionQuality': quality(scored)})
+            model.policy.load_state_dict(best_state)
         save_checkpoint(model, args.output / 'last.zip')
         write_json(args.output / 'contract.json', {'trackId': track_id, 'physicsHash': env.physics_hash, 'modelGeneration': 2,
             'observationNames': env.metadata['observationNames'], 'actionNames': env.metadata['actionNames'], 'config': config})
@@ -146,15 +170,23 @@ def main():
             'actionCount': 4, 'actionNames': env.metadata['actionNames'], 'decisionHz': 20, 'environmentVersion': 6,
             'createdAt': int(time.time() * 1000), 'approved': False,
             'variants': {'extreme': {'id': args.output.name, 'policy': export_policy(model),
-                'training': {'algorithm': 'Behaviour cloning from pace search', 'steps': 0, 'samples': len(observations),
+                'training': {'algorithm': 'Corrective imitation from pace search' if rounds else 'Behaviour cloning from pace search', 'steps': 0, 'samples': len(observations),
                     'source': str(args.data.resolve()), 'fit': fit, 'racecraft': False, 'warmStart': bool(args.warm_start)}}}}
+        pack['variants']['extreme']['training']['correctiveRounds'] = corrections
         write_json(args.output / 'candidate.kartai.json', pack)
     finally:
         env.close()
-    rows = evaluate_student(model, data, config, args.output)
+    if args.coach_plan:
+        from .pace_dagger import collect
+        cases = [{'mode': mode, 'raceLaps': laps, 'energy': charge, 'seed': seed,
+            'lateralOffset': -6 if seed == 81271 else 6, 'headingOffset': -.025 if seed == 81271 else .025}
+            for mode, laps in sorted(set((e['mode'], e['raceLaps']) for e in data['episodes'])) for seed in [81271, 91517] for charge in [.25, .5, 1.]]
+        rows, _, _ = collect(model, args.coach_plan, cases, args.output / 'student-evaluation.jsonl.gz')
+    else:
+        rows = evaluate_student(model, data, config, args.output)
     clean = [r for r in rows if r['finished'] and r['validLap'] and r['offTrackRate'] == 0 and r['contacts'] == 0]
     report = {'approved': False, 'reason': 'R&D only; imitation loss is not a driving score and native-game/racecraft validation is still required.',
-        'fit': fit, 'samples': len(observations), 'demonstrationEpisodes': len(set(groups.tolist())), 'cases': rows,
+        'fit': fit, 'correctiveRounds': corrections, 'samples': len(observations), 'demonstrationEpisodes': len(set(groups.tolist())), 'cases': rows,
         'closedLoopCleanRate': len(clean) / max(1, len(rows)), 'ppoOptimiserStateEntries': len(model.policy.optimizer.state),
         'checkpoint': str((args.output / 'last.zip').resolve())}
     write_json(args.output / 'report.json', report)

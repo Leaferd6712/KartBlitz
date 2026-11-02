@@ -56,6 +56,13 @@ export class Environment {
     if(this.mode==='shootout')core.applyShootoutBoost(k);
     // Observable dynamics vary during learning; fixed evaluation uses exact stock mode settings.
     if(!options.fixed&&this.config.randomization!==false){const power=.9+this.random()*.25;k.maxSpeed*=power;k.baseMaxSpeed=k.maxSpeed;k.accel*=power;k._baseAccel=k.accel;k.turnRate*=.92+this.random()*.16;k.baseTurnRate=k.turnRate;k.grip*=.92+this.random()*.16;k._baseGrip=k.grip;}
+    const wearChoices=this.config.initialTyreWearChoices;
+    if(wearChoices&&(!Array.isArray(wearChoices)||!wearChoices.length||wearChoices.length>32||wearChoices.some(w=>!Number.isFinite(w)||w<0||w>.9)))throw Error('Invalid initial tyre wear curriculum');
+    // Optional R&D starts include later-race grip, always at the real S/F line.
+    // Fixed evaluation remains fresh unless an explicit wear probe is requested.
+    this.initialTyreWear=this.mode==='ai'?(options.tyreWear??(!options.fixed&&wearChoices?wearChoices[Math.floor(this.random()*wearChoices.length)]:0)):0;
+    if(!Number.isFinite(this.initialTyreWear)||this.initialTyreWear<0||this.initialTyreWear>.9)throw Error('Invalid starting tyre wear');
+    k.tyreWear=this.initialTyreWear;
     k.speed=0;k.ersCharge=options.energy??START_CHARGES[Math.floor(this.random()*START_CHARGES.length)];if(!Number.isFinite(k.ersCharge)||k.ersCharge<0||k.ersCharge>1)throw Error('Invalid starting charge');this.kart=k;this.input={steer:0,throttle:0,brake:0,ers:false,drs:false};
     this.opponents=[];
     const traffic=this.config.racecraft?(this.scenario==='solo'?0:1+Math.floor(this.random()*3)):this.config.traffic;

@@ -1,4 +1,5 @@
 /** Shared deterministic native acceptance cases and promotion rules. */
+export function isolationCases(){return [{mode:'shootout',raceLaps:1,energy:1,scenario:'solo',seed:81271},{mode:'ai',raceLaps:3,energy:.5,scenario:'solo',seed:81271}];}
 export function evaluationCases(smoke=false){
   if(smoke)return [{mode:'shootout',raceLaps:1,energy:1,scenario:'solo',seed:81271},{mode:'ai',raceLaps:3,energy:.5,scenario:'passing',seed:81272}];
   const cases=[];for(const seed of [81271,91517]){
@@ -11,11 +12,11 @@ export function acceptance(rows,hasV1){
   const candidate=rows.filter(r=>r.arm==='V2'),reasons=[];
   if(!hasV1)reasons.push('A matched V1 baseline is required for promotion');
   if(!candidate.length||candidate.some(r=>!r.finished||!r.valid||r.offTrackRate>=.01))reasons.push('V2 must complete every held-out race/lap cleanly');
-  if(candidate.some(r=>r.defensiveReversalFlags))reasons.push('Defensive reversal flags require review');
+  if(candidate.some(r=>r.defensiveReversalFlags))reasons.push('Defensive lane-deviation flags require review; they are not proof of a second blocking move');
   const peers=(arm,mode)=>rows.filter(r=>r.arm===arm&&r.mode===mode);
   const sum=(a,key)=>a.reduce((n,r)=>n+(r[key]??Infinity),0);
   const styleTie=(a,b)=>a.length===b.length&&a.length>0&&a.every((r,i)=>Math.abs(r.raceTime-b[i].raceTime)<=.05)&&sum(a,'styleScore')>sum(b,'styleScore')+1e-6;
-  for(const arm of ['Legacy',...(hasV1?['V1']:[]),...(rows.some(r=>r.arm==='Unguided')?['Unguided']:[])])for(const mode of ['ai','shootout']){
+  for(const arm of ['Legacy',...(hasV1?['V1']:[]),...(rows.some(r=>r.arm==='Research seed')?['Research seed']:[]),...(rows.some(r=>r.arm==='Unguided')?['Unguided']:[])])for(const mode of ['ai','shootout']){
     const a=peers('V2',mode),b=peers(arm,mode);
     if(!b.length||b.length!==a.length){reasons.push(`Missing matched ${arm} ${mode} cases`);continue;}
     const finishedBaseline=b.every(r=>r.finished&&r.valid);

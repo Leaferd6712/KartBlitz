@@ -30,13 +30,14 @@ export function drive(plan, {mode = 'shootout', raceLaps = 1, energy = 1, seed =
     profileHash: plan.profile.profileHash, result: result.info, ...(collect || record ? {points: env.trajectory} : {}), ...(collect ? {pairs} : {})};
 }
 
-export function search(track, {rounds = 6, population = 20, seed = 4242, seconds = 120, mode = 'shootout', raceLaps = 1, energy = 1, onTrial = () => {}, onBest = () => {}, cancelled = () => false} = {}) {
+export async function search(track, {rounds = 6, population = 20, seed = 4242, seconds = 120, mode = 'shootout', raceLaps = 1, energy = 1, onTrial = () => {}, onBest = () => {}, cancelled = () => false} = {}) {
   const deadline = Date.now() + seconds * 1000, random = randomSource(seed), bounds = parameterBounds(), history = [];
   const conditions = {mode, raceLaps, energy, seed}; let best = null;
-  const test = (parameters, stage) => {
+  const test = async (parameters, stage) => {
     const plan = makePlan(track, parameters), run = drive(plan, {...conditions, record: true}), row = {...run.result, trial: history.length, stage, parameters};
     history.push(row); onTrial(row, {...run, trial: row.trial, parameters});
     if (!best || compareTrials(row, best.row) < 0) { best = {plan, row}; onBest({...drive(plan, {...conditions, collect: true}), trial: row.trial}); }
+    await new Promise(resolve => setImmediate(resolve)); // Dispatch stop requests between complete attempts.
     return {plan, row};
   };
   // Broad initial feasibility sweep, including centreline and classical shapes.
@@ -44,7 +45,7 @@ export function search(track, {rounds = 6, population = 20, seed = 4242, seconds
     if (cancelled() || Date.now() > deadline) break;
     const parameters = initialParameters(track, {classic, speed, energy: energySchedule === 'off' ? -.6 : .4});
     if (energySchedule === 'spatial') for (let i = 24; i < 36; i++) parameters[i] = random() * 2 - 1;
-    test(parameters, 'initial');
+    await test(parameters, 'initial');
   }
   if (!best) throw Error('Experiment cancelled before its first rollout');
   const initialBest = structuredClone(best.row), pool = [...history];
@@ -58,7 +59,7 @@ export function search(track, {rounds = 6, population = 20, seed = 4242, seconds
         const local = [...best.row.parameters], field = Math.floor(random() * local.length), [lo, hi] = bounds[field];
         local[field] = Math.max(lo, Math.min(hi, local[field] + (random() - .5) * (hi - lo) * .3)); candidates[j] = local;
       }
-      pool.push(test(candidates[j], `round-${round + 1}`).row);
+      pool.push((await test(candidates[j], `round-${round + 1}`)).row);
     }
     pool.sort(compareTrials); pool.splice(population);
   }
@@ -90,7 +91,7 @@ async function main() {
   }
   const experimentSources = Object.fromEntries(['scripts/pace-rnd.mjs', 'sim/pace-planner.mjs', 'ml_training/official-worker-v2.mjs', 'sim/official-policy-v2.mjs', 'sim/racing-line.mjs'].map(file => [file, createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
   write('config.json', {trackId, mode, raceLaps, energy, seed, seconds, rounds, population, physicsHash: PHYSICS_HASH, plannerVersion: PLANNER_VERSION, protectedSources: before, experimentSources, nodeVersion: process.version, approved: false});
-  const outcome = search(officialTracks[trackId], {seconds, seed, mode, raceLaps, energy, population, rounds, cancelled: () => cancelled || archiveBytes >= 120 * 1024 ** 2,
+  const outcome = await search(officialTracks[trackId], {seconds, seed, mode, raceLaps, energy, population, rounds, cancelled: () => cancelled || archiveBytes >= 120 * 1024 ** 2,
     onTrial: (row, record) => {
       const location = archive('attempts.jsonl.gz', record);
       fs.appendFileSync(path.join(output, 'attempt-index.jsonl'), JSON.stringify({trial: row.trial, trackId, mode, raceLaps, raceTime: row.raceTime, finished: row.finished, validLap: row.validLap, points: record.points.length, ...location}) + '\n');

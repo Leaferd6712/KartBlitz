@@ -32,7 +32,7 @@ assert(cleanFinish(clean)); assert(!cleanFinish({...clean, validLap: false}));
 assert(compareTrials(clean, {...clean, finished: false, raceTime: 1, progress: 100}) < 0);
 assert(compareTrials(clean, {...clean, raceTime: 40}) < 0);
 assert(compareTrials(clean, {...clean, raceTime: 20, contacts: 1}) < 0);
-const a = search(officialTracks[0], {rounds: 0, seconds: 10}), b = search(officialTracks[0], {rounds: 0, seconds: 10});
+const a = await search(officialTracks[0], {rounds: 0, seconds: 10}), b = await search(officialTracks[0], {rounds: 0, seconds: 10});
 assert.deepEqual(a.best.row, b.best.row); assert(cleanFinish(a.best.row));
 const recording = drive(a.best.plan, {collect: true});
 assert(recording.result.finished); assert(recording.result.validLap); assert(recording.points.length > 100);
