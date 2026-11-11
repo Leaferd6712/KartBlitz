@@ -132,7 +132,7 @@ async function poll(){
     if(['complete','cancelled'].includes(job.status)&&job.packages?.length&&capturedJob!==jobId){await library.captureFinishedJob({...job,id:jobId},track=>api(`jobs/${jobId}/model?trackId=${track}`));capturedJob=jobId;message((stopRequested?'Stop confirmed. ':'')+'Training weights saved to AI Models as inactive candidates. Your selected driver has not changed.');}
     const active=['queued','running','paused','stopping'].includes(job.status);$('start').disabled=active;$('benchmark').disabled=active;
     if(active)pollTimer=setTimeout(()=>poll(),900);
-  }catch(error){connectionLost=true;stopPlayback();updatePreviewState();message(error.message+' · Click Connect or Watch run to verify the job status.');}
+  }catch(error){connectionLost=true;stopPlayback();updatePreviewState();message(error.message+' · Reconnecting automatically. Training continues independently.');if(jobId&&!terminal(job?.status))pollTimer=setTimeout(()=>poll(),3000);}
 }
 function renderPerformance(){
   const d=job.diagnostics,number=(v,digits=3)=>Number.isFinite(v)?v.toFixed(digits):'unavailable';

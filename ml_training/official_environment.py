@@ -35,7 +35,9 @@ class NodeBatch:
             except Exception:
                 self.process.kill();self.process.wait(timeout=3)
         for stream in [self.process.stdin,self.process.stdout,self.process.stderr]:
-            if stream: stream.close()
+            if stream:
+                try:stream.close()
+                except OSError:pass # Do not mask a simulator crash with pipe cleanup.
 
 class OfficialVecEnv(VecEnv):
     def _observations(self,values):
@@ -106,7 +108,9 @@ class OfficialVecEnv(VecEnv):
     def close(self):
         if getattr(self,'closed',False):return
         self.closed=True
-        for batch in self.batches:batch.close()
+        for batch in self.batches:
+            try:batch.close()
+            except (OSError,ValueError):pass
     def get_attr(self, attr_name, indices=None):
         ids=self._get_indices(indices)
         if attr_name=='render_mode': return [None for _ in ids]

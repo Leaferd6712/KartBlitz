@@ -18,6 +18,12 @@ const files = ['index.html','rb6.glb','ui/customisation.bundle.js','online.js','
 for(const entry of await readdir(path.join(root,'sim'))) if(entry.endsWith('.mjs')) files.push(`sim/${entry}`);
 for(const entry of await readdir(path.join(root,'ui'))) if(/\.(css|svg|txt)$/.test(entry) || ['app-icon.png','player-experience.js','platform.js','car-preview.bundle.js'].includes(entry)) files.push(`ui/${entry}`);
 for(const entry of await readdir(path.join(root,'ui/fonts'))) files.push(`ui/fonts/${entry}`);
+files.push('ai-models/active.json','ui/continuous-training.html','ui/continuous-training.js','ui/specialist-training.html','ui/specialist-training.js');
+const activeModels=JSON.parse(await readFile(path.join(root,'ai-models/active.json'),'utf8'));
+for(const entry of Object.values(activeModels.tracks||{})){
+  if(!/^ai-models\/approved\/continuous\/track-[0-7]-[a-f0-9]{32}\.kartai\.json$/.test(entry.path))throw Error('Invalid approved model asset');
+  files.push(entry.path);
+}
 // README-linked tools are hosted alongside the website, outside the desktop player package.
 if (process.argv.includes('--web')) {
   files.push('leaderboard-admin.html','patch-notes-editor.html','Old Track Editor/track-editor.html','docs/online-mode.html',

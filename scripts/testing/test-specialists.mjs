@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import * as v3 from '../../sim/official-policy-v3.mjs';
+import {generation,validatePackage} from '../../sim/official-runtime.mjs';
+import {forward} from '../../sim/official-policy.mjs';
+const p=JSON.parse(fs.readFileSync('ml_training/runs/pace-rnd/sunset-review/candidate.kartai.json','utf8'));
+const pack={...p,format:'kartblitz-official-track-v3',modelGeneration:3,variants:{extreme:{id:'pair',policies:{shootout:structuredClone(p.variants.extreme),race:structuredClone(p.variants.extreme)}}}};
+pack.variants.extreme.policies.race.policy.layers.at(-1).bias[0]+=.25;
+assert.equal(validatePackage(pack),true);assert.equal(generation(pack),3);
+const shootout=v3.specialistPackage(pack,'extreme','shootout'),race=v3.specialistPackage(pack,'extreme','ai');
+assert.notDeepEqual(forward(shootout.variants.extreme.policy,Array(57).fill(0)),forward(race.variants.extreme.policy,Array(57).fill(0)));
+for(const mode of ['tt','online','local','career'])assert.throws(()=>v3.specialistPackage(pack,'extreme',mode));
+const broken=structuredClone(pack);delete broken.variants.extreme.policies.race;assert.throws(()=>validatePackage(broken));
+assert.equal(validatePackage(p),true);
+const python=process.platform==='win32'?'.venv-official/Scripts/python.exe':'.venv-official/bin/python';
+const result=spawnSync(python,['-m','unittest','ml_training.test_specialists'],{stdio:'inherit',windowsHide:true});if(result.status!==0)process.exit(result.status||1);
+console.log('V3 specialist contracts, independent RNG/checkpoints, reliability gates and streaming replays passed.');

@@ -43,6 +43,7 @@ try{
   await page.evaluate(()=>window.KartBlitzOfficialReady);
   const rows=await page.evaluate(async({pack,baseline,difficulty,cases,profile:providedProfile,unguided,researchBaseline,ablateDefense,appliedSteerFeedback})=>{
     const runtime=await import('/sim/official-runtime.mjs');await runtime.attach();
+    const {withNativePitStrategy}=await import('/sim/official-race-strategy.mjs');
     const line=await import('/sim/racing-line.mjs');const profile=providedProfile||line.buildProfile(TRACKS[pack.trackId]);line.validateProfile(profile,TRACKS[pack.trackId],runtime.PHYSICS_HASH);
     runtime.validatePackage(pack);if(baseline){runtime.validatePackage(baseline);if(baseline.trackId!==pack.trackId)throw Error('Baseline track differs');}
     if(unguided){runtime.validatePackage(unguided);if(unguided.trackId!==pack.trackId)throw Error('Unguided track differs');}
@@ -61,7 +62,7 @@ try{
       window._quickRaceOptions={weather:'dry',tyres:'med',selectedLaps:c.raceLaps,collisionMode:'collision'};
       const r=new Race(c.mode,TRACKS[pack.trackId]);race=r;const k=r.karts[1],track=r.track,opponents=r.karts.slice(2);
       for(const kart of r.karts){applyStockPerformanceToKart(kart);applyWeatherToKart(kart,'dry','med');}
-      if(policy){const controller=runtime.makeController(track,policy,difficulty,{mode:c.mode,getOpponents:()=>[k,...opponents]});controller.set(k);k._officialPolicyState=controller.state;k.getInput=dt=>controller.fn(dt);}
+      if(policy){const controller=runtime.makeController(track,policy,difficulty,{mode:c.mode,getOpponents:()=>[k,...opponents]});controller.set(k);k._officialPolicyState=controller.state;k.getInput=withNativePitStrategy(k,track,difficulty,c.mode,dt=>controller.fn(dt));}
       // Retain index 0 for the native Race state machine, but never run its
       // off-track recovery: it can otherwise respawn onto a supposedly solo lap.
       // It must remain unfinished in AI mode, which would DNF others 30s after

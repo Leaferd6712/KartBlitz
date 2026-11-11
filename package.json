@@ -37,12 +37,15 @@
     "official:core": "node scripts/build-official-core.mjs",
     "official:install": "powershell -ExecutionPolicy Bypass -File ml_training/official-install.ps1",
     "official:campaign": "powershell -ExecutionPolicy Bypass -File ml_training/campaign-start.ps1",
+    "official:continuous": "powershell -ExecutionPolicy Bypass -File ml_training/continuous-start.ps1",
     "official:v2": "node scripts/ai-training/train-energy.mjs",
     "official:pace": "node scripts/ai-training/pace-rnd.mjs",
     "official:refine": "node scripts/ai-training/refine-policy.mjs",
     "official:develop": "node scripts/ai-training/develop-pace.mjs",
     "official:race-rnd": "node scripts/ai-training/race-rnd.mjs",
     "test:native-isolation": "node scripts/testing/test-native-isolation.mjs",
+    "test:continuous": "node scripts/testing/test-continuous.mjs",
+    "test:continuous-native": "node scripts/testing/test-continuous-native.mjs",
     "official:seed": "node scripts/ai-training/seed-policy.mjs",
     "official:imitate": "node scripts/ai-training/distill-pace.mjs",
     "test:pace": "node scripts/testing/test-pace.mjs",
@@ -63,7 +66,9 @@
     "test:desktop": "npm run desktop:prepare && playwright test --config desktop/playwright.config.mjs",
     "test:activities": "node --test core/activity-host.test.mjs desktop/asset-policy.test.cjs sim/__tests__/customisation.test.mjs",
     "test:runtime": "node scripts/build/verify-runtime.mjs",
-    "test:portable": "node desktop/portable-smoke.mjs"
+    "test:portable": "node desktop/portable-smoke.mjs",
+    "official:v3": "powershell -ExecutionPolicy Bypass -File ml_training/specialist-start.ps1",
+    "test:specialists": "node scripts/testing/test-specialists.mjs"
   },
   "dependencies": {
     "partyserver": "^0.5.10",

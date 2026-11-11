@@ -48,6 +48,8 @@ KartBlitz/
 - **Choose AI models per track:** [ui/ai-models.js](ui/ai-models.js) and [sim/ai-model-library.mjs](sim/ai-model-library.mjs).
 - **AI driving at runtime:** [sim/official-runtime.mjs](sim/official-runtime.mjs), [V1 controller](sim/official-policy.mjs), [V2 controller](sim/official-policy-v2.mjs).
 - **Python training:** [V1 trainer](ml_training/official_train.py), [V2 trainer](ml_training/official_train_v2.py), [race experiments](ml_training/race_rnd.py).
+- **Continuous all-track campaign:** [runner](ml_training/continuous_campaign.py), [native race environment](sim/native-training-environment.mjs), [dashboard](ui/continuous-training.html) and [operating guide](docs/ai-training/continuous-v2.md).
+- **Automatic approved model selection:** [active manifest](ai-models/active.json); immutable versions in `ai-models/approved/continuous/`, backups in `ai-models/backups/`.
 - **Run AI research:** [scripts/ai-training/](scripts/ai-training/) and [AI setup/research guides](docs/ai-training/).
 - **Watch recordings and racing lines:** [ui/racing-lines.js](ui/racing-lines.js) and [ui/lap-replay.js](ui/lap-replay.js).
 - **Browser online racing:** [online.js](online.js), [online-codec.js](online-codec.js), [online-sim.js](online-sim.js) and [party/](party/).
@@ -63,6 +65,7 @@ These large local data folders have not been moved or renamed:
 
 - `ml_training/runs/official/<job ID>/`: official runs, attempt archives and exported track packages.
 - `ml_training/runs/campaign/`: campaign status, scheduling and validation history.
+- `ml_training/runs/continuous-v2/current/`: continuous V2 scheduling, source snapshots, native validation and restart state.
 - `ml_training/runs/energy-v2/`: V2 energy/racing-line training experiments.
 - `ml_training/runs/pace-rnd/`: pace and race R&D, candidate weights, comparisons and recordings.
 - `ai-models/approved/`: approved packages saved for the repository, where present.
@@ -78,3 +81,11 @@ Root configuration files (`package.json`, `package-lock.json`, `playwright.confi
 Three script entry points retain their original paths for simulator/model compatibility: `scripts/build-official-core.mjs`, `scripts/build-online-sim.mjs` and `scripts/campaign-browser-check.mjs`. The generated simulator files remain at their established runtime paths too.
 
 [Exact old-to-new filename map](docs/repository-file-moves.json) records every file moved in this tidy-up, including renamed reference images. Historical training metadata can still mention old script locations; use this map to find their current locations.
+
+## V3 specialists
+
+- [Training guide](docs/ai-training/specialists-v3.md) and [local dashboard](http://127.0.0.1:8766/ui/specialist-training.html).
+- [Campaign queue, pilot and qualification](ml_training/specialist_campaign.py); [clean teachers, balanced imitation and critic warmup](ml_training/specialist_training.py).
+- [Per-learner randomness](ml_training/independent_ppo.py); [streamed recording storage](ml_training/trajectory_archive.py); [reliability gates](ml_training/specialist_quality.py).
+- [Automatic specialist choice in the game](sim/official-policy-v3.mjs); [corner diagnostics](sim/corner-monitor.mjs).
+- Local checkpoints, telemetry and job records: `ml_training/runs/specialists-v3/current/`. Earlier V2 data stays under `ml_training/runs/continuous-v2/`.

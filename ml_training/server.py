@@ -51,7 +51,7 @@ def saved_official_models() -> list[dict[str, Any]]:
             with LOCK:cached=MODEL_CATALOG_CACHE.get(key)
             if cached and cached[0]==version:models.append(cached[1]);continue
             track_id=int(file.name.split('-')[1].split('.')[0]);data=saved_official_model(job_id,track_id);pack=data['package']
-            if pack.get('format') not in ['kartblitz-official-track-v1','kartblitz-official-track-v2'] or not pack.get('trackFingerprint'):continue
+            if pack.get('format') not in ['kartblitz-official-track-v1','kartblitz-official-track-v2','kartblitz-official-track-v3'] or not pack.get('trackFingerprint'):continue
             row={'id':data['id'],'jobId':job_id,'trackId':track_id,'name':pack.get('name'),'createdAt':pack.get('createdAt'),
                 'physicsHash':pack.get('physicsHash'),'variants':list(pack.get('variants',{}))}
             with LOCK:
@@ -114,6 +114,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path=='/api/official/specialists':
+            if not self._authorized():self._json(401,{'error':'Incorrect trainer pairing code'});return
+            from .specialist_campaign import CURRENT
+            from .campaign import read_json
+            self._json(200,read_json(CURRENT/'status.json',{'phase':'not-started','jobs':[]}));return
+        if path=='/api/official/continuous':
+            if not self._authorized():self._json(401,{'error':'Incorrect trainer pairing code'});return
+            from .continuous_campaign import CURRENT,read_json
+            self._json(200,read_json(CURRENT/'status.json',{'phase':'not-started','active':[],'tasks':[]}));return
         if path=='/api/official/models' or path.startswith('/api/official/models/'):
             if not self._authorized():self._json(401,{'error':'Incorrect trainer pairing code'});return
             try:
@@ -128,6 +137,7 @@ class Handler(BaseHTTPRequestHandler):
             import importlib.util
             status=torch_status()
             status.update({'ready':all(importlib.util.find_spec(name) for name in ['torch','gymnasium','stable_baselines3']),
+                'specialistsSupported':True,
                 'campaignSupported':True,
                 'capabilities':['actual-game-physics','per-track','five-difficulties','live-batches','checkpoint-resume'],
                 'trackCount':8,'defaultTrack':0,'apiVersion':1})
@@ -159,6 +169,13 @@ class Handler(BaseHTTPRequestHandler):
                 from .official_train import read_replays
                 query=parse_qs(urlparse(self.path).query)
                 from .official_train import TrainingControl
+                sources=ROOT/'ml_training/runs/official'/job_id/'replay-sources.json'
+                if sources.exists():
+                    from .trajectory_archive import read_group
+                    paths=json.loads(sources.read_text(encoding='utf-8'))
+                    allowed=(ROOT/'ml_training/runs/specialists-v3').resolve()
+                    if any(not Path(p).resolve().is_relative_to(allowed) for p in paths):self._json(400,{'error':'Invalid replay source'});return
+                    self._json(200,{'attempts':read_group(paths,query.get('cohort',['early'])[0],query.get('trackId',[None])[0],query.get('limit',[1000])[0])});return
                 try:self._json(200,{'attempts':read_replays(ROOT/'ml_training/runs/official'/job_id,OFFICIAL_CONTROLS.get(job_id) or TrainingControl(),query.get('cohort',['early'])[0],query.get('trackId',[None])[0],query.get('limit',[1000])[0])})
                 except (ValueError,KeyError) as exc:self._json(400,{'error':str(exc)})
                 return
@@ -177,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
         relative=unquote(path).lstrip('/')
         if not relative:
             self.send_response(302);self.send_header('Location','/index.html?tool=official-ml');self.end_headers();return
-        allowed=relative in ['index.html','rb6.glb','online.js','online-codec.js','online-sim.js'] or relative.startswith(('ui/','sim/','core/','ml/'))
+        allowed=relative in ['index.html','rb6.glb','online.js','online-codec.js','online-sim.js','ai-models/active.json'] or relative.startswith(('ui/','sim/','core/','ml/','ai-models/approved/continuous/'))
         file=(ROOT/relative).resolve()
         if allowed and file.is_relative_to(ROOT) and file.suffix in ['.html','.js','.mjs','.css','.json','.svg','.png','.webp','.woff2','.glb'] and file.is_file():
             data=file.read_bytes();self.send_response(200);self.send_header('Content-Type',mimetypes.guess_type(file.name)[0] or 'application/octet-stream');self.send_header('Content-Length',str(len(data)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data);return
@@ -191,11 +208,27 @@ class Handler(BaseHTTPRequestHandler):
                 length=int(self.headers.get('Content-Length','0'))
                 if length<=0 or length>MAX_JOB_BYTES:raise ValueError('Job request must be between 1 byte and 10 MB')
                 config=json.loads(self.rfile.read(length))
+                if path=='/api/official/specialists/control':
+                    from .specialist_campaign import CURRENT
+                    from .campaign import write_json
+                    if config.get('action') not in ['run','pause','stop']:raise ValueError('Choose run, pause or stop')
+                    write_json(CURRENT/'control.json',{'action':config['action']});self._json(200,{'ok':True});return
+                if path=='/api/official/continuous/control':
+                    from .continuous_campaign import CURRENT,write_json
+                    if config.get('action') not in ['run','pause','stop']:raise ValueError('Choose run, pause or stop')
+                    write_json(CURRENT/'control.json',{'action':config['action']});self._json(200,{'ok':True});return
                 if path=='/api/official/campaign/control':
                     from .campaign import write_json,CURRENT
                     if config.get('action') not in ['run','pause','stop']:raise ValueError('Choose run, pause or stop')
                     write_json(CURRENT/'control.json',{'action':config['action']});self._json(200,{'ok':True});return
                 if path=='/api/official/shutdown':
+                    from .specialist_campaign import CURRENT as V3_CURRENT
+                    from .campaign import write_json
+                    if (V3_CURRENT/'state.json').exists():write_json(V3_CURRENT/'control.json',{'action':'stop'})
+                    from .continuous_campaign import CURRENT as V2_CURRENT
+                    if (V2_CURRENT/'state.json').exists():
+                        from .campaign import write_json
+                        write_json(V2_CURRENT/'control.json',{'action':'stop'})
                     from .campaign import write_json,CURRENT
                     if (CURRENT/'state.json').exists():write_json(CURRENT/'control.json',{'action':'stop'})
                     for control in OFFICIAL_CONTROLS.values():control.cancelled.set();control.running.set()
@@ -206,6 +239,11 @@ class Handler(BaseHTTPRequestHandler):
                         self.server.shutdown()
                     threading.Thread(target=shutdown,daemon=True).start();self._json(200,{'ok':True});return
                 if path=='/api/official/jobs':
+                    from .specialist_campaign import CURRENT as V3_CURRENT,alive as v3_alive
+                    from .campaign import read_json
+                    if v3_alive(read_json(V3_CURRENT/'state.json',{}).get('owner',{})):raise ValueError('V3 specialist training owns the slots. Use its dashboard to stop it first.')
+                    from .continuous_campaign import CURRENT as V2_CURRENT,alive,read_json
+                    if alive(read_json(V2_CURRENT/'state.json',{}).get('owner',{})):raise ValueError('The continuous V2 campaign owns training. Pause or stop it from its dashboard first.')
                     from .campaign import read_json,CURRENT
                     import psutil
                     campaign=read_json(CURRENT/'state.json',{})

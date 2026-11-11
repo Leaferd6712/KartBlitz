@@ -42,6 +42,7 @@ export function isPenalizedOffTrack(kart){return !!(kart.isOffTrack||kart._isCom
 export class Environment {
   constructor(index,configuration={}){this.config=configuration;this.index=index;this.random=rng((this.config.seed||1)+index*997);this.episode=0;this.reset();}
   reset(options={}){
+    if(options.seed!==undefined)this.random=rng(options.seed>>>0);
     this.episode++;this.mode=options.mode||(this.config.mode==='mixed'?(this.random()<.5?'ai':'shootout'):(this.config.mode||'ai'));
     if(this.config.racecraft&&this.config.mode==='mixed'&&!options.mode)this.mode=this.random()<.25?'shootout':'ai';
     this.scenario=this.mode==='shootout'?'solo':this.config.scenario||(!this.config.racecraft?'solo':['solo','passing','passing','defending','recovery'][Math.floor(this.random()*5)]);
@@ -172,6 +173,7 @@ for await(const line of rl){try{const request=JSON.parse(line);let result;
   else if(request.command==='step'){result={results:envs.map((e,i)=>{const r=e.step(request.actions[i]);if(r.done){r.info.terminal_observation=r.observation;r.info['TimeLimit.truncated']=r.truncated;r.info.trajectory=e.trajectory;r.info.episode={r:e.rewardTotal,l:e.steps};r.observation=e.reset();}return r;})};}
   else if(request.command==='partials')result={episodes:envs.filter(e=>e.time>0).map(e=>({interrupted:true,rewardVersion:REWARD_VERSION,profileHash:e.profile.profileHash,miniSectors:e.sectors.finish(),environment:e.index,mode:e.mode,scenario:e.scenario,raceLaps:e.kart.totalLaps,lapTimes:[...e.kart.lapTimes],raceTime:null,racePosition:e.racePosition(),energyDeployed:e.energyDeployed,drsTransitions:e.drsTransitions,finished:false,validLap:false,lapTime:null,progress:e.progress/e.track.totalLen,contacts:e.contacts,offTrackRate:e.offSteps/Math.max(1,e.steps*3),trajectory:e.trajectory}))};
   else if(request.command==='profile')result={profile:envs[0].profile};
+  else if(request.command==='configure'){Object.assign(config,request.config);result={configured:true};}
   else if(request.command==='snapshot')result={environments:envs.map(e=>e.snapshot())};
   else if(request.command==='reset')result={observations:envs.map(e=>e.reset(request.options||{}))};
   else if(request.command==='teacher')result={actions:envs.map(e=>teacher(e.kart,e.track,{},PACE[config.difficulty]||1).slice(0,4))};

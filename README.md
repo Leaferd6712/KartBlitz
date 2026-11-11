@@ -13,6 +13,8 @@ A browser kart racer for a quick race, a friendly rivalry, or one more lap chasi
 
 **Looking for a file? [Open the repository file guide](FILE-GUIDE.md).**
 
+**AI training:** [V3 specialist dashboard (local trainer)](http://127.0.0.1:8766/ui/specialist-training.html) · [How V3 trains and qualifies models](docs/ai-training/specialists-v3.md) · [AI Models](https://leaferd6712.github.io/KartBlitz/index.html?tool=ai-models) · [Earlier V2 dashboard](http://127.0.0.1:8766/ui/continuous-training.html). Start locally with `npm run official:v3`. Shootout and Race specialists install together only after quality checks; Legacy remains a backup.
+
 ### In your browser · Available now
 
 **[Launch the game →](https://leaferd6712.github.io/KartBlitz/)**

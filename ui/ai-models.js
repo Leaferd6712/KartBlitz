@@ -19,6 +19,12 @@ async function open(){
   <p id="am-message" role="status"></p><section><div class="am-row"><h2>Choose AI per track</h2><label>Compare difficulty<select id="am-difficulty"><option value="extreme">Extreme</option><option value="hard">Hard</option><option value="medium">Medium</option><option value="easy">Easy</option><option value="ultraeasy">Ultra easy</option></select></label></div><p>Lap completion measures how many evaluation attempts finished a valid lap. It is not a prediction of race wins or human pace. Compare the same difficulty and conditions; a small test sample gives limited evidence.</p><div id="am-tracks" class="am-track-grid"></div></section><details id="am-archive"><summary>Model files and full evaluation details</summary><section><div class="am-row"><h2>Saved RL candidates</h2><label>Track filter<select id="am-filter"><option value="all">All tracks</option></select></label></div><div id="am-candidates"></div></section></details>
   <section class="am-card"><h2>Manual activation and rollback</h2><p>Use this model installs that candidate for its track and enables trained driving in AI Race and One Lap Shootout. Missing track/difficulty weights use Current AI. Other modes are unaffected. New races use your selection; a race already in progress keeps its controller.</p><p>Use Current AI switches back immediately for future races and keeps every candidate and installed package. Activating a replacement also archives the previously installed weights, so you can select an earlier version again.</p><p class="am-subtle">Selections and candidates belong to this browser origin. To use a local candidate on GitHub Pages, download it, open this page on the hosted site and import it there. Pushing the website does not automatically activate an RL candidate for players.</p></section>`;
   $('body').insertBefore($('message'),$('current'));$('body').insertBefore($('tracks').closest('section'),$('current'));
+  const auto=document.createElement('section');auto.className='am-card';
+  const autoText=document.createElement('p');autoText.textContent='V3 training selects a package only after both independent specialists pass native reliability, pace and racecraft checks. Legacy is kept as a backup. Manual model selection or restoring Legacy pauses automatic replacement for that selection. Running races keep their existing driver.';
+  const autoButton=document.createElement('button');autoButton.textContent='Use approved models automatically';autoButton.onclick=safe(async()=>{await library.useAutomaticModels();await render();message('Automatic approved-model selection enabled.');});
+  const campaignLink=document.createElement('a');campaignLink.href='ui/specialist-training.html';campaignLink.textContent='Open continuous training dashboard';auto.append(autoText,autoButton,' ',campaignLink);$('body').prepend(auto);
+  $('current').querySelector('h2').textContent='Legacy controller · backup';$('use-current').textContent='Restore Legacy backup';
+  $('body').querySelector('h1').nextElementSibling.textContent='Compare saved models. Verified continuous-campaign improvements are selected automatically; Legacy remains recoverable.';
   for(let id=0;id<8;id++)$('filter').add(new Option(window.KartBlitzReplayScene.getTrack(id)?.name||`Track ${id}`,id));
   $('code').value=incoming||localStorage.getItem('official-trainer-code')||sessionStorage.getItem('official-trainer-code')||'';
   $('source').textContent=window.makeAIInput?.toString()||'The Current AI controller is not available in this build.';
@@ -77,6 +83,10 @@ async function render(){
 }
 
 function evaluationText(pack,difficulty){
+  if(official.generation(pack)===3){
+    const v=pack.variants[difficulty];if(!v)return difficulty+' not trained';
+    return ['shootout','race'].map(role=>{const e=v.policies?.[role]?.certification,q=e?.quality;return `${role}: ${q?`${(q.completionRate*100).toFixed(1)}% completed / ${q.evaluated}, lower confidence ${(q.wilsonLower95*100).toFixed(1)}%`:'not certified'}`;}).join(' · ');
+  }
   const model=pack.variants[difficulty],e=model?.evaluation;
   if(!model)return `${difficulty} not trained · available: ${Object.keys(pack.variants).join(', ')}`;
   if(!e||e.cancelled||!Number.isFinite(e.finishRate))return 'Lap completion not evaluated';
